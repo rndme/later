@@ -52,8 +52,9 @@
 #define ESP8266WEBSERVER_H
 #endif
 
-#define LATER_EDITOR_URL "https://pagedemos.com/later/js/"
-
+#ifndef DANOS_EDITOR_URL
+#define DANOS_EDITOR_URL "https://pagedemos.com/later/js/"
+#endif
 
 
 
@@ -317,9 +318,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 380 "danscript.ino"
+#line 384 "danscript.ino"
 unsigned long clamp(int a);
-#line 445 "danscript.ino"
+#line 449 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 528 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -421,7 +422,7 @@ int HTTPRequest(char * url);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 129 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 380 "danscript.ino"
+#line 384 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
