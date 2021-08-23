@@ -95,3 +95,161 @@ else
 end if
 ```
 
+### /dir/
+A JSON Array of Objects decribing the files save on the ESP.
+
+#### Example return
+```js
+[
+{"type":"file","name":"test2.bat","size":"58B","mime":"text/plain"},
+{"type":"file","name":"neo7-lightlevel.bat","size":"469B","mime":"text/plain"},
+{"type":"file","name":"neo7-clock-wheel.bat","size":"1017B","mime":"text/plain"},
+{"type":"file","name":"test-ledpos.bat","size":"285B","mime":"text/plain"},
+{"type":"file","name":"colors-def.bat","size":"142B","mime":"text/plain"},
+{"type":"file","name":"autoexec.bat","size":"195B","mime":"text/plain"}
+]
+```
+
+
+
+
+
+### /test/
+View a detailed inspection of the last executed script; the parsed code, current variable values, the runtime log, and stats.
+
+
+#### Special Needs Flags
+These enable handling of certain constructs within the line's argument ( anything to the right of the starting command).
+
+* `H`: Needs HTTP Response parsing
+* `O`: Needs Output - interpolates placeholders - ex: `println`, `log`
+* `A`: Needs Array processing - ex: `[1,2][$x]`
+* `E`: Needs Expression processing  - ex: `(1 + 2 / 3)`
+* `V`: Needs Variable processing - ex: `println Total: $tot`
+* `T`: Needs Templates processing - ex: `println Time Take: {runtime}`
+
+
+#### Example return
+```
+25 lines in 249b from /neo7-lightlevel.bat
+RAM:7192,  runs:1338,  subRet:0, resumeLine:7
+Line:25, forStart:0, forEnd:0, forStep:0, forIndex:0
+
+LINES:
+ #  exit         HOAEVT flags  	OP  value
+ 0 -> 0 	[      ]	c = interval=500
+ 1 -> 0 	[      ]	M = 4,INPUT_PULLUP
+ 2 -> 0 	[      ]	M = 2,INPUT_PULLUP
+ 3 -> 0 	[     T]	V = @A_={adc}
+ 4 -> 0 	[      ]	V = @B_=0
+ 5 -> 0 	[     T]	V = @C_={runs}
+ 6 -> 0 	[      ]	z = 00
+ 7 -> 0 	[   EVT]	V = @A_=({adc} + @A_ + @A_ + @A_ + {adc} / 5)
+ 8 -> 0 	[    V ]	V = @D_=@A_
+ 9 -> 11 	[    V ]	I = @D_>90
+10 -> 0 	[      ]	V = @D_=90
+11 -> 0 	[      ]	F = 00
+12 -> 14 	[    V ]	I = @D_<9
+13 -> 0 	[      ]	V = @D_=9
+14 -> 0 	[      ]	F = 00
+15 -> 24 	[    VT]	I = @C_<{runs}
+16 -> 23 	[    V ]	I = @D_!@B_
+17 -> 0 	[   EV ]	V = @E_=(@B_ + @D_ / 2)
+18 -> 0 	[    V ]	V = @B_=@D_
+19 -> 0 	[    V ]	m = light=@E_
+20 -> 0 	[      ]	f = 200
+21 -> 0 	[    V ]	m = light=@D_
+22 -> 0 	[   E T]	V = @C_=({runs} + 2)
+23 -> 0 	[      ]	F = 00
+24 -> 0 	[      ]	F = 00
+ #  exit         HOAEVT flags  	OP  value
+
+VALUE REGISTERS:
+#  	SYM	val	expr
+1.	@B_	9	$last
+3.	@D_	9	$level
+2.	@C_	5	$lockTill
+0.	@A_	2	$read
+4.	@E_	4	$temp
+
+-------- SYSTEM LOG -----------
+```
+Which is the result of running this script:
+```
+// background light level adjuster
+// monitors ldr on ADC and sets global `light` variable
+
+option= interval=500
+pinMode=4,INPUT_PULLUP
+
+pinMode=2,INPUT_PULLUP
+
+$read={adc}
+$last = 0
+$lockTill = {runs}
+
+start
+
+$read = ({adc} + $read + $read + $read + {adc} / 5)
+
+$level = $read
+if $level > 90
+  $level = 90
+fi
+if $level < 9
+  $level = 9
+fi
+
+
+if $lockTill < {runs} 
+    if $level ! $last
+      $temp = ($last + $level / 2)
+      $last = $level
+      global=light=$temp
+      freeze 200
+      global=light=$level
+      $lockTill = ({runs} + 2)
+    fi
+fi
+  
+```
+
+
+
+
+
+
+### /scripts/
+View a JSON list of running tasks with statistics, comparable to a _task manager_ or `top` utility.
+
+#### Example return
+```js
+{
+	"count": 1,     // # of scripts running
+	"current": 1,   // last active script by index
+	"ms": 7616721,  // current system clock
+	"ram": 8200,    // device free heap
+	"bootram": 11240,   // free heap at startup
+	"scripts":[  // array of script stat objects
+	{
+		"fileName": "/neo7-clock-wheel.bat",
+		"index": 1, // ~PID - here autoexec.bat used slot 0 to run this
+		"frozen": 1,    // awaiting next interval?
+		"interval": 28, // how many ms between invocations
+		"line": 52,     // last executed line number - ~cursor
+		"lines": 55,    // how many non-empty LOC?
+		"exit": 52,     // exit point - last line of code or start of _after_ section 
+		"chars": 528,   // ~bytes of code
+		"vars": 16,     // how many $variables are in use?
+		"reads": 0,     // how many file reads performed by script?
+		"writes": 0,    // how many file writes performed by script?
+		"parseTime": 15339, // us taken to parse script before executing
+		"runTime": 20925,   // us taken to execute script once, the last time
+		"avgTime": 22182,   // us taken to run a task a single time on average
+		"cpuTime":  190612569,  // us taken to run task in total
+		"lifeTime": 242115000,  // us since script was loaded (cpu/life = cpu utilization from 0.0 - 0.99)
+		"runs": 8593
+	}
+		]
+}
+```
