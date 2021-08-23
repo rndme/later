@@ -1,5 +1,19 @@
 # Commands
 
+Every line of code has a command. 
+As an interpreted language, even loops, conditionals, etc are commands.
+The list below details the built-in commands, and you can create custom script commands inside your sketch using `Later.addCommand`.
+
+
+* [Basic](#basic)
+* [Neopixel](#neopixel)
+* [Debug](#debug)
+* [Flow](#flow)
+* [Loops](#loops)
+* [Variables](#variables)
+* [System](#system)
+
+
 ## Basic
 
 **pinMode**   [_int_ **pin**, _str_ **mode**] <br>
