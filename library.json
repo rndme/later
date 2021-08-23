@@ -1,0 +1,22 @@
+{
+    "name": "later",
+    "version": "0.0.1",
+    "keywords": "SCRIPTING,ESP8266,BATCH,SCRIPTS,OTA,INTERPRETER,MULTI-TASK",
+    "description": "Later is a multitasking scripting platform for ESP MCUs",
+    "authors":
+    {
+        "name": "dandavis",
+        "email": "",
+        "url": ""
+    },
+    "export": {
+      "include": "libraries/later"
+    },
+    "repository":
+    {
+        "type": "git",
+        "url": "https://github.com/rndme/later"
+    },
+    "frameworks": "arduino",
+    "platforms": "*"
+}
