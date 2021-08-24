@@ -1,6 +1,14 @@
 
 # HTTP APIs
 
+* [/log/](#log)
+* [/store/](#store)
+* [/run/](#run)
+* [/dir/](#dir)
+* [/test/](#test)
+* [/scripts/](#scripts)
+
+
 ## /log/
 
 Provides filtered access to data gathered with log (_) commands
