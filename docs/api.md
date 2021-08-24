@@ -1,7 +1,7 @@
 
-## HTTP APIs
+# HTTP APIs
 
-### /log/
+## /log/
 
 Provides filtered access to data gathered with log (_) commands
 
@@ -16,24 +16,24 @@ Provides filtered access to data gathered with log (_) commands
 * **count**    any: returns just the number of valid results
 
 
-### /store/
+## /store/
 To allow sharing data between scripts and reboots, there's a built-in key:value store avilable to http and programtically from scripts.
 
-#### HTTP Access
+### HTTP Access
 * `/store/` : view TSV table of stored values
 * `/store/?key=mynum` :  fetch value of _mynum_
 * `/store/?key=mynum&value=123` :  set key _mynum_ to `123` and save
 * `/store/?key=mynum&value=123&ram=1` :  set key _mynum_ to `123` w/o saving
 
 
-#### Programatic Access
+### Programatic Access
 * `store=mynum=123` : sets _mynum_ to `123` and saves
 * `global=mynum=123` : sets _mynum_ to `123` w/o saving
 * `$x={&mynum}` : sets local variable `$x` to the global stored value _mynum_; 123 using above examples
 
  
  
-### /run/
+## /run/
 Execute a script by calling from the run endpoint: `/run/?name=file.bat`. 
 You can preset and update variable values by name using GET param key=value pairs. 
 
@@ -95,10 +95,10 @@ else
 end if
 ```
 
-### /dir/
+## /dir/
 A JSON Array of Objects decribing the files save on the ESP.
 
-#### Example return
+### Example return
 ```js
 [
 {"type":"file","name":"test2.bat","size":"58B","mime":"text/plain"},
@@ -114,11 +114,11 @@ A JSON Array of Objects decribing the files save on the ESP.
 
 
 
-### /test/
+## /test/
 View a detailed inspection of the last executed script; the parsed code, current variable values, the runtime log, and stats.
 
 
-#### Special Needs Flags
+### Special Needs Flags
 These enable handling of certain constructs within the line's argument ( anything to the right of the starting command).
 
 * `H`: Needs HTTP Response parsing
@@ -129,7 +129,7 @@ These enable handling of certain constructs within the line's argument ( anythin
 * `T`: Needs Templates processing - ex: `println Time Take: {runtime}`
 
 
-#### Example return
+### Example return
 ```
 25 lines in 249b from /neo7-lightlevel.bat
 RAM:7192,  runs:1338,  subRet:0, resumeLine:7
@@ -174,7 +174,9 @@ VALUE REGISTERS:
 
 -------- SYSTEM LOG -----------
 ```
+
 Which is the result of running this script:
+
 ```
 // background light level adjuster
 // monitors ldr on ADC and sets global `light` variable
@@ -219,10 +221,10 @@ fi
 
 
 
-### /scripts/
+## /scripts/
 View a JSON list of running tasks with statistics, comparable to a _task manager_ or `top` utility.
 
-#### Example return
+### Example return
 ```js
 {
 	"count": 1,     // # of scripts running
@@ -248,7 +250,7 @@ View a JSON list of running tasks with statistics, comparable to a _task manager
 		"avgTime": 22182,   // us taken to run a task a single time on average
 		"cpuTime":  190612569,  // us taken to run task in total
 		"lifeTime": 242115000,  // us since script was loaded (cpu/life = cpu utilization from 0.0 - 0.99)
-		"runs": 8593
+		"runs": 8593    // how many times has it been run?
 	}
 		]
 }
