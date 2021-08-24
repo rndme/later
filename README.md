@@ -30,6 +30,31 @@ The extra time lets you tweak that perfect level of brightness or beep durations
 * Exclusively for the ESP family of MCUs, chiefly the 8266.
 
 
+
+## Getting Started
+If you've not done so, install the [arduino enviroment](https://www.arduino.cc/en/software) and add [ESP8266 support](https://github.com/esp8266/Arduino#installing-with-boards-manager).
+
+Now use `git clone git@github.com:rndme/later.git` or download [the repo zip](https://github.com/rndme/later/archive/refs/heads/master.zip) and unzip it to your `arduino/libraries/` folder.
+
+Once installed, you can use one of the built-in example sketches or just manually add the needed pieces to a new or existing sketch.
+```C++
+#include "SPIFFS.h"
+#include <later.h>
+
+// in setup(), usually the end:
+Later.setup();
+
+// in loop, anywhere:
+Later.loop();
+
+```
+
+Upload the sketch to the ESP, then navigate to the ESP's wifi address in a browser to arrive at the landing page. From there, head to the editor to start writing your first script.
+
+See the [scripts](scripts/) folder for some inspiration.
+
+
+
 ## Bite size demos
 Simple but practical examples in a half-dozen lines of code or less.
 These can all be named `autoexec.bat` to create instant single-purpose devices.
