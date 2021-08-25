@@ -350,35 +350,35 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 389 "core.ino"
+#line 401 "core.ino"
 void removeDoubleLines(char * buff);
-#line 399 "core.ino"
+#line 411 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 415 "core.ino"
+#line 427 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 433 "core.ino"
+#line 445 "core.ino"
 void autoEqualsInsert(char * line);
-#line 466 "core.ino"
+#line 478 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 708 "core.ino"
+#line 720 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 729 "core.ino"
+#line 741 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 893 "core.ino"
+#line 905 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1101 "core.ino"
+#line 1113 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1168 "core.ino"
+#line 1180 "core.ino"
 void popHttpResponse();
-#line 1181 "core.ino"
+#line 1193 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1332 "core.ino"
+#line 1344 "core.ino"
 void processStringFormats(char* s);
-#line 1473 "core.ino"
+#line 1480 "core.ino"
 void handleDump();
-#line 1701 "core.ino"
+#line 1708 "core.ino"
 void runScript();
-#line 2460 "core.ino"
+#line 2467 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 33 "http.ino"
 void handleAPI();
@@ -418,9 +418,9 @@ void handleScripts();
 void handleBench();
 #line 5 "mod.ino"
 int HTTPRequest(char * url);
-#line 97 "templates.ino"
+#line 98 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 129 "templates.ino"
+#line 130 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
 #line 384 "danscript.ino"
 unsigned long  clamp(int a) {
@@ -1412,7 +1412,7 @@ int loadScript(String filename) { //dd666 make this a class method
         macroPtr[0] = '?'; // stop same re-find
         size_t macroNameLen = 1;
         for (macroNameLen = 1; macroNameLen < 16; macroNameLen++) {
-          if (!isupper(macroPtr[macroNameLen])) break;
+          if (!isalnum(macroPtr[macroNameLen])) break;
         }
 
         strncpy(macro, macroPtr, macroNameLen);
@@ -1420,10 +1420,20 @@ int loadScript(String filename) { //dd666 make this a class method
 
         char * macroBuffPtr = macro + 1;
         char * macroRepPtr = DEFINES[slot][macroBuffPtr];
+        // check GET params for match if no pre-defined macro exists under the name:
+        if (!macroRepPtr) macroRepPtr = (char *)server.arg(macroBuffPtr).c_str();
+
         if (macroRepPtr) {
           size_t macroRepLen = strcspn(macroRepPtr, "\n");
+
+          // cleanup optional semi delimiter on macro names:
+          if (macroPtr[macroNameLen] == ';') {
+            macro[macroNameLen] = ';';
+            macro[macroNameLen + 1] = '\0';
+          }
           strncpy(macroRep, macroRepPtr, macroRepLen);
           macroRep[macroRepLen] = '\0';
+          laterUtil::trimRight(macroRep);
           laterUtil::replace(line, macro, macroRep);
         }//end if
 
@@ -2504,11 +2514,6 @@ void processStringFormats(char* s) { // finds format flags in form of <#flag str
       ltoa( atol(out), out, 16 );
       more = 0;
     }//end hex
-
-    if (more && !strcmp(flagName, "arg")) {
-      strcpy(out, server.arg(out).c_str());
-      more = 0;
-    }//end arg
 
     if (more && !strcmp(flagName, "lower")) {
       for (; i < slen; i++) out[i] = tolower(out[i]);
@@ -4071,6 +4076,7 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{E.value}", EVENT[Later.lastEventSlot].value),
   REPRAW("{E.time}", EVENT[Later.lastEventSlot].ms),
   REPRAW("{E.ms}", EVENT[Later.lastEventSlot].msNext - EVENT[Later.lastEventSlot].ms ),
+  REPRAW("{args}", server.args()),
   REPRAW("{arity}", getCurrent()->arity),
   REPRAW("{arg0}", getCurrent()->subArgs[0]),
   REPRAW("{arg1}", getCurrent()->subArgs[1]),
