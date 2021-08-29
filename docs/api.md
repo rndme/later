@@ -39,7 +39,12 @@ To allow sharing data between scripts and reboots, there's a built-in key:value 
 * `global=mynum=123` : sets _mynum_ to `123` w/o saving
 * `$x={&mynum}` : sets local variable `$x` to the global stored value _mynum_; 123 using above examples
 
- 
+### C++ Access
+You can access the Storage class from your c++ sketch using `nsLATER::LATER_STORE`, which can be used to apply startup configuration and other customizations.
+```c++
+unsigned long ledCount = nsLATER::LATER_STORE.get("ledCount"); 
+```
+
  
 ## /run/
 Execute a script by calling from the run endpoint: `/run/?name=file.bat`. 
