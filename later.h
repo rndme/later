@@ -326,7 +326,7 @@ LATER_ENVIRON* getCurrent();
 template <class text>void uniPrintln(text content);
 #line 541 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 689 "commands.ino"
+#line 701 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -609,6 +609,7 @@ LATER_ENVIRON *  LaterClass::load(const char * fileName) {
     return NULL;
   }
 
+  s->duration = 0;
   s->calledFromWeb = 0;
   s->runs = 0;
   s->resumeLineNumber = 0;
@@ -1150,10 +1151,12 @@ typedef struct LaterStore {
   char * stringify(int index);
   bool save();
   bool load();
+  bool loaded;
 } LaterStore;
 //<<
 
 int LaterStore::getIndex(const char * key) {
+  if (!loaded) load();
   for (int i = 0; i < length; i++) {
     if (strcmp(items[i].key, key) == 0) return i;
   }
@@ -1222,11 +1225,20 @@ char * LaterStore::stringify(int index) {
 bool LaterStore::save() {
   File file = SPIFFS.open(fileName, "w");
   if (!file) return false;
-  for (int i = 0; i < 24; i++) file.println(stringify(i));
+  for (int i = 0; i < 24; i++) {
+    LATER_ITEM * it = &items[i];
+    if (it->ver < 1) continue;
+    file.println(stringify(i));
+  }
+  file.print('\n');
+
   file.close();
   return 1;
 }//end save()
 bool LaterStore::load() {
+  if (loaded) return 0;
+  loaded = 1;
+
   File file = SPIFFS.open(fileName, "r");
   if (!file) return false;
   int index = 0;
@@ -3902,7 +3914,7 @@ void handleStore() {
   server.sendHeader(LATER_CORS, "*");
   server.send ( 200, LATER_PLAIN, "key  \tepoc\tver\tvalue\n");
 
-  for (int i = 0; i < 23; i++) {
+  for (int i = 0; i <  LATER_STORE.length; i++) {
     server.sendContent( LATER_STORE.stringify(i) );
     server.sendContent( "\n" );
   }//next
