@@ -425,7 +425,10 @@ It runs at parse time and injects literal numbers into the script, so it's size 
 
 
 ## Macros
-`#define=key 123` creates parse-time "macro" literal replacements substituted for `#key`, `123` in this example.
+`#define=key 123` creates parse-time "macro" literal replacements substituted for `@key`, `123` in this example.
+These values are unparsed, so text, lists, and numbers can be macro'd and will be literaly placed un-modified.
+You can also inject GET parameters with macro syntax (ex: `@param`), much like variable's GET mapping, but unparsed and replaced once at load.
+This can be used to detect empty parameters (ex: `if 1@param > 9`) that could be a `0`, which cannot be determined by a variable since they default to `0`.
 
 
 
