@@ -67,19 +67,24 @@ Q[0]=123;
 `Q[]` can be used from C++ just like any other variable.
 From the later script, you can read that byte array like `$val=GET(0)`, and alter it like `$status=SET(0, 222)`.
 
-
 ### To files - write
+Output can be re-directed into a SPIFFS file using the `>>` operator, ex: `print Hello World >>/text.txt`, which would leave the file `text.txt` containing `Hello World`.
+Output-producing lines are fully templated with variables, templates, macros, arrays, etc.
+You can fetch any SPIFFS file from HTTP as ex: `http://{esp ip}:80/text.txt`, or use your sketch code to process the SPIFFS file yourself.
 
 ### To files - append
+Output can be re-directed and appended to SPIFFS files using the `>>>` operator, ex: `print {runs}, >>/runs.txt`, which would leave the file `runs.txt` containing `1,2,3,4,5` is ran 5 times.
+Output-producing lines are fully templated with variables, templates, macros, arrays, etc.
+You can fetch any SPIFFS file from HTTP as ex: `http://{esp ip}:80/text.txt`, or use your sketch code to process the SPIFFS file yourself.
+
 
 ### To serial - print
+If not invoked from HTTP, `print` and `println` output to the `Serial` port, which can be specified using a sketch macro, ex: `#define LATER_UART_PORT Serial1`.
+You can also write a [custom command](/docs/expansion.md#commands) that outputs the script-provided composited line on any port or even a non-serial interface of your liking.
 
 ### To serial - println
-
-
-
-
-
+If not invoked from HTTP, `print` and `println` output to the `Serial` port, which can be specified using a sketch macro, ex: `#define LATER_UART_PORT Serial1`.
+You can also write a [custom command](/docs/expansion.md#commands) that outputs the script-provided composited line on any port or even a non-serial interface of your liking.
 
 
 ## Getting Data To Scripts
