@@ -12,8 +12,6 @@ Getting data into and out of scripts is easy using a wide variety of techniques 
 #### Getting Data IN To Scripts
 * http :  [variables](#from-http---variables),  [store](#from-http---store),  [fetch](#from-http---fetch),  [macros](#from-http---macros)
 * sketch :  [functions](#from-sketch---functions),  [store](#from-sketch---store),  [commands](#from-sketch---commands)
-* files :  [read](#from-files---read)
-
 
 
 ## Getting Data From Scripts
@@ -104,6 +102,10 @@ See [the store section](/docs/api.md#store) for details.
 
 
 ### From http - fetch
+Later scripts can fetch JSON and text data from remote HTTP servers using the `fetch` command.
+Due to memory constraints, such response should be small, under 1.5kb.
+Values can then be extracted from the response with the RESPONSE script interface.
+
 
 ### From http - macros
 
@@ -112,7 +114,5 @@ See [the store section](/docs/api.md#store) for details.
 ### From sketch - store
 
 ### From sketch - commands
-
-### From files - read
 
 
