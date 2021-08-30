@@ -19,8 +19,8 @@ Getting data into and out of scripts is easy using a wide variety of techniques 
 ## Getting Data From Scripts
 
 ### To http - store
-Setting a `global` or `store` value from scripts, ex: `store $ip=123`, enables fetching that value from the ESP's `/store/` endpoint.
-You can get all such values as a TSV table at `http://{esp ip}":80/store/`, or a specific one as a numeric literal at `http://{esp ip}":80/store/?key=ip`.
+Setting a `global` or `store` value from scripts, ex: `store ip=123`, enables fetching that value from the ESP's `/store/` endpoint.
+You can get all such values as a TSV table at `http://{esp ip}:80/store/`, or a specific one as a numeric literal at `http://{esp ip}:80/store/?key=ip`.
 See [the store api](/docs/api.md#http-access) section for details.
 
 ### To http - fetch
@@ -30,23 +30,43 @@ Example: `fetch http://192.168.1.1:1880/incoming/?dev={mac}&type=moisture&value=
 
 ### To http - log
 Use the log feature to buffer and expose larger amounts of ESP-generated data. Calling the `log` command appends the templated line to the internal log with a timestamp.
-That logged data and messages are available at `http://{esp ip}":80/log/`
+That logged data and messages are available at `http://{esp ip}:80/log/`
 This API provides several optional parameters to filter and select the data, see [the log api](/docs/api.md#log) section for details. 
 
 ### To http - print
 When running a script via http, data can be returned to the response using `print` and `println` (as well as `assert` and `timer`).
 Output-producing lines are fully templated with variables, templates, macros, arrays, etc.
-Example: calling a file named `myscript.bat` containing `print Hello World` via `http://{esp ip}":80/myscript/` returns `Hello World` as the HTTP response.
-
-
+Example: calling a file named `myscript.bat` containing `print Hello World` via `http://{esp ip}:80/myscript/` returns `Hello World` as the HTTP response.
 
 ### To http - test
+All of a script's variable and some DMA expressions (and log message, stats, etc) are available at `http://{esp ip}:80/test/`. 
+If multiple scripts are running, you can specify a file name to choose one:  `http://{esp ip}:80/log/?name=/myscript.bat`.
+Only scripts with `option persist` or `option interval=n` are preserved after execution and made available to this interface.
 
 ### To sketch - store
+Setting a `global` or `store` value from scripts, ex: `store ip=123` exposes it to C++ via the Store Class.
+In your sketch, this can be reached as `unsigned long customIP = nsLATER::LATER_STORE.get("ip");`.
+You can also push data into scripts with this API, example: `nsLATER::LATER_STORE.set("ip", 101);`.
 
 ### To sketch - variables
+Sketch variables can be reached from C++ via `nsLATER::SCRIPTS[int instance]->VARS[int slot]`. A lookup for slots is held by a [map](https://www.cplusplus.com/reference/map/map/) at `nsLATER::LATER_VAR_NAMES[int instance]`, which holds an index linking the auto-replaced script variable name's new shortcut letter `(index + 65 = runtime char name)`.
 
 ### To sketch - functions
+You can call scripting [custom functions](/README.md#custom-functions) defined by your sketch to link between the two.
+```c++
+// define a byte array:
+static byte Q[65];
+
+// define some custom functions for later scripts to reach the array:
+Later.addFunction("SET", FUNCTION( return Q[a] = b  )); 
+Later.addFunction("GET", FUNCTION( return Q[a]  ));
+
+// set a default byte value for the first slot:
+Q[0]=123;
+```
+`Q[]` can be used from C++ just like any other variable.
+From the later script, you can read that byte array like `$val=GET(0)`, and alter it like `$status=SET(0, 222)`.
+
 
 ### To files - write
 
