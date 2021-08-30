@@ -249,7 +249,6 @@ Arrays can yield discrete text from an index (`[AM,PM][$isPM]`). Format, filter,
 * `<#trim   Hello World!   #>` removes leading and trailing space from text, eg: `Hello World!`
 * `<#hex 254#>` converts a number into hexadecimal form, eg: `fe`
 * `|<#pad40 99#>|` pads a string to the first digit's width using the 2nd character against the rest, eg: `|0099|`
-* `<#arg paramName#>` replaces the tag with a value specified by name from a GET param, passed at call-time. This isn't really a format, but FUNCTIONS and {templates} only return Numbers.
 
 
 
@@ -259,7 +258,7 @@ literals: `#ABC` or `#abc` or `#AABBCC` or `#aabbcc`, or `r,g,b` where each is 0
 Colors variables: `$c=RGB(255,255,255)` and `$c=HSL(64000,255,255)` can be used.
 
 
-Color variables can even be blended with simple math:
+Color variables can even be mixed with simple math:
 ```
   $red = RGB(255,0,0)
   $blue = RGB(0,0,255)
@@ -267,6 +266,9 @@ Color variables can even be blended with simple math:
 ```
 
 The pixel command supports a variety of blend modes (via the current and a new specified color) using a hint prefix with the color specifier. Ex: `pixel 0->+RGB(10,10,10) // lighten existing color by 10 levels`. Available prefixes:
+
+```pixel=5->&0 // dims all channels by half```
+
 
 * `<` subtracts a random amount to the existing color. clamped at 0. new color's rgb values are max to add.
 * `>` adds a random amount to the existing color. clamped at 255. new color's rgb values are max to add.
@@ -289,9 +291,9 @@ You can also perform an operation on a whole set of comma-seperated numbers by p
 ### Expression Operators
 * Arithmetic: `+-*/%` performs math on numbers
 * Boolean Comparison: `!=&`  0 or 1 if evaluating to true as not same, same, and both true respectively
-* Value Comparison: `<>` used lisp-style as min/max, or as a compare yielding 0 or 1
+* Value Comparison: `<>` used lisp-style as min/max ex: `(>3,5,7)==7`, or as a compare yielding 0 or 1 ex: `1(5 < 7)==1`
 * Ternary Usage: `?:` a special syntax to write an expression like `($x > 9 ? 2 : 1)` or even just `($z ? 2 : 1)`. must appear at end of chain.
-* Defaults: `|` keeps left side if non-zero, otherwise picks right side.
+* Defaults: `|` keeps left side if non-zero, otherwise picks right side `(0|5)==5` and `(3|5)==3`.
 
 
 ## Conditionals
@@ -318,7 +320,7 @@ If the first term in a conditional is `!`, the whole conditional evaluation is i
  There's an optional code-brevity enhancement to `iif` using a colon to place the code to be executed after the conditional, using a `:` as a delimiter.
  
  ```
- if $x > 6 : println x is bigger than six
+ iif $x > 6 : println x is bigger than six
  ```
  
 
@@ -429,6 +431,9 @@ It runs at parse time and injects literal numbers into the script, so it's size 
 These values are unparsed, so text, lists, and numbers can be macro'd and will be literaly placed un-modified.
 You can also inject GET parameters with macro syntax (ex: `@param`), much like variable's GET mapping, but unparsed and replaced once at load.
 This can be used to detect empty parameters (ex: `if 1@param > 9`) that could be a `0`, which cannot be determined by a variable since they default to `0`.
+Compared to variables, the literal values left by macros need parsing each evaluation, 
+which results in about half the performance of variables; vars: 3.6us vs macros: 7us on the 8266. The difference is usually negligable, but for tight loops demanding top performance, copy literals to variables.
+
 
 
 
