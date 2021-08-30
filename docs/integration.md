@@ -91,8 +91,17 @@ You can also write a [custom command](/docs/expansion.md#commands) that outputs 
 
 
 ### From http - variables
+Variable values can be set by GET parameters in the HTTP call that runs the script, example: `http://{esp ip}:80/myscript?mode=5` to pre-set `$mode`. 
+If a GET-passed variable is _assigned_ a value in the script, the http-provided value is discarded at that point.
+The value of an undeclared variable is `0`, which makes it tricky to determine between a missing param and one set to 0.
+Use GET macro syntax (which are empty instead of `0` when unset) to handle such ambiguities. 
 
 ### From http - store
+A remote client can set new values for `global` or `store` script values by name from `http://{esp ip}:80/store/`.
+For exmaple, `http://{esp ip}:80/store/?key=mynum&value=123` to set `{&mynum}` seen by scripts.
+See [the store section](/docs/api.md#store) for details.
+
+
 
 ### From http - fetch
 
