@@ -11,7 +11,7 @@ Getting data into and out of scripts is easy using a wide variety of techniques 
 
 #### Getting Data IN To Scripts
 * http :  [variables](#from-http---variables),  [store](#from-http---store),  [fetch](#from-http---fetch),  [macros](#from-http---macros)
-* sketch :  [functions](#from-sketch---functions),  [store](#from-sketch---store),  [commands](#from-sketch---commands)
+* sketch :  [functions](#from-sketch---functions),  [store](#from-sketch---store)
 
 
 ## Getting Data From Scripts
@@ -108,11 +108,30 @@ Values can then be extracted from the response with the RESPONSE script interfac
 
 
 ### From http - macros
+Macros can be pre-set by GET parameters in the HTTP call that runs the script, example: `http://{esp ip}:80/myscript?mode=5` to pre-set `@mode`. 
+If a GET-passed macro is _defined_ in the script, the http-provided value is discarded.
+These values are replaced literally, so they can be used to build expressions and lists instead of just numbers like variables.
+
 
 ### From sketch - functions
+You can call scripting [custom functions](/README.md#custom-functions) defined by your sketch to link between the two.
+```c++
+// define a byte array:
+static byte Q[65];
+
+// define some custom functions for later scripts to reach the array:
+Later.addFunction("SET", FUNCTION( return Q[a] = b  )); 
+Later.addFunction("GET", FUNCTION( return Q[a]  ));
+
+// set a default byte value for the first slot:
+Q[0]=123;
+```
+`Q[]` can be used from C++ just like any other variable.
+From the later script, you can read that byte array like `$val=GET(0)`, and alter it like `$status=SET(0, 222)`.
+
+
 
 ### From sketch - store
-
-### From sketch - commands
-
+`global` and `store` values used by scripts, ex: `store ip=123` are exposed to C++ through the Store Class.
+You can push data into scripts with this API, example: `nsLATER::LATER_STORE.set("ip", 101);`, which updates `{&ip}` in scripts.
 
