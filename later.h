@@ -100,7 +100,7 @@ char TEMPLATE_BUFFER[48];
 char TEMPLATE_KEY_BUFF[16];
 //>> var names can consit of the following letters and numbers:
 const char VARCHARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$1234567890.";
-const char VARLIST[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; // -65 to get slot 0-64, 8 slots in middle aren't used for 57 or so slots
+const char VARLIST[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"; // -65 to get slot 0-64, 8 slots in middle aren't used for 57 or so slots
 const char CMDCHARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()_+=-`~,.<>{}[];:'?/|"; // 92 chars
 //<<
 std::map<std::string,  long> LATER_VAR_NAMES[LATER_INSTANCES];
@@ -234,7 +234,8 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 //for the template engine:
 // container for user-defined program variables
 std::map<const char *,  char, cmp_str> LATER_CMDS = {
-  {"_", 'T'},
+  {"_", 'l'},
+  {"__", 'l'},
   {"analogWrite", 'w'},
   {"assert", 'k'},
   {"attachInterrupt", 'v'}, // alias: on
@@ -318,9 +319,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 384 "danscript.ino"
+#line 385 "danscript.ino"
 unsigned long clamp(int a);
-#line 449 "danscript.ino"
+#line 450 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 528 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -404,17 +405,17 @@ void handleRun();
 void handleLog();
 #line 742 "http.ino"
 void handleCommandList();
-#line 779 "http.ino"
+#line 780 "http.ino"
 void handleStore();
-#line 815 "http.ino"
+#line 816 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 823 "http.ino"
+#line 824 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 832 "http.ino"
+#line 833 "http.ino"
 void backtrack(char * buff);
-#line 836 "http.ino"
+#line 837 "http.ino"
 void handleScripts();
-#line 909 "http.ino"
+#line 910 "http.ino"
 void handleBench();
 #line 5 "mod.ino"
 int HTTPRequest(char * url);
@@ -422,7 +423,7 @@ int HTTPRequest(char * url);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 130 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 384 "danscript.ino"
+#line 385 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -1670,13 +1671,13 @@ void autoEqualsInsert (char * line) { // inserts '=' into any line not having on
   while (line[valPos] == ' ') valPos++;
   c = line[valPos];
 
-  if (c == '=') {
+  if (c == '=') {// space after cmd, then an equal
     line[cmdLen] = '=';
     line[valPos] = ' ';
     return;
   }
 
-  if (valPos > cmdLen) {
+  if (valPos > cmdLen) {//space after cmd, then a non-equal
     line[cmdLen] = '=';
     return;
   }
@@ -3886,6 +3887,7 @@ void handleCommandList() {
   char c[2] = {0, 0};
   for (auto const & x : LATER_CMDS)   {
     c[0] = x.second;
+    if (!c[0]) continue;
     server.sendContent(c);
     server.sendContent("\t");
     server.sendContent(x.first);
