@@ -157,6 +157,7 @@ typedef struct LATER_ENVIRON {
 
   long switchExit; // tracking switch statement cases
   char switchTerm[16]; // term used to lexically match case statements buffer
+  char contentType[32]; // used for http response, set by #type= "macro"
 
   unsigned long intervals[8] = {0, 0, 0, 0,   0, 0, 0, 0}; // ms timer snapshots for repeating sections ; interval command
   byte intervalCount = 0; // how many intervals are active?
@@ -319,9 +320,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 385 "danscript.ino"
+#line 386 "danscript.ino"
 unsigned long clamp(int a);
-#line 450 "danscript.ino"
+#line 451 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 528 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -351,35 +352,35 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 401 "core.ino"
+#line 431 "core.ino"
 void removeDoubleLines(char * buff);
-#line 411 "core.ino"
+#line 441 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 427 "core.ino"
+#line 457 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 445 "core.ino"
+#line 475 "core.ino"
 void autoEqualsInsert(char * line);
-#line 478 "core.ino"
+#line 508 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 720 "core.ino"
+#line 750 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 741 "core.ino"
+#line 771 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 905 "core.ino"
+#line 935 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1113 "core.ino"
+#line 1143 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1180 "core.ino"
+#line 1210 "core.ino"
 void popHttpResponse();
-#line 1193 "core.ino"
+#line 1223 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1344 "core.ino"
+#line 1374 "core.ino"
 void processStringFormats(char* s);
-#line 1480 "core.ino"
+#line 1510 "core.ino"
 void handleDump();
-#line 1708 "core.ino"
+#line 1738 "core.ino"
 void runScript();
-#line 2467 "core.ino"
+#line 2497 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 33 "http.ino"
 void handleAPI();
@@ -423,7 +424,7 @@ int HTTPRequest(char * url);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 130 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 385 "danscript.ino"
+#line 386 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -582,7 +583,8 @@ void LaterClass::unload(const char * fileName) {
   s->intervalCount = 0;
   s->duration = 0;
   //s->program[0] = '\0';
-
+  strcpy(s->contentType, LATER_PLAIN);
+  
   // reset any used VARs to zero
   for (int i = 0, mx = VAR_NAME_COUNT[s->index]; i < mx; i++) s->VARS[i] = 0;
 
@@ -1309,6 +1311,15 @@ int loadScript(String filename) { //dd666 make this a class method
   SCRIPT->i = 0;
   strcpy(SCRIPT->fileName, filename.c_str());
 
+  char * contentType = strstr(fileBuff, "#type=");
+  while (contentType) {
+    strncpy(SCRIPT->contentType, contentType + 6, 31);
+    size_t ctend = strcspn(SCRIPT->contentType, "\n ;\t");
+    SCRIPT->contentType[ctend] = '\0';
+    contentType[0] = '\'';
+    contentType = strstr(fileBuff, "#type=");
+  }//wend contentType
+
   char * inc = strstr(fileBuff, "#include");
   while (inc) {
     char incLine[24];
@@ -1374,6 +1385,7 @@ int loadScript(String filename) { //dd666 make this a class method
   int lineLen = 0;
   char rangeBuffer[64];
   char temp[12];
+  bool isPrintBlock = 0;
 
   // build up lines:
   while (strlen(lb) > 1) {
@@ -1530,7 +1542,21 @@ int loadScript(String filename) { //dd666 make this a class method
         laterUtil::replace(line, "end switch", "end=end switch");
       }//end if end
 
-      autoEqualsInsert(line);
+      if (line[0] == '<' && line[1] == '?') {
+        isPrintBlock = 1;
+        line[0] = '_';
+        line[1] = '=';
+        continue;
+      }
+
+      if (line[0] == '?' && line[1] == '>') {
+        isPrintBlock = 0;
+        line[0] = '_';
+        line[1] = '=';
+        continue;
+      }
+
+      if (!isPrintBlock) autoEqualsInsert(line);
       replaceVarNames(line, SCRIPT->index);
       lineLen = strlen(line);
 
@@ -1538,6 +1564,7 @@ int loadScript(String filename) { //dd666 make this a class method
       // deduce command:
 
       int cmdPos = laterUtil::indexOf(line, "=");
+      if (cmdPos < 0)cmdPos = 0;
       strncpy(cmd, line, cmdPos);
       cmd[cmdPos] = '\0';
       char cmdChar = LATER_CMDS[cmd];
@@ -1550,6 +1577,11 @@ int loadScript(String filename) { //dd666 make this a class method
       if (linePtr[0] == '=') {
         linePtr++;
         while (linePtr[0] == ' ')linePtr++;
+      }
+
+      if (isPrintBlock) {
+        linePtr = line;
+        cmdChar = LATER_println;
       }
       lineLen = strlen(linePtr);
 
@@ -3388,7 +3420,7 @@ void bindServerMethods() {
       if (server.hasArg("content-type")) {
         server.send ( 200, server.arg("content-type"), "");
       } else {
-        server.send ( 200, LATER_PLAIN, "");
+        server.send ( 200, s->contentType, "");
       }
       s->calledFromWeb = 1;
       Later.run((char*)fn.c_str());
@@ -3725,7 +3757,7 @@ void handleRun() {
     if (server.hasArg("content-type")) {
       server.send ( 200, server.arg("content-type"), "");
     } else {
-      server.send ( 200, LATER_PLAIN, "");
+      server.send ( 200,  s->contentType, "");
     }
 
     s->calledFromWeb = 1;
