@@ -322,13 +322,13 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 unsigned long randomReg();
 #line 386 "danscript.ino"
 unsigned long clamp(int a);
-#line 451 "danscript.ino"
+#line 457 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 528 "commands.ino"
+#line 551 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 541 "commands.ino"
+#line 564 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 701 "commands.ino"
+#line 724 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -352,77 +352,83 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 431 "core.ino"
+#line 434 "core.ino"
 void removeDoubleLines(char * buff);
-#line 441 "core.ino"
+#line 444 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 457 "core.ino"
+#line 460 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 475 "core.ino"
+#line 478 "core.ino"
 void autoEqualsInsert(char * line);
-#line 508 "core.ino"
+#line 511 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 750 "core.ino"
+#line 753 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 771 "core.ino"
+#line 774 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 935 "core.ino"
+#line 938 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1143 "core.ino"
+#line 1146 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1210 "core.ino"
+#line 1213 "core.ino"
 void popHttpResponse();
-#line 1223 "core.ino"
+#line 1226 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1374 "core.ino"
+#line 1377 "core.ino"
 void processStringFormats(char* s);
-#line 1510 "core.ino"
+#line 1506 "core.ino"
+void handleEval();
+#line 1518 "core.ino"
 void handleDump();
-#line 1738 "core.ino"
+#line 1746 "core.ino"
 void runScript();
-#line 2497 "core.ino"
+#line 2505 "core.ino"
 void finishRun(LATER_ENVIRON * s);
-#line 33 "http.ino"
+#line 34 "http.ino"
+void handleGenericHttpRun(String fn);
+#line 71 "http.ino"
 void handleAPI();
-#line 44 "http.ino"
+#line 86 "http.ino"
+void handleDelete();
+#line 109 "http.ino"
 void bindServerMethods();
-#line 133 "http.ino"
+#line 170 "http.ino"
 void handleLS();
-#line 211 "http.ino"
+#line 249 "http.ino"
 void handleEditor();
-#line 242 "http.ino"
+#line 280 "http.ino"
 String getContentType(String filename);
-#line 264 "http.ino"
+#line 302 "http.ino"
 bool handleFileRead(String path);
-#line 337 "http.ino"
+#line 375 "http.ino"
 void handleFileUpload();
-#line 377 "http.ino"
+#line 415 "http.ino"
 void handleFileList();
-#line 484 "http.ino"
+#line 522 "http.ino"
 void handleUnload();
-#line 498 "http.ino"
+#line 535 "http.ino"
 void handleRun();
-#line 562 "http.ino"
+#line 598 "http.ino"
 void handleLog();
-#line 742 "http.ino"
+#line 778 "http.ino"
 void handleCommandList();
-#line 780 "http.ino"
-void handleStore();
 #line 816 "http.ino"
+void handleStore();
+#line 852 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 824 "http.ino"
+#line 860 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 833 "http.ino"
+#line 869 "http.ino"
 void backtrack(char * buff);
-#line 837 "http.ino"
+#line 873 "http.ino"
 void handleScripts();
-#line 910 "http.ino"
+#line 946 "http.ino"
 void handleBench();
 #line 5 "mod.ino"
 int HTTPRequest(char * url);
-#line 98 "templates.ino"
+#line 97 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 130 "templates.ino"
+#line 129 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
 #line 386 "danscript.ino"
 unsigned long  clamp(int a) {
@@ -435,6 +441,12 @@ std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned
   RAWFUNC("SQRT", sqrt(a)),
   RAWFUNC("CBRT", cbrt(a)),
   RAWFUNC("POW", pow(a, b)),
+  { "MAP", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
+      float rate = (float)b / (float)c;
+      return rate * (float) a;
+    }
+  },
+
 #ifdef ADAFRUIT_NEOPIXEL_H
   RAWFUNC("RGB", Adafruit_NeoPixel::Color(a, b, c)),
   RAWFUNC("CRGB", Adafruit_NeoPixel::Color(clamp(a), clamp(b), clamp(c))),
@@ -584,7 +596,7 @@ void LaterClass::unload(const char * fileName) {
   s->duration = 0;
   //s->program[0] = '\0';
   strcpy(s->contentType, LATER_PLAIN);
-  
+
   // reset any used VARs to zero
   for (int i = 0, mx = VAR_NAME_COUNT[s->index]; i < mx; i++) s->VARS[i] = 0;
 
@@ -884,8 +896,14 @@ void runPortWrite (char * line, unsigned long * VARS, bool isDigital) {
 #endif
   }
 }//end runPortWrite()
+void compositeLine(char * linebuff, LATER_ENVIRON * s) {
+  replaceVarNames(linebuff, s->index);
+  processTemplateExpressions2(linebuff, s);
+  processVariableExpressions(linebuff, s->VARS);
+  evalMath(linebuff, s, -1);
+}//end compositeLine()
 
-void runCGI(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
+void runCGI(char * lb, LATER_ENVIRON * s) {
   char * buff = laterUtil::fileToBuff(String(lb));
   char * p = buff; //strchr(buff, '\n');
   int offset = 0;
@@ -895,20 +913,35 @@ void runCGI(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
 
     linebuff = laterUtil::copyUntilChar(p + offset, '\n');
     if (!offset) offset = 1;
-
-    // composite line :
-    replaceVarNames(linebuff, s->index);
-    processTemplateExpressions2(linebuff, s);
-    processVariableExpressions(linebuff, s->VARS);
-    evalMath(linebuff, s, -1);
-
-
+    /*
+        // composite line :
+        replaceVarNames(linebuff, s->index);
+        processTemplateExpressions2(linebuff, s);
+        processVariableExpressions(linebuff, s->VARS);
+        evalMath(linebuff, s, -1);
+    */
+    compositeLine(linebuff, s);
     uniPrintln(linebuff);
     p = strchr(p + 1, '\n');
   }//wend line
   // now process each line of the buffer:
-
 }//end runCGI()
+
+void runEval(char * lb, LATER_ENVIRON * s) {
+  char * buff = lb; // laterUtil::fileToBuff(String(lb));
+  char * p = buff; //strchr(buff, '\n');
+  int offset = 0;
+  char * linebuff;
+
+  while (p) {
+    linebuff = laterUtil::copyUntilChar(p + offset, '\n');
+    if (!offset) offset = 1;
+    compositeLine(linebuff, s);
+    uniPrintln(linebuff);
+    p = strchr(p + 1, '\n');
+  }//wend line
+  // now process each line of the buffer:
+}//end runEval()
 
 void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
   //  four sections A OP B > COMMENT
@@ -1300,7 +1333,6 @@ int loadScript(String filename) { //dd666 make this a class method
   if (filename[0] != '/') filename = "/" + filename;
   char * fileBuff = laterUtil::fileToBuff(filename);
   while ( isspace(fileBuff[0])) fileBuff++; // trim left
-  while (strstr(fileBuff, "__FILE__")) laterUtil::replace(fileBuff, "__FILE__", filename.c_str());// swap out "macro"
 
   int slot = 0;
   for (; slot < LATER_INSTANCES; slot++) {
@@ -1310,15 +1342,6 @@ int loadScript(String filename) { //dd666 make this a class method
   SCRIPT->loadedAt = millis();
   SCRIPT->i = 0;
   strcpy(SCRIPT->fileName, filename.c_str());
-
-  char * contentType = strstr(fileBuff, "#type=");
-  while (contentType) {
-    strncpy(SCRIPT->contentType, contentType + 6, 31);
-    size_t ctend = strcspn(SCRIPT->contentType, "\n ;\t");
-    SCRIPT->contentType[ctend] = '\0';
-    contentType[0] = '\'';
-    contentType = strstr(fileBuff, "#type=");
-  }//wend contentType
 
   char * inc = strstr(fileBuff, "#include");
   while (inc) {
@@ -1345,6 +1368,17 @@ int loadScript(String filename) { //dd666 make this a class method
     memcpy(inc, incbuf, inclen);
     inc = strstr(fileBuff, "#include"); // WORKS!
   }//wend include?
+
+  while (strstr(fileBuff, "__FILE__")) laterUtil::replace(fileBuff, "__FILE__", filename.c_str());// swap out "macro"
+
+  char * contentType = strstr(fileBuff, "#type=");
+  while (contentType) {
+    strncpy(SCRIPT->contentType, contentType + 6, 31);
+    size_t ctend = strcspn(SCRIPT->contentType, "\n ;\t");
+    SCRIPT->contentType[ctend] = '\0';
+    contentType[0] = '\'';
+    contentType = strstr(fileBuff, "#type=");
+  }//wend contentType
 
   //#define TABLE_SIZE 100
   char * dec = strstr(fileBuff, "#define=");
@@ -1572,14 +1606,15 @@ int loadScript(String filename) { //dd666 make this a class method
       // cleanup value after command:
       char * linePtr = line;
       linePtr += cmdPos + 1;
-      while (linePtr[0] == ' ')linePtr++;
-
-      if (linePtr[0] == '=') {
-        linePtr++;
+      if (!isPrintBlock) {
         while (linePtr[0] == ' ')linePtr++;
-      }
 
-      if (isPrintBlock) {
+        if (linePtr[0] == '=') {
+          linePtr++;
+          while (linePtr[0] == ' ')linePtr++;
+        }
+
+      } else {
         linePtr = line;
         cmdChar = LATER_println;
       }
@@ -1620,7 +1655,8 @@ int loadScript(String filename) { //dd666 make this a class method
       } else { // don't need whitespace in any other command, right. asume and let's try iy
         // collapse whitespace here
 
-        if ( strchr(line, ' ') && (cmdChar != LATER_gosub) && (cmdChar != LATER_call) && (cmdChar != LATER_interval)  && (cmdChar != LATER_option) && (cmdChar != LATER_var) && (!strstr(linePtr, "][")) &&  (!Later.addons[cmdChar])  ) {
+        if ( (!isPrintBlock) && strchr(line, ' ') && (cmdChar != LATER_gosub) && (cmdChar != LATER_call) && (cmdChar != LATER_interval)  && (cmdChar != LATER_option) && (cmdChar != LATER_var) && (!strstr(linePtr, "][")) &&  (!Later.addons[cmdChar])  ) {
+
           while (strchr(linePtr, ' ')) laterUtil::replace(linePtr, " ", "");
           lineLen = strlen(linePtr);
         }
@@ -2610,6 +2646,18 @@ void processStringFormats(char* s) { // finds format flags in form of <#flag str
   */
 
 }//end processStringFormats()
+
+void handleEval() {
+  char linebuff[160];
+  LATER_ENVIRON * s = server.hasArg("name") ? Later.getByName(server.arg("name").c_str()) : getCurrent();
+
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send ( 200, LATER_PLAIN, " ");
+  strcpy(linebuff, server.arg("code").c_str());
+  laterCMD::runEval(linebuff, s);
+  server.sendContent("");//ends and closes response
+}//end handleEval()
+
 #ifdef ESP8266WEBSERVER_H
 void handleDump() {
 
@@ -3309,7 +3357,7 @@ void runScript() {
         break;
 
       case LATER_cgi:
-        laterCMD::runCGI(lb, l, s);
+        laterCMD::runCGI(lb, s);
         continue;
         break;
 
@@ -3365,14 +3413,76 @@ const char * const FLASH_SIZE_MAP_NAMES[] = {
 ////////////////////////////////////////////
 #ifdef ESP8266WEBSERVER_H
 std::map<std::string,  std::string> PATHS;
+void handleGenericHttpRun(String fn) {
 
-void handleAPI() {
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.sendHeader(LATER_CORS, "*");
+
+  LATER_ENVIRON * s = Later.load((char*)fn.c_str()); //dd666, move this somewhere better:
+  if (!s) {
+    server.send ( 504, LATER_PLAIN, "504 - refused to load");
+    server.sendContent("");
+    return;
+  }
+  // load vars from url into script enviroment:
+  String key, value, banned = ",$name,$content-type";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    key =  "$" + server.argName(i);
+    value = server.arg(i);
+    if (banned.indexOf(',' + key + ',') > -1) continue;
+    char slot = getVarNameNumber((char*)key.c_str(), s->index);
+    s->VARS[(int)slot] = value.toInt();
+  }
+
+  server.send ( 200, s->contentType, ""); // start response
+  s->calledFromWeb = 1;
+  Later.run((char*)fn.c_str()); // execute em!
+  server.sendContent(""); // finish response
+  /*
+      if (server.hasArg("persist")) return;
+    if (s->options.persist) return;
+
+    if (  !strchr(fnp, '~') ) {
+      Later.unload(fnp);
+    } else {
+      s->options.persist = true;
+    }
+  */
+}//end handleGenericHttpRun();
+
+void handleAPI() { // break in here and look for default.bat or index.bat
+  String fn = "/index.bat";
+  if (SPIFFS.exists(fn) && !server.hasArg("default")) {
+    handleGenericHttpRun(fn);
+    return;
+  }//end if bat file found?
+
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
   server.sendHeader(LATER_CORS, "*");
   server.send ( 200, "text/html", F("<body><h1>Later Endpoints</h1><big><big><ul>\n"));
   char line[64];
   for (const auto &x : PATHS) server.sendContent(sprintf(line, "<li><a href=%s>%s</a>\n", x.first.c_str(), x.first.c_str()) ? line : line );
   server.sendContent( "" );
+}
+
+void handleDelete() {
+  String fn = server.arg("name");
+
+  if (!server.hasArg("name")) {
+    server.send ( 403, "text/plain", F("403 - no file specified by name GET param"));
+    return;
+  }
+
+  if (fn[0] != '/') fn = "/" + fn; // optionalize preceding slash
+
+  if (SPIFFS.exists(fn)) {
+    SPIFFS.remove(fn);
+    server.send ( 200, "text/plain", F("200 - file deleted"));
+    return;
+  }//end if bat file found?
+
+  // should not make it this far, file not found:
+  server.send ( 402, "text/plain", F("402 - existing file not specified by name GET param"));
 }
 void bindServerMethods() {
 
@@ -3385,10 +3495,12 @@ void bindServerMethods() {
   SUB_PATH(log, handleLog);
   SUB_PATH(dir, handleFileList);
   SUB_PATH(ls, handleLS);
+  SUB_PATH(delete, handleDelete);
   SUB_PATH(editor, handleEditor);
   SUB_PATH(store, handleStore);
   SUB_PATH(unload, handleUnload);
   SUB_PATH(test, handleDump);
+  SUB_PATH(eval, handleEval);
   SUB_PATH(help, handleCommandList);
   SUB_PATH(bench, handleBench);
   server.on("/upload", HTTP_POST, []() {
@@ -3398,40 +3510,13 @@ void bindServerMethods() {
 
     String fn = server.uri() + ".bat";
     if (SPIFFS.exists(fn)) {
-
-      server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-      server.sendHeader(LATER_CORS, "*");
-
-      LATER_ENVIRON * s = Later.load((char*)fn.c_str()); //dd666, move this somewhere better:
-      if (!s) {
-        server.send ( 200, LATER_PLAIN, "404");
-        server.sendContent("");
-        return;
-      }
-      // load vars from url into script enviroment:
-      String key, value, banned = ",$reload,$name,$content-type";
-      for (uint8_t i = 0; i < server.args(); i++) {
-        key =  "$" + server.argName(i);
-        value = server.arg(i);
-        if (banned.indexOf(',' + key + ',') > -1) continue;
-        char slot = getVarNameNumber((char*)key.c_str(), s->index);
-        s->VARS[(int)slot] = value.toInt();
-      }
-      if (server.hasArg("content-type")) {
-        server.send ( 200, server.arg("content-type"), "");
-      } else {
-        server.send ( 200, s->contentType, "");
-      }
-      s->calledFromWeb = 1;
-      Later.run((char*)fn.c_str());
-      server.sendContent("");
+      handleGenericHttpRun(fn);
       return;
     }//end if bat file found?
 
     if (!handleFileRead(server.uri()))
       server.send(404, LATER_PLAIN, "FileNotFound: " + server.uri() );
   });
-
 }//end bindServerMethods()
 #ifdef ESP8266
 
@@ -3499,7 +3584,7 @@ void handleLS() { // replace with non-string non-crap:
 #endif
   }
 
-  server.sendContent(F("].filter(Boolean).map(function(a){list.appendChild(document.createElement('li')).innerHTML='<input type=button onclick=\"doDel(nextElementSibling.href)\" value=X > '+a.name.link('./'+a.name)+' '+'run'.link('/run/?name='+encodeURIComponent(a.name))+'  ' +'edit'.link('/editor/#'+a.name)+' ' + a.size.bold()+' ' + a.mime.small(); })</script>"));
+  server.sendContent(F("].filter(Boolean).map(function(a){list.appendChild(document.createElement('li')).innerHTML='<input type=button onclick=\"doDel(nextElementSibling.href)\" value=X > '+a.name.link('./'+a.name)+' '+'run'.link('/run/?name='+encodeURIComponent(a.name))+'  ' +'edit'.link('/editor/#'+a.name)+' ' + a.size.bold()+' ' + a.mime.small(); });function doDel(fn){if(!confirm('ERASING FILE: '+fn+'\\n\\nThis CANNOT be undone !!!'))return; var path = '/' + fn.split('/').pop(); fetch('/delete/?name='+encodeURIComponent(path)).then(function(){location.reload();});return false;}</script>"));
   server.sendContent(F("<hr><form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload Embeded File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body>"));
   server.sendContent("");
 }
@@ -3727,55 +3812,60 @@ void handleUnload() {
 }
 void handleRun() {
 
-  char fnb[32] = {'/'};
+  char fnb[44] = {'/'};
   char *fnp = fnb + 1;
-  memset(fnp, '\0', 31);
+  memset(fnp, '\0', 43);
   strcpy(fnp, server.arg("name").c_str());
   if (fnp[0] != '/') fnp = fnb;
 
   if (SPIFFS.exists(fnp)) {
-    server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-    server.sendHeader(LATER_CORS, "*");
+    handleGenericHttpRun(fnp);
+    /*
+        server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+        server.sendHeader(LATER_CORS, "*");
 
-    LATER_ENVIRON * s = Later.load(fnp);
-    if (!s) {
-      server.send ( 503, LATER_PLAIN, "503 - refused to load");
-      server.sendContent("");
-      return;
-    }
+        LATER_ENVIRON * s = Later.load(fnp);
+        if (!s) {
+          server.send ( 503, LATER_PLAIN, "503 - refused to load");
+          server.sendContent("");
+          return;
+        }
 
-    // load vars from url into script enviroment:
-    String key, value, banned = ",$reload,$name,$content-type";
-    for (uint8_t i = 0; i < server.args(); i++) {
-      key =  "$" + server.argName(i);
-      value = server.arg(i);
-      if (!isdigit(value[0])) continue;
-      if (banned.indexOf(',' + key + ',') > -1) continue;
-      char slot = getVarNameNumber((char*)key.c_str(), s->index);
-      s->VARS[(int)slot] = value.toInt();
-    }
-    if (server.hasArg("content-type")) {
-      server.send ( 200, server.arg("content-type"), "");
-    } else {
-      server.send ( 200,  s->contentType, "");
-    }
+        // load vars from url into script enviroment:
+        String key, value, banned = ",$reload,$name,$content-type";
+        for (uint8_t i = 0; i < server.args(); i++) {
+          key =  "$" + server.argName(i);
+          value = server.arg(i);
+          if (!isdigit(value[0])) continue;
+          if (banned.indexOf(',' + key + ',') > -1) continue;
+          char slot = getVarNameNumber((char*)key.c_str(), s->index);
+          s->VARS[(int)slot] = value.toInt();
+        }
+        if (server.hasArg("content-type")) {
+          server.send ( 200, server.arg("content-type"), "");
+        } else {
+          server.send ( 200,  s->contentType, "");
+        }
 
-    s->calledFromWeb = 1;
-    Later.run(fnp);
-    server.sendContent("");
-    if (server.hasArg("persist")) return;
-    if (s->options.persist) return;
+        s->calledFromWeb = 1;
+        Later.run(fnp);
+        server.sendContent("");
+        if (server.hasArg("persist")) return;
+        if (s->options.persist) return;
 
-    if (  !strchr(fnp, '~') ) {
-      Later.unload(fnp);
-    } else {
-      s->options.persist = true;
-    }
+        if (  !strchr(fnp, '~') ) {
+          Later.unload(fnp);
+        } else {
+          s->options.persist = true;
+        }
+
+    */
+
     //LATER_INSTANCES
     return;
   }//end if bat file found?
 
-  server.send(504, LATER_PLAIN, "504" );
+  server.send(404, LATER_PLAIN, "404 - batch not found" );
 
 }//end handleRun()
 void handleLog() {
@@ -4101,6 +4191,11 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{mac}", system_get_chip_id()),
   REPRAW("{chan}", wifi_get_channel()),
   REPRAW("{runs}", getCurrent()->runs),
+  REPRAW("{ip0}",  WiFi.localIP()[0] % 255),
+  REPRAW("{ip1}",  WiFi.localIP()[1] % 255),
+  REPRAW("{ip2}",  WiFi.localIP()[2] % 255),
+  REPRAW("{ip3}",  WiFi.localIP()[3] % 255),
+
   REPRAW("{ip}",  WiFi.localIP()[3] % 255),
   REPRAW("{net}",  WiFi.localIP()[2] % 255),
   REPRAW("{ram}", ESP.getFreeHeap()),
