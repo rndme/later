@@ -198,7 +198,7 @@ These single-char flags prefix the data assigned to a variable to affect the res
 * `var $x = 123` The normal definition, normally used via short-cut `$x = 123`
 * `static $x = 123` Only applies the first time it's run, then is ignored, good for defaulting values
 * `static $obj={a:1,b:2,c:3}` `static` (or an assign like `$x={a:1}`) can create apparent literal objects, read with a dot, eg: `$obj.b`, equal to 2 here.
-* `global x=123` Sets a system-wide variable, read through a template, eg: `{&x}` here. See Store section.
+* `global x=123` Sets a system-wide variable, read through a template, eg: `{&x}` here. See [Store section](/docs/api.md#store) fro more info.
 * `store x=123` Sets a system-wide variable same as `global`, but the value is saved to internal storage for persistence between reboots.
 
 
@@ -238,14 +238,14 @@ Read all about templates in the [templates documentation](docs/templates.md).
 
 ## Strings
 There are no String variables, but there's literal input/output and String-handling tools, much like a batch or shell script. 
-Text can come from a web fetch (`$RESPONSE`), an internal server request (`<#arg param#>`), or from a program itself (`println Uptime: {timer}`).
+Text can come from a web fetch (`$RESPONSE`), a macro replacement (`println month: @month`), or from a program itself (`println Uptime: {timer}`).
 Arrays can yield discrete text from an index (`[AM,PM][$isPM]`). Format, filter, and alter text using string tags. Useful for web api responses and data logging.
 
 
 ### Available String Tags
 * `<#escape hello world#>` makes text url-safe, eg: `hello%20world`
 * `<#upper hello world#>` makes text uppercase, eg: `HELLO WORLD`
-* `<#upper Hello World!#>` makes text lowercase, eg: `hello world!`
+* `<#lower Hello World!#>` makes text lowercase, eg: `hello world!`
 * `<#trim   Hello World!   #>` removes leading and trailing space from text, eg: `Hello World!`
 * `<#hex 254#>` converts a number into hexadecimal form, eg: `fe`
 * `|<#pad40 99#>|` pads a string to the first digit's width using the 2nd character against the rest, eg: `|0099|`
@@ -291,7 +291,7 @@ You can also perform an operation on a whole set of comma-seperated numbers by p
 ### Expression Operators
 * Arithmetic: `+-*/%` performs math on numbers
 * Boolean Comparison: `!=&`  0 or 1 if evaluating to true as not same, same, and both true respectively
-* Value Comparison: `<>` used lisp-style as min/max ex: `(>3,5,7)==7`, or as a compare yielding 0 or 1 ex: `1(5 < 7)==1`
+* Value Comparison: `<>` used lisp-style as min/max ex: `(>3,5,7)==7`, or as a compare yielding 0 or 1 ex: `(5 < 7)==1`
 * Ternary Usage: `?:` a special syntax to write an expression like `($x > 9 ? 2 : 1)` or even just `($z ? 2 : 1)`. must appear at end of chain.
 * Defaults: `|` keeps left side if non-zero, otherwise picks right side `(0|5)==5` and `(3|5)==3`.
 
@@ -345,6 +345,7 @@ These take 0-3 numbers and return a number. Most of the built-ins are math-focue
 * **SQRT**(x) - square root of x. integer.
 * **CBRT**(x) - cube root of x. integer.
 * **POW**(x,y) - takes x to the power of y
+* **MAP**(val,maxFrom,maxTo) - scales value from 0-maxFrom to 0-maxTo.
 * **RGB**(r,g,b) - construct a reg, green, blue color value. values above 255 and below zero roll-over (unsigned)
 * **CRGB**(r,g,b) - same as RGB() but slower and clamped to 255 and 0 when over/under respectively.
 * **HSV**(hue,sat,val) - construct a color using HSL instead of RGB values
