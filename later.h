@@ -320,9 +320,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 386 "danscript.ino"
+#line 387 "danscript.ino"
 unsigned long clamp(int a);
-#line 457 "danscript.ino"
+#line 458 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 551 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -352,37 +352,37 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 434 "core.ino"
+#line 439 "core.ino"
 void removeDoubleLines(char * buff);
-#line 444 "core.ino"
+#line 449 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 460 "core.ino"
+#line 465 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 478 "core.ino"
+#line 483 "core.ino"
 void autoEqualsInsert(char * line);
-#line 511 "core.ino"
+#line 516 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 753 "core.ino"
+#line 758 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 774 "core.ino"
+#line 779 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 938 "core.ino"
+#line 943 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1146 "core.ino"
+#line 1151 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1213 "core.ino"
+#line 1218 "core.ino"
 void popHttpResponse();
-#line 1226 "core.ino"
+#line 1231 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1377 "core.ino"
+#line 1382 "core.ino"
 void processStringFormats(char* s);
-#line 1506 "core.ino"
+#line 1511 "core.ino"
 void handleEval();
-#line 1518 "core.ino"
+#line 1524 "core.ino"
 void handleDump();
-#line 1746 "core.ino"
+#line 1752 "core.ino"
 void runScript();
-#line 2505 "core.ino"
+#line 2516 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -392,45 +392,45 @@ void handleAPI();
 void handleDelete();
 #line 109 "http.ino"
 void bindServerMethods();
-#line 170 "http.ino"
+#line 168 "http.ino"
 void handleLS();
-#line 249 "http.ino"
+#line 247 "http.ino"
 void handleEditor();
-#line 280 "http.ino"
+#line 278 "http.ino"
 String getContentType(String filename);
-#line 302 "http.ino"
+#line 300 "http.ino"
 bool handleFileRead(String path);
-#line 375 "http.ino"
+#line 373 "http.ino"
 void handleFileUpload();
-#line 415 "http.ino"
+#line 413 "http.ino"
 void handleFileList();
-#line 522 "http.ino"
+#line 520 "http.ino"
 void handleUnload();
-#line 535 "http.ino"
+#line 533 "http.ino"
 void handleRun();
-#line 598 "http.ino"
+#line 596 "http.ino"
 void handleLog();
-#line 778 "http.ino"
+#line 776 "http.ino"
 void handleCommandList();
-#line 816 "http.ino"
+#line 814 "http.ino"
 void handleStore();
-#line 852 "http.ino"
+#line 850 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 860 "http.ino"
+#line 858 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 869 "http.ino"
+#line 867 "http.ino"
 void backtrack(char * buff);
-#line 873 "http.ino"
+#line 871 "http.ino"
 void handleScripts();
-#line 946 "http.ino"
+#line 944 "http.ino"
 void handleBench();
 #line 5 "mod.ino"
 int HTTPRequest(char * url);
-#line 97 "templates.ino"
+#line 146 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 129 "templates.ino"
+#line 178 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 386 "danscript.ino"
+#line 387 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -1420,7 +1420,7 @@ int loadScript(String filename) { //dd666 make this a class method
   char rangeBuffer[64];
   char temp[12];
   bool isPrintBlock = 0;
-
+  bool isStaticPrintBlock = 0;
   // build up lines:
   while (strlen(lb) > 1) {
 
@@ -1578,6 +1578,10 @@ int loadScript(String filename) { //dd666 make this a class method
 
       if (line[0] == '<' && line[1] == '?') {
         isPrintBlock = 1;
+        if (line[2] == '!') {
+          line[2] = ' ';
+          isStaticPrintBlock = 1;
+        }
         line[0] = '_';
         line[1] = '=';
         continue;
@@ -1587,6 +1591,7 @@ int loadScript(String filename) { //dd666 make this a class method
         isPrintBlock = 0;
         line[0] = '_';
         line[1] = '=';
+        isStaticPrintBlock = 0;
         continue;
       }
 
@@ -1628,8 +1633,7 @@ int loadScript(String filename) { //dd666 make this a class method
 
       //////////  %templates% ? LSB
       char * tempPtr = strchr(linePtr, '{'); // look for opening template expression
-      if (tempPtr && tempPtr[1] != ' ' && strchr(tempPtr + 1, '}')) flag += 1; // also has later close template delim
-
+      if (tempPtr && tempPtr[1] != ' ' && strchr(tempPtr + 1, '}') && !isStaticPrintBlock) flag += 1; // also has later close template delim
       //////////  $vars ? 2s
       // look for var usage, minding var commands themselves
       if (cmdChar == 'V' || cmdChar == LATER_static) { // look only after first equal for this
@@ -1638,14 +1642,13 @@ int loadScript(String filename) { //dd666 make this a class method
         if (strchr(linePtr, '@')) flag += 2;// vars
       }
 
-      if (strchr(linePtr, '(') && strchr(linePtr, ')') ) flag += 4;
-
+      if (strchr(linePtr, '(') && strchr(linePtr, ')') && !isStaticPrintBlock ) flag += 4;
       //////////  [x,y][arrays] ?  8s
-      if (strstr(linePtr, "][")) flag += 8;
+      if (strstr(linePtr, "][") && !isStaticPrintBlock ) flag += 8;
 
 #ifdef ESP8266HTTPClient_H_
       //////////  &RESPONSE usage ?  32s
-      if (strstr(linePtr, "&RESPONSE->")) flag += 32;
+      if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
 #endif
 
       ////////// output ?  16s - interpolate var and %templates% in code line itself?
@@ -2652,6 +2655,7 @@ void handleEval() {
   LATER_ENVIRON * s = server.hasArg("name") ? Later.getByName(server.arg("name").c_str()) : getCurrent();
 
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.sendHeader(LATER_CORS, "*");
   server.send ( 200, LATER_PLAIN, " ");
   strcpy(linebuff, server.arg("code").c_str());
   laterCMD::runEval(linebuff, s);
@@ -3189,7 +3193,12 @@ void runScript() {
         continue;
         break;
       case LATER_sleep: // sleep ms
-        delay(Number(linebuff, s->VARS));
+        if (strchr(lb, ',')) {
+          delayMicroseconds(Number(linebuff, s->VARS));
+        } else {
+          delay(Number(linebuff, s->VARS));
+        }
+
         continue;
         break;
       /*
@@ -3203,7 +3212,7 @@ void runScript() {
         continue;
         break;
       case LATER_digitalWrite:
-        laterCMD::runPortWrite(lb, s->VARS, false);
+        laterCMD::runPortWrite(lb, s->VARS, true);
         continue;
         break;
 
@@ -3507,13 +3516,11 @@ void bindServerMethods() {
     server.send(200, LATER_PLAIN, "ok");
   }, handleFileUpload);
   server.onNotFound([]() {
-
     String fn = server.uri() + ".bat";
     if (SPIFFS.exists(fn)) {
       handleGenericHttpRun(fn);
       return;
     }//end if bat file found?
-
     if (!handleFileRead(server.uri()))
       server.send(404, LATER_PLAIN, "FileNotFound: " + server.uri() );
   });
@@ -4157,7 +4164,14 @@ int HTTPRequest(char * url) {
 #endif
 
 #line 1 "templates.ino"
-
+#ifdef ESP32
+extern "C" {
+  uint8_t temprature_sens_read();
+}
+uint64_t macAddress = ESP.getEfuseMac();
+uint64_t macAddressTrunc = macAddress << 40;
+unsigned long chipID = macAddressTrunc >> 40;
+#endif
 std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{timer}", millis()),
   REPRAW("{rnd}", randomReg() % 1024),
@@ -4182,14 +4196,18 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
 #endif
   REPRAW("{micros}", micros()),
 
+#ifdef ESP8266
   REPRAW("{micros64}", micros64()),
   REPRAW("{cycle}", esp_get_cycle_count()),
   REPRAW("{frag}", ESP.getHeapFragmentation()),
   REPRAW("{flash}", ESP.getFlashChipRealSize()),
-  REPRAW("{cpu}", system_get_cpu_freq()),
-  REPRAW("{rssi}", WiFi.RSSI()),
   REPRAW("{mac}", system_get_chip_id()),
   REPRAW("{chan}", wifi_get_channel()),
+  REPRAW("{cpu}", system_get_cpu_freq()),
+
+#endif
+
+  REPRAW("{rssi}", WiFi.RSSI()),
   REPRAW("{runs}", getCurrent()->runs),
   REPRAW("{ip0}",  WiFi.localIP()[0] % 255),
   REPRAW("{ip1}",  WiFi.localIP()[1] % 255),
@@ -4213,6 +4231,40 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{gpio14}", digitalRead(14)),
   REPRAW("{gpio15}", digitalRead(15)),
   REPRAW("{gpio16}", digitalRead(16)),
+#ifdef ESP32
+  REPRAW("{gpio17}", digitalRead(17)),
+  REPRAW("{gpio18}", digitalRead(18)),
+  REPRAW("{gpio19}", digitalRead(19)),
+  REPRAW("{gpio20}", digitalRead(20)),
+  REPRAW("{gpio21}", digitalRead(21)),
+  REPRAW("{gpio22}", digitalRead(22)),
+  REPRAW("{gpio23}", digitalRead(23)),
+  REPRAW("{gpio24}", digitalRead(24)),
+  REPRAW("{gpio25}", digitalRead(25)),
+  REPRAW("{gpio26}", digitalRead(26)),
+  REPRAW("{gpio27}", digitalRead(27)),
+  REPRAW("{gpio28}", digitalRead(28)),
+  REPRAW("{gpio29}", digitalRead(29)),
+  REPRAW("{gpio30}", digitalRead(30)),
+  REPRAW("{gpio31}", digitalRead(31)),
+  REPRAW("{gpio32}", digitalRead(32)),
+  REPRAW("{gpio33}", digitalRead(33)),
+  REPRAW("{gpio34}", digitalRead(34)),
+  REPRAW("{gpio35}", digitalRead(35)),
+
+  REPRAW("{temp}", temprature_sens_read()),
+  REPRAW("{hall}", hallRead()),
+
+  // replacements for 8266 versions:
+  REPRAW("{cpu}", getCpuFrequencyMhz()),
+  REPRAW("{mac}", chipID),
+  REPRAW("{flash}", ESP.getFlashChipSize()),
+  REPRAW("{cycle}", xthal_get_ccount()),
+  REPRAW("{micros64}", xTaskGetTickCount()),
+
+
+#endif
+
   REPRAW("{E.pin}", EVENT[Later.lastEventSlot].pin),
   REPRAW("{E.value}", EVENT[Later.lastEventSlot].value),
   REPRAW("{E.time}", EVENT[Later.lastEventSlot].ms),
