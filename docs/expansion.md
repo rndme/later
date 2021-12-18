@@ -62,6 +62,23 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
   
 // script usage: send [1,2,"to event.data on client"]
 ```
+   
+   
+   Integrating with a config manager using setConfig(k,v) and saveConfig():
+```c++
+    Later.addCommand("savecfg",  COMMAND( saveConfig(); return 1; )); 
+    Later.addCommand("cfg", [](char * v, LATER_LINE * ln, LATER_ENVIRON * scr )->bool {
+      nsLATER::laterUtil::splitStringByChar(v, ',');
+      if (nsLATER::laterUtil::split_count > 1) {
+        strchr(nsLATER::laterUtil::splits[0],',')[0]='\0'; // chop at first comma
+        nsLATER::laterUtil::trimRight(nsLATER::laterUtil::splits[0]);
+        setConfig(nsLATER::laterUtil::splits[0], nsLATER::laterUtil::splits[1]);
+      }
+      return 1;
+    });
+// script usage: cfg=wifi_ip, 212
+```
+
     
 
 
