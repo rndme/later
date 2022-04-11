@@ -174,6 +174,12 @@ Later.addFunction("TEMP", FUNCTION( return (unsigned long)dht.readTemperature())
 // script usage: $humid = HUMID(0)
 ```
 
-    
+Read serial port byte by byte
+```c++
+    Later.addFunction("UART", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
+      if (Serial.available()) return Serial.read();
+      return 0;
+    });
+```    
 
 
