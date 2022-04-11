@@ -15,6 +15,14 @@
 #define LATER_PRINT(s) LATER_PORT.print(s)
 #define LATER_PRINTLN(s) LATER_PORT.println(s)
 
+#ifdef LATER_UART_PORT_DISABLE
+#define LATER_PRINT(s) String(s)
+#define LATER_PRINTLN(s) String(s)
+#endif
+#ifndef LATER_LOG_HEADER
+#define LATER_LOG_HEADER ""
+#endif
+
 /*
 #if LATER_UART_PORT == NULL
 #undef LATER_PRINT
@@ -97,7 +105,7 @@ struct cmp_str { // converts pointers into stirng values to find terms in map an
 #define ESP8266WEBSERVER_H
 #endif
 char TEMPLATE_BUFFER[48];
-char TEMPLATE_KEY_BUFF[16];
+char TEMPLATE_KEY_BUFF[24];
 //>> var names can consit of the following letters and numbers:
 const char VARCHARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$1234567890.";
 const char VARLIST[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"; // -65 to get slot 0-64, 8 slots in middle aren't used for 57 or so slots
@@ -133,6 +141,7 @@ typedef struct LATER_OPTIONS {
   bool perf; // print perf info to the console?
   bool strict; // disable legacy handlers and slower features?
   bool persist; // keep the script in ram?
+  bool socket; // use web socket as print mechanism?
 } LATER_OPTIONS;
 
 // 37800b free before bumping up lines from 64 to 96
@@ -311,7 +320,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 
 // supports the auto end point recording and simplified http path/handler
 #ifdef ESP8266WEBSERVER_H
-#define SUB_PATH(_key, _expr) server.on("/" #_key, _expr); server.on("/" #_key "/", _expr);PATHS["/" #_key]=#_expr
+#define SUB_PATH(_key, _expr) LATER_SERVER_NAME.on("/" #_key, _expr); LATER_SERVER_NAME.on("/" #_key "/", _expr);PATHS["/" #_key]=#_expr
 #endif
 //<<
 // used inline in intitial expression function and template libs
@@ -320,15 +329,15 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 387 "danscript.ino"
+#line 392 "danscript.ino"
 unsigned long clamp(int a);
-#line 458 "danscript.ino"
+#line 463 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 551 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 564 "commands.ino"
+#line 569 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 724 "commands.ino"
+#line 729 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -352,37 +361,37 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 439 "core.ino"
+#line 447 "core.ino"
 void removeDoubleLines(char * buff);
-#line 449 "core.ino"
+#line 457 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 465 "core.ino"
+#line 473 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 483 "core.ino"
+#line 491 "core.ino"
 void autoEqualsInsert(char * line);
-#line 516 "core.ino"
+#line 524 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 758 "core.ino"
+#line 770 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 779 "core.ino"
+#line 791 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 943 "core.ino"
+#line 955 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1151 "core.ino"
+#line 1163 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1218 "core.ino"
+#line 1230 "core.ino"
 void popHttpResponse();
-#line 1231 "core.ino"
+#line 1243 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1382 "core.ino"
+#line 1394 "core.ino"
 void processStringFormats(char* s);
-#line 1511 "core.ino"
+#line 1523 "core.ino"
 void handleEval();
-#line 1524 "core.ino"
+#line 1536 "core.ino"
 void handleDump();
-#line 1752 "core.ino"
+#line 1764 "core.ino"
 void runScript();
-#line 2516 "core.ino"
+#line 2531 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -390,47 +399,49 @@ void handleGenericHttpRun(String fn);
 void handleAPI();
 #line 86 "http.ino"
 void handleDelete();
-#line 109 "http.ino"
+#line 108 "http.ino"
+void handleReboot();
+#line 117 "http.ino"
 void bindServerMethods();
-#line 168 "http.ino"
+#line 177 "http.ino"
 void handleLS();
-#line 247 "http.ino"
+#line 256 "http.ino"
 void handleEditor();
-#line 278 "http.ino"
+#line 287 "http.ino"
 String getContentType(String filename);
-#line 300 "http.ino"
+#line 309 "http.ino"
 bool handleFileRead(String path);
-#line 373 "http.ino"
+#line 382 "http.ino"
 void handleFileUpload();
-#line 413 "http.ino"
+#line 422 "http.ino"
 void handleFileList();
-#line 520 "http.ino"
+#line 529 "http.ino"
 void handleUnload();
-#line 533 "http.ino"
+#line 542 "http.ino"
 void handleRun();
-#line 596 "http.ino"
+#line 605 "http.ino"
 void handleLog();
-#line 776 "http.ino"
+#line 795 "http.ino"
 void handleCommandList();
-#line 814 "http.ino"
+#line 833 "http.ino"
 void handleStore();
-#line 850 "http.ino"
+#line 869 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 858 "http.ino"
+#line 877 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 867 "http.ino"
+#line 886 "http.ino"
 void backtrack(char * buff);
-#line 871 "http.ino"
+#line 890 "http.ino"
 void handleScripts();
-#line 944 "http.ino"
+#line 963 "http.ino"
 void handleBench();
 #line 5 "mod.ino"
 int HTTPRequest(char * url);
-#line 146 "templates.ino"
+#line 156 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 178 "templates.ino"
+#line 188 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 387 "danscript.ino"
+#line 392 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -588,6 +599,7 @@ void LaterClass::unload(const char * fileName) {
   s->exitLineNumber = 0;
   s->lineCount = 0;
   s->options.debug = 0;
+  s->options.socket = 0;
   s->options.persist = 0;
   s->options.perf = 0;
   s->options.strict = 0;
@@ -1143,22 +1155,25 @@ void logMe(const char * line) {
 template <class text>
 void uniPrintln(text content) {
   auto s = getCurrent();
-  if (s->calledFromWeb) {
-#ifdef ESP8266WEBSERVER_H
-    server.sendContent(content);
-    server.sendContent("\n");
+#ifdef WEBSOCKETSSERVER_H_
+  if (s->options.socket) {
+    webSocket.broadcastTXT(content);
+    return;
+  }
 #endif
+  if (s->calledFromWeb) {
+    LATER_SERVER_NAME.sendContent(content);
+    LATER_SERVER_NAME.sendContent("\n");
   } else {
     LATER_PRINTLN(content);
   }
 }//end uniPrintln()
-
 template <class text>
 void uniPrint(text content) {
   auto s = getCurrent();
   if (s->calledFromWeb) {
 #ifdef ESP8266WEBSERVER_H
-    server.sendContent(content);
+    LATER_SERVER_NAME.sendContent(content);
 #endif
   } else {
     LATER_PRINT(content);
@@ -1400,7 +1415,7 @@ int loadScript(String filename) { //dd666 make this a class method
     DEFINES[slot][decName] = defValp;
     dec = strstr(fileBuff, "#define="); // grab next one (if any)
   }//wend define
-  char clean[1024];
+  char clean[LATER_PROGRAM_SIZE];
   char * outptr = clean;
   char * cleanptr = clean;
 
@@ -1478,12 +1493,19 @@ int loadScript(String filename) { //dd666 make this a class method
         macro[macroNameLen] = '\0';
 
         char * macroBuffPtr = macro + 1;
+        char buffKey2 [ 32 ] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         char * macroRepPtr = DEFINES[slot][macroBuffPtr];
         // check GET params for match if no pre-defined macro exists under the name:
-        if (!macroRepPtr) macroRepPtr = (char *)server.arg(macroBuffPtr).c_str();
+        if (!macroRepPtr || !strlen(macroRepPtr)) {
+          if (LATER_SERVER_NAME.hasArg(macroBuffPtr)) {
+            strcpy(buffKey2, LATER_SERVER_NAME.arg(macroBuffPtr).c_str());
+            macroRepPtr = buffKey2;
+          }
+        }
 
         if (macroRepPtr) {
           size_t macroRepLen = strcspn(macroRepPtr, "\n");
+          if (macroRepLen < 1) macroRepLen = strlen(macroRepPtr);
 
           // cleanup optional semi delimiter on macro names:
           if (macroPtr[macroNameLen] == ';') {
@@ -1929,7 +1951,11 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
         }//end if on?
 
         // if it's an interval call instead of gosub, to set line.data to intervals count
-        if (line->cmd == LATER_interval) line->data = SCRIPT->intervalCount++;
+        if (line->cmd == LATER_interval) {
+          line->data = SCRIPT->intervalCount++;
+          k =  strchr(SCRIPT->program + line->start, ',') + 1;
+          while ( !isalnum(k[0]) ) k++; // trim?
+        }
 
         v = k;
         while (isalnum(v[0]))v++;
@@ -2652,20 +2678,20 @@ void processStringFormats(char* s) { // finds format flags in form of <#flag str
 
 void handleEval() {
   char linebuff[160];
-  LATER_ENVIRON * s = server.hasArg("name") ? Later.getByName(server.arg("name").c_str()) : getCurrent();
+  LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader(LATER_CORS, "*");
-  server.send ( 200, LATER_PLAIN, " ");
-  strcpy(linebuff, server.arg("code").c_str());
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, " ");
+  strcpy(linebuff, LATER_SERVER_NAME.arg("code").c_str());
   laterCMD::runEval(linebuff, s);
-  server.sendContent("");//ends and closes response
+  LATER_SERVER_NAME.sendContent("");//ends and closes response
 }//end handleEval()
 
 #ifdef ESP8266WEBSERVER_H
 void handleDump() {
 
-  LATER_ENVIRON * s = server.hasArg("name") ? Later.getByName(server.arg("name").c_str()) : getCurrent();
+  LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
   if (!s) s = getCurrent();
   LATER_LINE * l;
   char linebuff[80];
@@ -2674,69 +2700,69 @@ void handleDump() {
   char dbg[88];
   char flagList[] = "HOAEVT";
 
-  server.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.send ( 200, LATER_PLAIN, "\n");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "\n");
 
   sprintf(dbg, "%ld lines in %db from ", s->lineCount, strlen(s->program) );
-  server.sendContent(dbg);
-  server.sendContent(s->fileName);
+  LATER_SERVER_NAME.sendContent(dbg);
+  LATER_SERVER_NAME.sendContent(s->fileName);
 
   sprintf(dbg, "\nRAM:%d,  runs:%lu,  subRet:%u, resumeLine:%u\n", ESP.getFreeHeap(), s->runs, s->subReturnLine,  s->resumeLineNumber);
-  server.sendContent(dbg);
+  LATER_SERVER_NAME.sendContent(dbg);
   sprintf(dbg, "Line:%ld, forStart:%ld, forEnd:%ld, forStep:%ld, forIndex:%ld", s->i, s->forStart[s->forLevel], s->forEnd[s->forLevel], s->forStep[s->forLevel], s->forIndex[s->forLevel]);
-  server.sendContent(dbg);
+  LATER_SERVER_NAME.sendContent(dbg);
   //String bonus = " ";
   bool bonus = true;
-  server.sendContent("\n\nLINES:\n #  exit         HOAEVT flags  \tOP  value\n");
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n #  exit         HOAEVT flags  \tOP  value\n");
   for (int i = 0, mx = s->lineCount; i < mx; i++) {
     l = &s->lines[i];
     lp = s->program + l->start;
     strncpy(linebuff, lp, l->len);
     linebuff[l->len] = '\0';
     if (i > 9) bonus = false;
-    if (bonus) server.sendContent(" ");
-    server.sendContent(itoa(i, respbuff, 10));
-    server.sendContent(" -> ");
-    server.sendContent(itoa(l->exit, respbuff, 10));
-    server.sendContent(" \t[");
+    if (bonus) LATER_SERVER_NAME.sendContent(" ");
+    LATER_SERVER_NAME.sendContent(itoa(i, respbuff, 10));
+    LATER_SERVER_NAME.sendContent(" -> ");
+    LATER_SERVER_NAME.sendContent(itoa(l->exit, respbuff, 10));
+    LATER_SERVER_NAME.sendContent(" \t[");
     itoa(l->flags + 256, respbuff, 2);
     lp = respbuff;
     lp += 3;  // print out any active flags with abbr in the slot, else empty space:
     for (int f = 0; f < 6; f++)  lp[f] = (lp[f] == '1') ? flagList[f] : ' ';
 
-    server.sendContent(lp);
-    server.sendContent("]\t");
+    LATER_SERVER_NAME.sendContent(lp);
+    LATER_SERVER_NAME.sendContent("]\t");
     respbuff[0] = l->cmd ? l->cmd : '?';
     respbuff[1] = '\0';
-    server.sendContent(respbuff);
-    server.sendContent(" = ");
-    server.sendContent(linebuff);
-    server.sendContent("\n");
+    LATER_SERVER_NAME.sendContent(respbuff);
+    LATER_SERVER_NAME.sendContent(" = ");
+    LATER_SERVER_NAME.sendContent(linebuff);
+    LATER_SERVER_NAME.sendContent("\n");
   }//next line
 
-  server.sendContent(" #  exit         HOAEVT flags  \tOP  value\n");
-  server.sendContent("\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
+  LATER_SERVER_NAME.sendContent(" #  exit         HOAEVT flags  \tOP  value\n");
+  LATER_SERVER_NAME.sendContent("\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
 
   for (auto const & x : LATER_VAR_NAMES[s->index])   {
-    server.sendContent(itoa(x.second, linebuff, 10));
-    server.sendContent( ".\t@");
+    LATER_SERVER_NAME.sendContent(itoa(x.second, linebuff, 10));
+    LATER_SERVER_NAME.sendContent( ".\t@");
 
     linebuff[0] = (char)VARLIST[x.second];
     linebuff[1] = '\0';
-    server.sendContent(linebuff);
-    server.sendContent("_\t");
-    server.sendContent(itoa(s->VARS[x.second], linebuff, 10));
-    server.sendContent("\t");
-    server.sendContent(x.first.c_str());
-    server.sendContent("\n");
+    LATER_SERVER_NAME.sendContent(linebuff);
+    LATER_SERVER_NAME.sendContent("_\t");
+    LATER_SERVER_NAME.sendContent(itoa(s->VARS[x.second], linebuff, 10));
+    LATER_SERVER_NAME.sendContent("\t");
+    LATER_SERVER_NAME.sendContent(x.first.c_str());
+    LATER_SERVER_NAME.sendContent("\n");
   }
 
-  server.sendContent("\n-------- SYSTEM LOG -----------\n");
-  server.sendContent(setRunLog);
-  server.sendContent("\n-------- END PROGRAM DEBUG -----------\n");
-  server.sendContent("");//ends and closes response
+  LATER_SERVER_NAME.sendContent("\n-------- SYSTEM LOG -----------\n");
+  LATER_SERVER_NAME.sendContent(setRunLog);
+  LATER_SERVER_NAME.sendContent("\n-------- END PROGRAM DEBUG -----------\n");
+  LATER_SERVER_NAME.sendContent("");//ends and closes response
 } // end handle dump()
 #endif
 void runScript() {
@@ -3086,7 +3112,8 @@ void runScript() {
       case LATER_interval: //interval sub call
 
         // find interval, compare to lastFire
-        k = strchr(linebuff, ' ');
+        k = linebuff;
+
         if (k) {
           tempInt = Number(k, s->VARS);
           if (  (s->intervals[ l->data ] + tempInt) < millis()  ) { //ready?
@@ -3137,8 +3164,6 @@ void runScript() {
         Later.httpResponseTextBuffer[0] = '\0';
         Later.httpResponseText = Later.httpResponseTextBuffer;
 
-        s->status = HTTPRequest(linebuff);
-        yield();
         //Later.httpResponseText = Later.httpResponseTextBuffer;
 
         continue;
@@ -3270,6 +3295,7 @@ void runScript() {
         if (strstr(lb, "perf")) s->options.perf = true;
         if (strstr(lb, "strict")) s->options.strict = true;
         if (strstr(lb, "persist")) s->options.persist = true;
+        if (strstr(lb, "socket")) s->options.socket = true;
 
         if ((k = strstr(lb, "interval"))) {
           // find next digits
@@ -3424,31 +3450,31 @@ const char * const FLASH_SIZE_MAP_NAMES[] = {
 std::map<std::string,  std::string> PATHS;
 void handleGenericHttpRun(String fn) {
 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
 
   LATER_ENVIRON * s = Later.load((char*)fn.c_str()); //dd666, move this somewhere better:
   if (!s) {
-    server.send ( 504, LATER_PLAIN, "504 - refused to load");
-    server.sendContent("");
+    LATER_SERVER_NAME.send ( 504, LATER_PLAIN, "504 - refused to load");
+    LATER_SERVER_NAME.sendContent("");
     return;
   }
   // load vars from url into script enviroment:
   String key, value, banned = ",$name,$content-type";
-  for (uint8_t i = 0; i < server.args(); i++) {
-    key =  "$" + server.argName(i);
-    value = server.arg(i);
+  for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
+    key =  "$" + LATER_SERVER_NAME.argName(i);
+    value = LATER_SERVER_NAME.arg(i);
     if (banned.indexOf(',' + key + ',') > -1) continue;
     char slot = getVarNameNumber((char*)key.c_str(), s->index);
     s->VARS[(int)slot] = value.toInt();
   }
 
-  server.send ( 200, s->contentType, ""); // start response
+  LATER_SERVER_NAME.send ( 200, s->contentType, ""); // start response
   s->calledFromWeb = 1;
   Later.run((char*)fn.c_str()); // execute em!
-  server.sendContent(""); // finish response
+  LATER_SERVER_NAME.sendContent(""); // finish response
   /*
-      if (server.hasArg("persist")) return;
+      if (LATER_SERVER_NAME.hasArg("persist")) return;
     if (s->options.persist) return;
 
     if (  !strchr(fnp, '~') ) {
@@ -3461,24 +3487,24 @@ void handleGenericHttpRun(String fn) {
 
 void handleAPI() { // break in here and look for default.bat or index.bat
   String fn = "/index.bat";
-  if (SPIFFS.exists(fn) && !server.hasArg("default")) {
+  if (SPIFFS.exists(fn) && !LATER_SERVER_NAME.hasArg("default")) {
     handleGenericHttpRun(fn);
     return;
   }//end if bat file found?
 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader(LATER_CORS, "*");
-  server.send ( 200, "text/html", F("<body><h1>Later Endpoints</h1><big><big><ul>\n"));
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send ( 200, "text/html", F("<body><h1>Later Endpoints</h1><big><big><ul>\n"));
   char line[64];
-  for (const auto &x : PATHS) server.sendContent(sprintf(line, "<li><a href=%s>%s</a>\n", x.first.c_str(), x.first.c_str()) ? line : line );
-  server.sendContent( "" );
+  for (const auto &x : PATHS) LATER_SERVER_NAME.sendContent(sprintf(line, "<li><a href=%s>%s</a>\n", x.first.c_str(), x.first.c_str()) ? line : line );
+  LATER_SERVER_NAME.sendContent( "" );
 }
 
 void handleDelete() {
-  String fn = server.arg("name");
+  String fn = LATER_SERVER_NAME.arg("name");
 
-  if (!server.hasArg("name")) {
-    server.send ( 403, "text/plain", F("403 - no file specified by name GET param"));
+  if (!LATER_SERVER_NAME.hasArg("name")) {
+    LATER_SERVER_NAME.send ( 403, "text/plain", F("403 - no file specified by name GET param"));
     return;
   }
 
@@ -3486,16 +3512,28 @@ void handleDelete() {
 
   if (SPIFFS.exists(fn)) {
     SPIFFS.remove(fn);
-    server.send ( 200, "text/plain", F("200 - file deleted"));
+    LATER_SERVER_NAME.send ( 200, "text/plain", F("200 - file deleted"));
     return;
   }//end if bat file found?
 
   // should not make it this far, file not found:
-  server.send ( 402, "text/plain", F("402 - existing file not specified by name GET param"));
+  LATER_SERVER_NAME.send ( 402, "text/plain", F("402 - existing file not specified by name GET param"));
 }
+
+void(* resetFunc) (void) = 0;//declare reset function at address 0
+
+void handleReboot() {
+  String message = F("<body><h1>Rebooting. Allowing 7 seconds.</h1> <progress></progress> <script> setTimeout(function(){ location.href= localStorage.dest || '/';  },7300);</script></body> ");
+  LATER_SERVER_NAME.send(200, "text/html", message);
+  LATER_SERVER_NAME.close();
+  delay(250);
+  yield();
+  resetFunc();
+}
+
 void bindServerMethods() {
 
-  server.on("/", handleAPI); // this style of sub won't be listed
+  LATER_SERVER_NAME.on("/", handleAPI); // this style of sub won't be listed
 
   // subscript public GET endpoints:
   SUB_PATH(run, handleRun);
@@ -3505,6 +3543,7 @@ void bindServerMethods() {
   SUB_PATH(dir, handleFileList);
   SUB_PATH(ls, handleLS);
   SUB_PATH(delete, handleDelete);
+  SUB_PATH(reboot, handleReboot);
   SUB_PATH(editor, handleEditor);
   SUB_PATH(store, handleStore);
   SUB_PATH(unload, handleUnload);
@@ -3512,17 +3551,17 @@ void bindServerMethods() {
   SUB_PATH(eval, handleEval);
   SUB_PATH(help, handleCommandList);
   SUB_PATH(bench, handleBench);
-  server.on("/upload", HTTP_POST, []() {
-    server.send(200, LATER_PLAIN, "ok");
+  LATER_SERVER_NAME.on("/upload", HTTP_POST, []() {
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, "ok");
   }, handleFileUpload);
-  server.onNotFound([]() {
-    String fn = server.uri() + ".bat";
+  LATER_SERVER_NAME.onNotFound([]() {
+    String fn = LATER_SERVER_NAME.uri() + ".bat";
     if (SPIFFS.exists(fn)) {
       handleGenericHttpRun(fn);
       return;
     }//end if bat file found?
-    if (!handleFileRead(server.uri()))
-      server.send(404, LATER_PLAIN, "FileNotFound: " + server.uri() );
+    if (!handleFileRead(LATER_SERVER_NAME.uri()))
+      LATER_SERVER_NAME.send(404, LATER_PLAIN, "FileNotFound: " + LATER_SERVER_NAME.uri() );
   });
 }//end bindServerMethods()
 #ifdef ESP8266
@@ -3532,23 +3571,23 @@ void bindServerMethods() {
 #endif
 void handleLS() { // replace with non-string non-crap:
 
-  String path = server.arg("dir");
+  String path = LATER_SERVER_NAME.arg("dir");
   if (path == "") path = "/";
 #ifdef ESP8266
   Dir dir = SPIFFS.openDir(path);
 #else
   File dir = SPIFFS.open(path);
 #endif
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader(LATER_CORS, "*");
-  server.send ( 200, "text/html", "");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send ( 200, "text/html", "");
 
-  server.sendContent(F("<html><head><title>"));
-  server.sendContent(path);
-  server.sendContent(F("</title><style>@import 'https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cyborg/bootstrap.min.css';\n  a,b,small { display: inline-block; min-width: 11em;}"));
-  server.sendContent(F(" ol li { margin-top: 0.25em; font-size: 125%; }</style></title></head><body class=container> <h1>"));
-  server.sendContent(path);
-  server.sendContent(F("</h1> <ol id=list></ol><script>["));
+  LATER_SERVER_NAME.sendContent(F("<html><head><title>"));
+  LATER_SERVER_NAME.sendContent(path);
+  LATER_SERVER_NAME.sendContent(F("</title><style>@import 'https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cyborg/bootstrap.min.css';\n  a,b,small { display: inline-block; min-width: 11em;}"));
+  LATER_SERVER_NAME.sendContent(F(" ol li { margin-top: 0.25em; font-size: 125%; }</style></title></head><body class=container> <h1>"));
+  LATER_SERVER_NAME.sendContent(path);
+  LATER_SERVER_NAME.sendContent(F("</h1> <ol id=list></ol><script>["));
 
   File entry;
 
@@ -3562,26 +3601,26 @@ void handleLS() { // replace with non-string non-crap:
 
     if (strlen(entry.name()) > 2) {
       bool isDir = false;
-      server.sendContent(",\n{\"type\":\"");
-      server.sendContent((isDir) ? "dir" : "file");
-      server.sendContent("\",\"name\":\"");
+      LATER_SERVER_NAME.sendContent(",\n{\"type\":\"");
+      LATER_SERVER_NAME.sendContent((isDir) ? "dir" : "file");
+      LATER_SERVER_NAME.sendContent("\",\"name\":\"");
 #ifdef ESP8266
-      server.sendContent(entry.name() + 1);
+      LATER_SERVER_NAME.sendContent(entry.name() + 1);
 #else
-      server.sendContent(entry.name() + 1);// Ignore '/' prefix
+      LATER_SERVER_NAME.sendContent(entry.name() );// Ignore '/' prefix
 #endif
 #ifdef ESP8266
-      server.sendContent( "\",\"size\":\"");
-      server.sendContent(laterUtil::formatBytes(dir.fileSize()));
+      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.fileSize()));
 #endif
 #ifdef ESP32
-      server.sendContent( "\",\"size\":\"");
-      server.sendContent(laterUtil::formatBytes(dir.size()));
+      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.size()));
 #endif
 
-      server.sendContent("\",\"mime\":\"");
-      server.sendContent(getContentType(entry.name()));
-      server.sendContent("\"}");
+      LATER_SERVER_NAME.sendContent("\",\"mime\":\"");
+      LATER_SERVER_NAME.sendContent(getContentType(entry.name()));
+      LATER_SERVER_NAME.sendContent("\"}");
       entry.close();
 
     }//end if name long?
@@ -3591,9 +3630,9 @@ void handleLS() { // replace with non-string non-crap:
 #endif
   }
 
-  server.sendContent(F("].filter(Boolean).map(function(a){list.appendChild(document.createElement('li')).innerHTML='<input type=button onclick=\"doDel(nextElementSibling.href)\" value=X > '+a.name.link('./'+a.name)+' '+'run'.link('/run/?name='+encodeURIComponent(a.name))+'  ' +'edit'.link('/editor/#'+a.name)+' ' + a.size.bold()+' ' + a.mime.small(); });function doDel(fn){if(!confirm('ERASING FILE: '+fn+'\\n\\nThis CANNOT be undone !!!'))return; var path = '/' + fn.split('/').pop(); fetch('/delete/?name='+encodeURIComponent(path)).then(function(){location.reload();});return false;}</script>"));
-  server.sendContent(F("<hr><form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload Embeded File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body>"));
-  server.sendContent("");
+  LATER_SERVER_NAME.sendContent(F("].filter(Boolean).map(function(a){list.appendChild(document.createElement('li')).innerHTML='<input type=button onclick=\"doDel(nextElementSibling.href)\" value=X > '+a.name.link('/'+a.name)+' '+'run'.link('/run/?name='+encodeURIComponent(a.name))+'  ' +'edit'.link('/editor/#'+a.name)+' ' + a.size.bold()+' ' + a.mime.small(); });function doDel(fn){if(!confirm('ERASING FILE: '+fn+'\\n\\nThis CANNOT be undone !!!'))return; var path = '/' + fn.split('/').pop(); fetch('/delete/?name='+encodeURIComponent(path)).then(function(){location.reload();});return false;}</script>"));
+  LATER_SERVER_NAME.sendContent(F("<hr><form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload Embeded File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body>"));
+  LATER_SERVER_NAME.sendContent("");
 }
 //25968 > 26268 > 26772
 void handleEditor() {
@@ -3601,20 +3640,20 @@ void handleEditor() {
 
   // move this to a multipart response, print most of it, then print define path to script, then print html page closer/footer.
 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader(LATER_CORS, "*");
-  server.send ( 200, "text/html", "");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send ( 200, "text/html", "");
 
-  server.sendContent(F(  "<!doctype html><html><head>\n    <meta charset=\"UTF-8\">    <title>later editor</title>\n<link rel=icon href=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAAcSURBVDhPY/hr+fc/JXjUgFEDQHjUgGFgwN//AJBjMi73juieAAAAAElFTkSuQmCC> \n<link rel=stylesheet type=text/css href='//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css' />\n<style>\tbody {background:#000;color:#888;padding-top:5px; } #files{ width: 7em; }  #val {overflow: scroll;width: 99%; height: 85vh; font: 24px monospace; } div#stats {position: fixed;top: 1em;right: 3em;width: 40%;background: #111;padding: 1em;overflow: auto;height: 90vh;border: 1px solid #888;font: 20px monospace;}\n</style>\n</head>\n<body class=container-fixed><a href='/docs/'>Home</a>\n   <select id=files onchange='loadme(value)'>\n  <option value=\"\">Load File...<option>\n  </select>  &nbsp; \n <label>Filename: \n  <input type=text id=inpname size=32>\n</label>\n    &nbsp;   &nbsp; \n   <input type=button class='btn btn-success btn-sm' value=Save id=btnsave onclick='saveIt(inpname.value, val.value)'>\n&nbsp;   &nbsp; \n   <input type=button class='btn btn-warning btn-sm' value=Run id=btnrun onclick='runme(inpname.value)'> \n&nbsp;   &nbsp; \n   <input type=button class='btn btn-info btn-sm' value=Test id=btntest onclick='test()'> \n&nbsp;   &nbsp; <label> auto-test <input type=checkbox id=chkauto></label>\n\n&nbsp;   &nbsp;\n&nbsp;   &nbsp; <label> URL Params <input type=input id=inpqs value=\"&reload=true\" size=24></label>\n\n   <input type=button class='btn btn-xs btn-info pull-right btn-sm' value=\"?\" id=btnhelp onclick='showHelp()'> \n\n<br> \n<div id=edwrap>\n<textarea id=val rows=40 cols=90></textarea></div>\n\n<div id=stats></div>\n<form method='POST' action='/update' target=_blank enctype='multipart/form-data' onsubmit='setTimeout(function(){file11.value=null}, 25000)' >\n                  <input id=file11 type='file' accept='application/*' name='update'>\n                  <input type='submit' value='Update'>\n               </form>\n\n\n<script>\nvar url = '/';\n\nfunction saveIt(name, value) {\n\tif(!name) return alert('filename blank, try again');\n\tvar dbs = document.body.style,\n\t\tfile = new File([value], name, {\n\t\t\ttype: \"text/plain\",\n\t\t}),\n\t\tform = new FormData();\n\tdbs.opacity = 0.5;\n\tform.append('file', file, name);\n\tfetch(url + 'upload', {\n\t\tbody: form,\n\t\tmethod: 'POST',\n\t\tmode: 'cors'\n\t}).then(x => {\n\t\tdbs.opacity = 1;\n\t\tdir();\n\t\tlocation.hash = name;\n\t\tdocument.title=\"@\"+name;\n\t});\n}\n\nfunction dir() {\n\tfetch(url + 'dir').then(x => x.json()).then(x => {\n\t\tfiles.options.length = 1;\n\t\tx.sort(function(a,b){return a.name>b.name?1:-1;}).map(function(a, i) {\n\t\t\tfiles.appendChild(new Option(a.name + \" : \" + a.size, a.name));\n\t\t});\n\t})\n}\n\n \nfunction test() {\n\tfetch(url + 'test').then(x => x.text()).then(x=>{\n\t\t stats.innerText= x;\t\n\t});\n}\n\n\nfunction loadme(file) {\n        var dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + file).then(x => x.text()).then(x => {\n\t\tval.value = x;\n\t\tinpname.value = file;\n\t\tval.focus();\n\t\tdbs.opacity = 1;\n\t\tlocation.hash = file;\n\t\tdocument.title=\"@\"+file;\n\t});\n\n}\nvar cache;\nfunction showHelp(){\n  var done = x=>{\n   var s = x.split(/<\\/?pre/i)[1].slice(1).trim();\n   cache = x;\n   stats.innerText = s;\n  };\n  if(cache) return done(cache);\n  fetch(\"/docs/\").then(x=>x.text()).then(done);\n}\n\nfunction runme(file) {\n\tif(!file) return alert(\"no file chosen\");\n\tvar dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + \"run?name=\" + encodeURIComponent(file) + inpqs.value ).then(x => x.text()).then(x => {\n\t\tval.focus();stats.title=x;\n\t\tdbs.opacity = 1;\n\t\tif(chkauto.checked) setTimeout(test, 500);\n\t});\n}\nif(location.hash) loadme(location.hash.slice(1));\nsetTimeout(dir, 140);\n</script>"));
+  LATER_SERVER_NAME.sendContent(F(  "<!doctype html><html><head>\n    <meta charset=\"UTF-8\">    <title>later editor</title>\n<link rel=icon href=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAAcSURBVDhPY/hr+fc/JXjUgFEDQHjUgGFgwN//AJBjMi73juieAAAAAElFTkSuQmCC> \n<link rel=stylesheet type=text/css href='//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css' />\n<style>\tbody {background:#000;color:#888;padding-top:5px; } #files{ width: 7em; }  #val {overflow: scroll;width: 99%; height: 85vh; font: 24px monospace; } div#stats {position: fixed;top: 1em;right: 3em;width: 40%;background: #111;padding: 1em;overflow: auto;height: 90vh;border: 1px solid #888;font: 20px monospace;}\n</style>\n</head>\n<body class=container-fixed><a href='/docs/'>Home</a>\n   <select id=files onchange='loadme(value)'>\n  <option value=\"\">Load File...<option>\n  </select>  &nbsp; \n <label>Filename: \n  <input type=text id=inpname size=32>\n</label>\n    &nbsp;   &nbsp; \n   <input type=button class='btn btn-success btn-sm' value=Save id=btnsave onclick='saveIt(inpname.value, val.value)'>\n&nbsp;   &nbsp; \n   <input type=button class='btn btn-warning btn-sm' value=Run id=btnrun onclick='runme(inpname.value)'> \n&nbsp;   &nbsp; \n   <input type=button class='btn btn-info btn-sm' value=Test id=btntest onclick='test()'> \n&nbsp;   &nbsp; <label> auto-test <input type=checkbox id=chkauto></label>\n\n&nbsp;   &nbsp;\n&nbsp;   &nbsp; <label> URL Params <input type=input id=inpqs value=\"&reload=true\" size=24></label>\n\n   <input type=button class='btn btn-xs btn-info pull-right btn-sm' value=\"?\" id=btnhelp onclick='showHelp()'> \n\n<br> \n<div id=edwrap>\n<textarea id=val rows=40 cols=90></textarea></div>\n\n<div id=stats></div>\n<form method='POST' action='/update' target=_blank enctype='multipart/form-data' onsubmit='setTimeout(function(){file11.value=null}, 25000)' >\n                  <input id=file11 type='file' accept='application/*' name='update'>\n                  <input type='submit' value='Update'>\n               </form>\n\n\n<script>\nvar url = '/';\n\nfunction saveIt(name, value) {\n\tif(!name) return alert('filename blank, try again');\n\tvar dbs = document.body.style,\n\t\tfile = new File([value], name, {\n\t\t\ttype: \"text/plain\",\n\t\t}),\n\t\tform = new FormData();\n\tdbs.opacity = 0.5;\n\tform.append('file', file, name);\n\tfetch(url + 'upload', {\n\t\tbody: form,\n\t\tmethod: 'POST',\n\t\tmode: 'cors'\n\t}).then(x => {\n\t\tdbs.opacity = 1;\n\t\tdir();\n\t\tlocation.hash = name;\n\t\tdocument.title=\"@\"+name;\n\t});\n}\n\nfunction dir() {\n\tfetch(url + 'dir').then(x => x.json()).then(x => {\n\t\tfiles.options.length = 1;\n\t\tx.sort(function(a,b){return a.name>b.name?1:-1;}).map(function(a, i) {\n\t\t\tfiles.appendChild(new Option(a.name + \" : \" + a.size, a.name));\n\t\t});\n\t})\n}\n\n \nfunction test() {\n\tfetch(url + 'test').then(x => x.text()).then(x=>{\n\t\t stats.innerText= x;\t\n\t});\n}\n\n\nfunction loadme(file) {\n        var dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + file).then(x => x.text()).then(x => {\n\t\tval.value = x;\n\t\tinpname.value = file;\n\t\tval.focus();\n\t\tdbs.opacity = 1;\n\t\tlocation.hash = file;\n\t\tdocument.title=\"@\"+file;\n\t});\n\n}\nvar cache;\nfunction showHelp(){\n  var done = x=>{\n   var s = x.split(/<\\/?pre/i)[1].slice(1).trim();\n   cache = x;\n   stats.innerText = s;\n  };\n  if(cache) return done(cache);\n  fetch(\"/docs/\").then(x=>x.text()).then(done);\n}\n\nfunction runme(file) {\n\tif(!file) return alert(\"no file chosen\");\n\tvar dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + \"run?name=\" + encodeURIComponent(file) + inpqs.value ).then(x => x.text()).then(x => {\n\t\tval.focus();stats.title=x;\n\t\tdbs.opacity = 1;\n\t\tif(chkauto.checked) setTimeout(test, 500);\n\t});\n}\nif(location.hash) loadme(location.hash.slice(1));\nsetTimeout(dir, 140);\n</script>"));
 
-  server.sendContent("<script src=");
-  server.sendContent(LATER_EDITOR_URL);
-  server.sendContent("></script>");
-  server.sendContent("\n</body>\n</html>");
-  server.sendContent("");
+  LATER_SERVER_NAME.sendContent("<script src=");
+  LATER_SERVER_NAME.sendContent(LATER_EDITOR_URL);
+  LATER_SERVER_NAME.sendContent("></script>");
+  LATER_SERVER_NAME.sendContent("\n</body>\n</html>");
+  LATER_SERVER_NAME.sendContent("");
 }//end handle editor
 String getContentType(String filename) {
-  if (server.hasArg("download")) return "application/octet-stream";
+  if (LATER_SERVER_NAME.hasArg("download")) return "application/octet-stream";
   else if (filename.endsWith(".html")) return "text/html";
   else if (filename.endsWith(".css")) return "text/css";
   else if (filename.endsWith(".js")) return "application/javascript";
@@ -3635,8 +3674,8 @@ bool handleFileRead(String path) {
     if (SPIFFS.exists(pathWithGz))
       path += ".gz";
     File file = SPIFFS.open(path, "r");
-    server.sendHeader(LATER_CORS, "*");
-    server.streamFile(file, contentType);
+    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+    LATER_SERVER_NAME.streamFile(file, contentType);
     file.close();
     return true;
   }
@@ -3665,7 +3704,7 @@ bool handleFileRead(String path) {
   message += " \"chipid\":\t\"" + String(system_get_chip_id(), HEX) + "\",\n";
   message += " \"dev_mac\":\t\"" + String(mac[0], HEX) + ":" + String(mac[1], HEX) + ":" + String(mac[2], HEX) + ":" + String(mac[3], HEX) + ":" + String(mac[4], HEX) + ":" + String(mac[5], HEX) + "\",\n";
   message += " \"dev_ip\":\t\"" + String( WiFi.localIP().toString()) + "\",\n";
-  message += " \"req_uri\":\t\"" + String(server.uri()) + "\",\n";
+  message += " \"req_uri\":\t\"" + String(LATER_SERVER_NAME.uri()) + "\",\n";
   message += " \"built\":\t\"" + String( __DATE__) + " " + String(__TIME__) + "\",\n";
   message += " \"flash\":\t\"" + String(FLASH_SIZE_MAP_NAMES[system_get_flash_size_map()]) + "\",\n";
 
@@ -3678,15 +3717,15 @@ bool handleFileRead(String path) {
   message += " \"cpumhz\":\t" + String(system_get_cpu_freq()) + ",\n";
   message += " \"memkb\":\t" + String(system_get_free_heap_size()) + "\n";
   message += "\n}";
-  server.sendHeader(LATER_CORS, "*");
-  server.send(200, "application/json", message);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "application/json", message);
   #endif
   }
 */
 static String filename;
 void handleFileUpload() {
 
-  HTTPUpload& upload = server.upload();
+  HTTPUpload& upload = LATER_SERVER_NAME.upload();
   if (upload.status == UPLOAD_FILE_START) {
     filename = upload.filename;
     if (!filename.startsWith("/")) filename = "/" + filename;
@@ -3702,12 +3741,12 @@ void handleFileUpload() {
   else if (upload.status == UPLOAD_FILE_END) {
     if (fsUploadFile) {
       fsUploadFile.close();
-      if ((!server.hasArg("reload")) && Later.getByName( (char*)filename.c_str() ))  Later.unload((char*)filename.c_str());
-      if ((server.hasArg("reload")) && Later.getByName( (char*)filename.c_str() ))  Later.run((char*)filename.c_str());
+      if ((!LATER_SERVER_NAME.hasArg("reload")) && Later.getByName( (char*)filename.c_str() ))  Later.unload((char*)filename.c_str());
+      if ((LATER_SERVER_NAME.hasArg("reload")) && Later.getByName( (char*)filename.c_str() ))  Later.run((char*)filename.c_str());
 
       // handleSetFileLastFileName = ""; // bust any batch file caches
-      server.sendHeader(LATER_CORS, "*");
-      server.send(200, "text/html", F("<html><title>Done Uploading...</title><h1>Done</h1><script>location.replace('/ls');</script></html>"));
+      LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+      LATER_SERVER_NAME.send(200, "text/html", F("<html><title>Done Uploading...</title><h1>Done</h1><script>location.replace('/ls');</script></html>"));
     }
 #ifdef DEBUG_WEBSERVER
     Serial.printf(F("handleFileUpload Size: %u\n"), upload.totalSize);
@@ -3716,7 +3755,7 @@ void handleFileUpload() {
 }//end handleFileUpload()
 void handleFileList() {
 
-  String path = server.arg("dir");
+  String path = LATER_SERVER_NAME.arg("dir");
   if (path == "") path = "/";
 
 #ifdef ESP8266
@@ -3725,9 +3764,9 @@ void handleFileList() {
   File dir = SPIFFS.open(path);
 #endif
 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader(LATER_CORS, "*");
-  server.send ( 200, "text/json", "[{}");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send ( 200, "text/json", "[{}");
 
   File entry;
 
@@ -3742,25 +3781,25 @@ void handleFileList() {
     if (strlen(entry.name()) > 2) {
 
       bool isDir = false;
-      server.sendContent(",\n{\"type\":\"");
-      server.sendContent((isDir) ? "dir" : "file");
-      server.sendContent("\",\"name\":\"");
+      LATER_SERVER_NAME.sendContent(",\n{\"type\":\"");
+      LATER_SERVER_NAME.sendContent((isDir) ? "dir" : "file");
+      LATER_SERVER_NAME.sendContent("\",\"name\":\"");
 #ifdef ESP8266
-      server.sendContent(entry.name() + 1);
+      LATER_SERVER_NAME.sendContent(entry.name() + 1);
 #else
-      server.sendContent(entry.name() + 1);// Ignore '/' prefix
+      LATER_SERVER_NAME.sendContent(entry.name() );// Ignore '/' prefix
 #endif
 #ifdef ESP8266
-      server.sendContent( "\",\"size\":\"");
-      server.sendContent(laterUtil::formatBytes(dir.fileSize()));
+      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.fileSize()));
 #endif
 #ifdef ESP32
-      server.sendContent( "\",\"size\":\"");
-      server.sendContent(laterUtil::formatBytes(entry.size()));
+      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(entry.size()));
 #endif
-      server.sendContent("\",\"mime\":\"");
-      server.sendContent(getContentType(entry.name()));
-      server.sendContent("\"}");
+      LATER_SERVER_NAME.sendContent("\",\"mime\":\"");
+      LATER_SERVER_NAME.sendContent(getContentType(entry.name()));
+      LATER_SERVER_NAME.sendContent("\"}");
       entry.close();
 
     }
@@ -3771,11 +3810,11 @@ void handleFileList() {
 
   }
 
-  server.sendContent("]");
-  server.sendContent("");
+  LATER_SERVER_NAME.sendContent("]");
+  LATER_SERVER_NAME.sendContent("");
   /*
 
-    String path = server.arg("dir");
+    String path = LATER_SERVER_NAME.arg("dir");
 
     Dir dir = SPIFFS.openDir(path);
     path = String();
@@ -3801,8 +3840,8 @@ void handleFileList() {
     }
 
     output += "\n]";
-    server.sendHeader(LATER_CORS, "*");
-    server.send(200, "text/json", output);
+    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+    LATER_SERVER_NAME.send(200, "text/json", output);
 
   */
 }//end handFileList()
@@ -3810,54 +3849,54 @@ void handleUnload() {
   char fnb[32] = {'/'};
   char *fnp = fnb + 1;
   memset(fnp, '\0', 31);
-  strcpy(fnp, server.arg("name").c_str());
+  strcpy(fnp, LATER_SERVER_NAME.arg("name").c_str());
   if (fnp[0] != '/') fnp = fnb;
   Later.unload(fnp);
 
-  server.sendHeader(LATER_CORS, "*");
-  server.send(200, "text/json", "true");
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/json", "true");
 }
 void handleRun() {
 
   char fnb[44] = {'/'};
   char *fnp = fnb + 1;
   memset(fnp, '\0', 43);
-  strcpy(fnp, server.arg("name").c_str());
+  strcpy(fnp, LATER_SERVER_NAME.arg("name").c_str());
   if (fnp[0] != '/') fnp = fnb;
 
   if (SPIFFS.exists(fnp)) {
     handleGenericHttpRun(fnp);
     /*
-        server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-        server.sendHeader(LATER_CORS, "*");
+        LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+        LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
 
         LATER_ENVIRON * s = Later.load(fnp);
         if (!s) {
-          server.send ( 503, LATER_PLAIN, "503 - refused to load");
-          server.sendContent("");
+          LATER_SERVER_NAME.send ( 503, LATER_PLAIN, "503 - refused to load");
+          LATER_SERVER_NAME.sendContent("");
           return;
         }
 
         // load vars from url into script enviroment:
         String key, value, banned = ",$reload,$name,$content-type";
-        for (uint8_t i = 0; i < server.args(); i++) {
-          key =  "$" + server.argName(i);
-          value = server.arg(i);
+        for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
+          key =  "$" + LATER_SERVER_NAME.argName(i);
+          value = LATER_SERVER_NAME.arg(i);
           if (!isdigit(value[0])) continue;
           if (banned.indexOf(',' + key + ',') > -1) continue;
           char slot = getVarNameNumber((char*)key.c_str(), s->index);
           s->VARS[(int)slot] = value.toInt();
         }
-        if (server.hasArg("content-type")) {
-          server.send ( 200, server.arg("content-type"), "");
+        if (LATER_SERVER_NAME.hasArg("content-type")) {
+          LATER_SERVER_NAME.send ( 200, LATER_SERVER_NAME.arg("content-type"), "");
         } else {
-          server.send ( 200,  s->contentType, "");
+          LATER_SERVER_NAME.send ( 200,  s->contentType, "");
         }
 
         s->calledFromWeb = 1;
         Later.run(fnp);
-        server.sendContent("");
-        if (server.hasArg("persist")) return;
+        LATER_SERVER_NAME.sendContent("");
+        if (LATER_SERVER_NAME.hasArg("persist")) return;
         if (s->options.persist) return;
 
         if (  !strchr(fnp, '~') ) {
@@ -3872,18 +3911,18 @@ void handleRun() {
     return;
   }//end if bat file found?
 
-  server.send(404, LATER_PLAIN, "404 - batch not found" );
+  LATER_SERVER_NAME.send(404, LATER_PLAIN, "404 - batch not found" );
 
 }//end handleRun()
 void handleLog() {
 
-  server.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
 
-  if ( server.hasArg("tail")) {
-    int count = server.arg("tail").toInt();
+  if ( LATER_SERVER_NAME.hasArg("tail")) {
+    int count = LATER_SERVER_NAME.arg("tail").toInt();
 
     if (count < 1) { // passed in url w/o value or zero, grab just the last line:
-      server.send(200, LATER_PLAIN, strrchr(setRunLog, '\n') + 1);
+      LATER_SERVER_NAME.send(200, LATER_PLAIN, strrchr(setRunLog, '\n') + 1);
       return;
     }
 
@@ -3891,14 +3930,14 @@ void handleLog() {
     int pos = strlen(setRunLog) - count;
     if (pos < 0) pos = 0;
     char *ret = setRunLog + pos;
-    server.send(200, LATER_PLAIN, ret);
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, ret);
     return;
   }//end if tail arg?
   //////////////////////////////////////////////////////////////
   // processed results  - chunked line-by-line results:
-  if (server.args() > 0) {
-    server.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
-    server.send(200, LATER_PLAIN, "");                      //Send first part WITH header
+  if (LATER_SERVER_NAME.args() > 0) {
+    LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, LATER_LOG_HEADER);                      //Send first part WITH header
 
     int pos = strcspn(setRunLog + 1, "\n");
 
@@ -3906,31 +3945,33 @@ void handleLog() {
 
     char * rest = setRunLog;
     char line[64];
-    const char * term = server.arg("filter").c_str();
-    const char * exclude = server.arg("exclude").c_str();
-    const char * after = server.arg("after").c_str();
-    const char * before = server.arg("before").c_str();
-    bool is_filter = server.hasArg("filter");
-    bool is_after = server.hasArg("after");
-    bool is_before = server.hasArg("before");
-    bool is_larger = server.hasArg("larger");
-    bool is_smaller = server.hasArg("smaller");
-    bool is_exclude = server.hasArg("exclude");
-    bool is_take = server.hasArg("take");
-    bool is_skip = server.hasArg("skip");
-    bool is_count = server.hasArg("count");
-    unsigned long afterTime = strtoul(after, NULL, 0);
-    unsigned long beforeTime = strtoul(before, NULL, 0);
+    char termBuffer[24];
+    char excludeBuffer[24];
 
-    unsigned int largerThan = server.arg("larger").toInt();
-    unsigned int smallerThan = server.arg("smaller").toInt();
+    bool is_filter = LATER_SERVER_NAME.hasArg("filter");
 
-    int takeLeft = server.arg("take").toInt();
-    int skipLeft = server.arg("skip").toInt();
+    bool is_after = LATER_SERVER_NAME.hasArg("after");
+    bool is_before = LATER_SERVER_NAME.hasArg("before");
+    bool is_larger = LATER_SERVER_NAME.hasArg("larger");
+    bool is_smaller = LATER_SERVER_NAME.hasArg("smaller");
+    bool is_exclude = LATER_SERVER_NAME.hasArg("exclude");
+    bool is_take = LATER_SERVER_NAME.hasArg("take");
+    bool is_skip = LATER_SERVER_NAME.hasArg("skip");
+    bool is_count = LATER_SERVER_NAME.hasArg("count");
+    unsigned long afterTime = strtoul(LATER_SERVER_NAME.arg("after").c_str(), NULL, 0);
+    unsigned long beforeTime = strtoul(LATER_SERVER_NAME.arg("before").c_str(), NULL, 0);
+
+    unsigned int largerThan = LATER_SERVER_NAME.arg("larger").toInt();
+    unsigned int smallerThan = LATER_SERVER_NAME.arg("smaller").toInt();
+
+    int takeLeft = LATER_SERVER_NAME.arg("take").toInt();
+    int skipLeft = LATER_SERVER_NAME.arg("skip").toInt();
     int countOfResults = 0;
     unsigned long lineTime;
     char lineTimeString[16];
 
+    if (is_filter) strcpy(termBuffer, LATER_SERVER_NAME.arg("filter").c_str() );
+    if (is_exclude) strcpy(excludeBuffer, LATER_SERVER_NAME.arg("exclude").c_str() );
 
     bool is_wanted;
 
@@ -3945,8 +3986,8 @@ void handleLog() {
       // now filter by making sure line contains term
 
       is_wanted = 1;
-      if (is_filter && is_wanted) is_wanted = strstr (line, term);
-      if (is_exclude && is_wanted) is_wanted = !strstr (line, exclude);
+      if (is_filter && is_wanted) is_wanted = strstr (line, termBuffer);
+      if (is_exclude && is_wanted) is_wanted = !strstr (line, excludeBuffer);
 
       if (is_larger && is_wanted)  is_wanted =  strlen(line) > largerThan;
       if (is_smaller && is_wanted) is_wanted =  strlen(line) < smallerThan;
@@ -3974,7 +4015,7 @@ void handleLog() {
         if (is_count) {
           countOfResults++;
         } else {
-          server.sendContent( line );
+          LATER_SERVER_NAME.sendContent( line );
         }
       }
       // find next line, if any
@@ -3990,18 +4031,21 @@ void handleLog() {
 
     } // wend rest
     if (is_count) {
-      server.sendContent( String(countOfResults) );
+      LATER_SERVER_NAME.sendContent( String(countOfResults) );
     }
 
-    server.sendContent(F("")); // this tells web client that transfer is done
-    server.client().stop();
+    LATER_SERVER_NAME.sendContent(F("")); // this tells web client that transfer is done
+    LATER_SERVER_NAME.client().stop();
     //Tell browser no more content is coming
     return;
   }//end if params?
   //////////////////////////////////////////////////////////////
   // END processed results
   // serve whole log:
-  server.send(200, LATER_PLAIN, setRunLog + 1);
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
+  LATER_SERVER_NAME.send(200, LATER_PLAIN, LATER_LOG_HEADER);
+  LATER_SERVER_NAME.sendContent(setRunLog + 1);
+  LATER_SERVER_NAME.sendContent(F(""));
 
 }//end handleLog()
 // before log api
@@ -4009,48 +4053,48 @@ void handleLog() {
 // after log api:
 void handleCommandList() {
 
-  server.sendHeader(LATER_CORS, "*");
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
-  server.send(200, LATER_PLAIN, "COMMAND LISTING (duplicate keys are aliases)\n\nKey\tCommand\n");                      //Send first part WITH header
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
+  LATER_SERVER_NAME.send(200, LATER_PLAIN, "COMMAND LISTING (duplicate keys are aliases)\n\nKey\tCommand\n");                      //Send first part WITH header
 
   char c[2] = {0, 0};
   for (auto const & x : LATER_CMDS)   {
     c[0] = x.second;
     if (!c[0]) continue;
-    server.sendContent(c);
-    server.sendContent("\t");
-    server.sendContent(x.first);
-    server.sendContent("\n");
+    LATER_SERVER_NAME.sendContent(c);
+    LATER_SERVER_NAME.sendContent("\t");
+    LATER_SERVER_NAME.sendContent(x.first);
+    LATER_SERVER_NAME.sendContent("\n");
   }
-  server.sendContent("");
+  LATER_SERVER_NAME.sendContent("");
 }//end handleCommandList()
 // a 100-line or fewer key:value store with smart api for managing it. file backed peristent storage.
 
 void handleStore() {
 
-  if (server.hasArg("value")) {
-    if (server.hasArg("ram")) {
-      LATER_STORE.update(server.arg("key").c_str(), server.arg("value").toInt());
+  if (LATER_SERVER_NAME.hasArg("value")) {
+    if (LATER_SERVER_NAME.hasArg("ram")) {
+      LATER_STORE.update(LATER_SERVER_NAME.arg("key").c_str(), LATER_SERVER_NAME.arg("value").toInt());
     } else {
-      LATER_STORE.set(server.arg("key").c_str(), server.arg("value").toInt());
+      LATER_STORE.set(LATER_SERVER_NAME.arg("key").c_str(), LATER_SERVER_NAME.arg("value").toInt());
     }
 
-  } else if (server.hasArg("key")) {
-    server.sendHeader(LATER_CORS, "*");
-    server.send(200, LATER_PLAIN, String(LATER_STORE.get(server.arg("key").c_str())));
+  } else if (LATER_SERVER_NAME.hasArg("key")) {
+    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, String(LATER_STORE.get(LATER_SERVER_NAME.arg("key").c_str())));
     return;
   }
 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader(LATER_CORS, "*");
-  server.send ( 200, LATER_PLAIN, "key  \tepoc\tver\tvalue\n");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "key  \tepoc\tver\tvalue\n");
 
   for (int i = 0; i <  LATER_STORE.length; i++) {
-    server.sendContent( LATER_STORE.stringify(i) );
-    server.sendContent( "\n" );
+    LATER_SERVER_NAME.sendContent( LATER_STORE.stringify(i) );
+    LATER_SERVER_NAME.sendContent( "\n" );
   }//next
 
-  server.sendContent("");
+  LATER_SERVER_NAME.sendContent("");
 
   // serve whole log:
 
@@ -4129,15 +4173,15 @@ void handleScripts() {
   strcat(out, "\n\t\t]\n}");//end scripts
 
 
-  server.sendHeader(LATER_CORS, "*");
-  server.send(200, "text/json", out);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/json", out);
 }
 int ratchetPos = 0;
 void handleBench() { // w/rgb: 39267us.  w/o rgb: 9us. w/o rgb but w/ output to prevent dead code skipping: 24u
   unsigned long st = micros();
   unsigned long et = micros();
-  server.sendHeader(LATER_CORS, "*");
-  server.send(200, "text/plain",  "rez" );
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/plain",  "rez" );
 }
 
 #endif
@@ -4269,12 +4313,21 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{E.value}", EVENT[Later.lastEventSlot].value),
   REPRAW("{E.time}", EVENT[Later.lastEventSlot].ms),
   REPRAW("{E.ms}", EVENT[Later.lastEventSlot].msNext - EVENT[Later.lastEventSlot].ms ),
-  REPRAW("{args}", server.args()),
+  REPRAW("{args}", LATER_SERVER_NAME.args()),
   REPRAW("{arity}", getCurrent()->arity),
   REPRAW("{arg0}", getCurrent()->subArgs[0]),
   REPRAW("{arg1}", getCurrent()->subArgs[1]),
   REPRAW("{arg2}", getCurrent()->subArgs[2]),
   REPRAW("{arg3}", getCurrent()->subArgs[3]),
+
+  REPRAW("{self.index}", getCurrent()->index  ),
+  REPRAW("{self.interval}", getCurrent()->interval  ),
+  REPRAW("{self.runTime}", getCurrent()->runTime  ),
+  REPRAW("{self.duration}", getCurrent()->duration  ),
+  REPRAW("{self.loadTime}", getCurrent()->loadedAt  ),
+  REPRAW("{self.parseTime}", getCurrent()->parseTime  ),
+  REPRAW("{self.runs}", getCurrent()->runs  ),
+  REPRAW("{self.lines}", getCurrent()->lineCount  ),
 
 };//end map
 bool LaterClass::addTemplate(  const char * key, unsigned long(* callBack)()   ) {
@@ -4350,7 +4403,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
       char * nam = getVarName(TEMPLATE_KEY_BUFF, s->index);
       s->VARS[nam[1] - 65] = val;
       int varLen = strlen(nam);
-      memset ( TEMPLATE_BUFFER, ' ', 16);
+      memset ( TEMPLATE_BUFFER, ' ', 24);
       strncpy(TEMPLATE_BUFFER, nam, varLen);
       TEMPLATE_BUFFER[varLen] = '\0';
     } else {
