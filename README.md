@@ -352,6 +352,7 @@ These take 0-3 numbers and return a number. Most of the built-ins are math-focue
 * **CSPRNG**(a,b) - returns a fast and supposedly true random number between a and b
 * **PRNG**(a,b) - returns a pseudo random number between a and b
 * **SEED**(a) - sets chain of values given by PRNG using an integer seed value
+* **GPIO**(pin) - returns a digitalRead of the specified GPIO pin. Unlike templates (eg. `{GPIO2}`), a var names the port.
 
 ### Custom Functions
 You can define new function in your Arduino sketch that can the be reached by scripts.
