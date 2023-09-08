@@ -183,6 +183,7 @@ typedef struct LATER_ENVIRON {
   byte exitLineNumber = 0; // over-rides the default last line from the real last line. can be jumped over in unload() to allow cleanup routine
   unsigned long subReturnValue = 99; // stores var slot for call command to recieve value
   bool calledFromWeb; // switches print from Serial to server
+  bool storeDirty; // set by store update, reset after first thereafter run
   LATER_OPTIONS options;
 } LATER_ENVIRON;
 //<<
@@ -329,15 +330,15 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 392 "danscript.ino"
+#line 393 "danscript.ino"
 unsigned long clamp(int a);
-#line 463 "danscript.ino"
+#line 488 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 551 "commands.ino"
+#line 820 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 569 "commands.ino"
+#line 838 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 729 "commands.ino"
+#line 998 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -361,87 +362,87 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 447 "core.ino"
+#line 452 "core.ino"
 void removeDoubleLines(char * buff);
-#line 457 "core.ino"
+#line 462 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 473 "core.ino"
+#line 478 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 491 "core.ino"
+#line 496 "core.ino"
 void autoEqualsInsert(char * line);
-#line 524 "core.ino"
+#line 529 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 770 "core.ino"
+#line 778 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 791 "core.ino"
+#line 799 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 955 "core.ino"
+#line 963 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1163 "core.ino"
+#line 1171 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1230 "core.ino"
+#line 1239 "core.ino"
 void popHttpResponse();
-#line 1243 "core.ino"
+#line 1252 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1394 "core.ino"
+#line 1403 "core.ino"
 void processStringFormats(char* s);
-#line 1523 "core.ino"
+#line 1532 "core.ino"
 void handleEval();
-#line 1536 "core.ino"
+#line 1551 "core.ino"
 void handleDump();
-#line 1764 "core.ino"
+#line 1779 "core.ino"
 void runScript();
-#line 2531 "core.ino"
+#line 2597 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
 #line 71 "http.ino"
 void handleAPI();
-#line 86 "http.ino"
+#line 88 "http.ino"
 void handleDelete();
-#line 108 "http.ino"
+#line 110 "http.ino"
 void handleReboot();
-#line 117 "http.ino"
+#line 119 "http.ino"
 void bindServerMethods();
-#line 177 "http.ino"
+#line 178 "http.ino"
 void handleLS();
-#line 256 "http.ino"
+#line 257 "http.ino"
 void handleEditor();
-#line 287 "http.ino"
+#line 288 "http.ino"
 String getContentType(String filename);
-#line 309 "http.ino"
+#line 310 "http.ino"
 bool handleFileRead(String path);
-#line 382 "http.ino"
+#line 383 "http.ino"
 void handleFileUpload();
-#line 422 "http.ino"
+#line 423 "http.ino"
 void handleFileList();
-#line 529 "http.ino"
+#line 530 "http.ino"
 void handleUnload();
-#line 542 "http.ino"
+#line 555 "http.ino"
 void handleRun();
-#line 605 "http.ino"
+#line 618 "http.ino"
 void handleLog();
-#line 795 "http.ino"
-void handleCommandList();
-#line 833 "http.ino"
+#line 808 "http.ino"
+void handleCommandList2();
+#line 846 "http.ino"
 void handleStore();
-#line 869 "http.ino"
+#line 885 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 877 "http.ino"
+#line 893 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 886 "http.ino"
+#line 902 "http.ino"
 void backtrack(char * buff);
-#line 890 "http.ino"
+#line 906 "http.ino"
 void handleScripts();
-#line 963 "http.ino"
-void handleBench();
-#line 5 "mod.ino"
+#line 7 "mod.ino"
 int HTTPRequest(char * url);
-#line 156 "templates.ino"
+#line 161 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 188 "templates.ino"
+#line 193 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 392 "danscript.ino"
+#line 256 "templates.ino"
+void handleCommandList();
+#line 393 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -451,6 +452,7 @@ std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned
   RAWFUNC("MAX", max(a, b)),
   RAWFUNC("SQRT", sqrt(a)),
   RAWFUNC("CBRT", cbrt(a)),
+  RAWFUNC("GPIO", digitalRead(a)),
   RAWFUNC("POW", pow(a, b)),
   { "MAP", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
       float rate = (float)b / (float)c;
@@ -463,6 +465,25 @@ std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned
   RAWFUNC("CRGB", Adafruit_NeoPixel::Color(clamp(a), clamp(b), clamp(c))),
   RAWFUNC("HSV", Adafruit_NeoPixel::ColorHSV(a, b, c)),
 #endif
+#ifdef __INC_FASTSPI_LED2_H
+  { "RGB", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
+      return ((a * 256 * 256) + (b * 256) + c);
+    }
+  },
+  { "HSV", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
+      LATER_PIXEL_TYPE x;
+      x.setHSV(a / 256, b, c);
+      return (x.r * 256 * 256) + (x.g * 256) + x.b;
+    }
+  },
+  { "HSL", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
+      LATER_PIXEL_TYPE x;
+      x.setHSV(a, b, c);
+      return (x.r * 256 * 256) + (x.g * 256) + x.b;
+    }
+  },
+#endif
+
   RAWFUNC("CSPRNG", ( (randomReg()) % ((a + 1) - b)) + b),
   RAWFUNC("PRNG", (rand() % ((a + 1) - b)) + b),
   {"SEED", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {srand(a); return 1;}}
@@ -672,9 +693,9 @@ bool LaterClass::addCommand(const char * commandName, bool(*callBack)(char *, LA
     return 0;
   }
 
-  char possibleNames[92];
-  strncpy(possibleNames, CMDCHARS, 91);
-  possibleNames[91] = '\0';
+  char possibleNames[93];//char possibleNames[92];
+  strcpy(possibleNames, CMDCHARS); //strncpy(possibleNames, CMDCHARS, 90); //strncpy(possibleNames, CMDCHARS, 91);
+  possibleNames[91] = '\0';//possibleNames[91] = '\0';
 
   // loop through existing vars, remove cmd char from possible char list
   for (auto const & x : LATER_CMDS)   {
@@ -771,7 +792,7 @@ char * replace (char * str, const char * term, const char * rep) {
     return str;
   }
 
-  char buff[80];
+  char buff[96];
   strcpy(buff, start + termlen);
 
   // char * str2 = buff;
@@ -795,6 +816,10 @@ String formatBytes(size_t bytes) {
 char * fileToBuff(String fileName) {
   static char buff[2048];
   char * p = buff;
+
+  if (fileName.startsWith("%RAM%")) {
+    return p;
+  }
   memset ( buff, '\0', 2048);
 
   if (!fileName.startsWith("/")) fileName = "/" + fileName;
@@ -867,6 +892,34 @@ uint32_t parseColor(char * ptr, LATER_ENVIRON * s) {
     }//end non-hex color handling
   }//end if
   return color;
+}//end parseColor()
+#endif
+
+#ifdef __INC_FASTSPI_LED2_H
+uint32_t parseColor(char * ptr, LATER_ENVIRON * s) {
+  int colorLength, commaPos;
+  LATER_PIXEL_TYPE color;
+  while (isspace(ptr[0])) ptr++; // trim left, maybe move to compilation stage, as optomization
+  colorLength = strlen(ptr);
+  uint32_t buff;
+    commaPos = laterUtil::indexOf(ptr, ",");
+    if (commaPos > 0) {  // $r, $g, $b
+      byte r, g, b;
+      r = Number(ptr, s->VARS);
+      ptr += commaPos + 1;
+      g = Number(ptr, s->VARS);
+      b = Number(strchr(ptr, ',') + 1, s->VARS);
+      buff+= b;
+    buff+= g * 256;
+    buff+= r * (256 * 256);
+    return buff;
+    } else { // no comma, just a big long
+      color = LATER_PIXEL_TYPE(Number(ptr, s->VARS)); //strtoul(ptr, NULL, 10);
+    }//end non-hex color handling
+  buff+= color.raw[2];
+  buff+= color.raw[1] * 256;
+  buff+= color.raw[0] * (256 * 256);
+  return buff;
 }//end parseColor()
 #endif
 }//end namespace
@@ -968,7 +1021,7 @@ void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
 
   if (!rez) {
     char * lp;
-    char linebuff[80];
+    char linebuff[96];
     lp = s->program + l->start;
     strncpy(linebuff, lp, l->len);
     linebuff[l->len] = '\0';
@@ -981,7 +1034,218 @@ void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
 
 
 }//end runAssert()
+#ifdef __INC_FASTSPI_LED2_H
 
+int subtract(int a, int b) {
+  return max(b - a, 0);
+}
+
+//}
+
+uint8_t within(uint8_t  range, uint8_t  base) {
+  uint8_t amt = randomReg() % range;
+  if(randomReg() % 2){//add
+    return qadd8(amt, base);
+  }else{//subtract
+   if(base > amt) return base - amt;
+   return 0;
+  }  
+}
+int rndSubtract(int range, int base) {
+  int n = randomReg() % range;
+  return max(base - n, 0);
+}
+int rndAdd(int range, int base) {
+  int n = randomReg() % range;
+  return min(base + n, 255);
+}
+void runSetPixel(char * line, LATER_ENVIRON * s) {
+
+  char * ptr = line;
+  uint32_t color;
+  LATER_PIXEL_TYPE parsedColor;
+  int indPos = laterUtil::indexOf(line, "->"),
+      commaPos = laterUtil::indexOf(line, ",") + 1,
+      startPos = Number(line, s->VARS),
+      howMany = 1;
+  if (commaPos && commaPos < indPos) howMany =  Number(line + commaPos, s->VARS);
+
+  ptr += indPos + 2;
+
+  //  1,2->|#11,22,33
+  // look for
+
+/*
+  dblog+= "\n\n@"+String(millis())+"\n line: " + String(line) +"\n";  
+  dblog+= " ptr: " + String(ptr) +"\n"; 
+  dblog+= " startPos: " + String(startPos) +"\n";
+  dblog+= " howMany: " + String(howMany) +"\n";  
+*/
+
+  char flag = 0;
+  if (strpbrk (ptr, "+-<>*&LR") == ptr) {
+    flag = ptr[0];
+    ptr++;
+  }
+  
+  if(flag=='@'){ // wtf is this needed? fixes flag getting matched as "@"
+  flag = '\0';
+  ptr--;
+  }
+  
+  
+  
+  if (startPos + howMany >  FastLED.size()) return;
+  
+
+  color = laterUtil::parseColor(ptr, s);  // LATER_PRINTLN("pix color:" + String(color));
+  // here we can apply shit like bright, avg, rnd, etc
+  
+  
+  
+   
+  if (flag) {
+
+    byte  rArg = (color >> 16) & 0xFF,
+          gArg = (color >> 8) & 0xFF,
+          bArg = color % 256;
+    LATER_PIXEL_TYPE colorNow;
+
+  byte rNow,gNow,bNow;
+  
+  CHSV hsv;
+   
+    for (int i = startPos, mx = startPos + howMany; i < mx; i++) {
+
+      colorNow = LATER_PIXEL_NAME[i];
+
+    rNow = colorNow.red;
+        gNow = colorNow.green;
+        bNow = colorNow.blue;
+
+      switch (flag) {
+        case '+':
+      LATER_PIXEL_NAME[i]+= colorNow;
+          break;
+
+        case '-':
+      LATER_PIXEL_NAME[i]-= colorNow;
+          break;
+
+        case '*':
+      LATER_PIXEL_NAME[i].setRGB( within(rArg, rNow), within(gArg, gNow), within(bArg, bNow) );
+          break;
+
+        case '>':
+          LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( rndAdd(rArg, rNow), rndAdd(gArg, gNow), rndAdd(bArg, bNow));
+          break;
+
+        case '<':
+          LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( rndSubtract(rArg, rNow), rndSubtract(gArg, gNow), rndSubtract(bArg, bNow));
+          break;
+
+        case '&':
+          LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( (rArg + rNow) / 2, (gArg + gNow) / 2, (bArg + bNow) / 2);
+          break;
+      
+    case 'R':
+      hsv = rgb2hsv_approximate(colorNow);
+      hsv.hue = qadd8(hsv.hue, rArg);
+      hsv.sat = qadd8(hsv.sat, gArg);
+      hsv.val = qadd8(hsv.val, bArg);
+      LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( hsv );
+      break;
+            
+    case 'L':
+      hsv = rgb2hsv_approximate(CRGB(colorNow));
+      if(hsv.hue >= rArg){
+      hsv.hue -= rArg;
+      }else{
+      hsv.hue = (255 + hsv.hue) - rArg;
+      }
+      
+      hsv.sat -= gArg;
+      hsv.val -= bArg;
+      LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( hsv );
+      break;
+      
+          //case '': break;
+      }//end switch()
+
+  //  LATER_PIXEL_NAME[i]=parsedColor;
+    
+    }//next pixel
+    return;
+  }//end if flag?
+  
+  
+ 
+ 
+  
+  for (int i = startPos, mx = startPos + howMany; i < mx; i++) {
+    LATER_PIXEL_NAME[i]= color;
+  }
+  
+
+}//end setPixel()
+void runRotate(long dist) {
+
+  int mx = FastLED.size() - 1;
+  uint16_t  i = 0;
+
+  //scoot them by memorizing next, then moving last to next
+  LATER_PIXEL_TYPE last;
+  last = LATER_PIXEL_NAME[mx];
+  for (i = mx; i > 0; i--)  LATER_PIXEL_NAME[i] = LATER_PIXEL_NAME[ i - 1 ];
+  LATER_PIXEL_NAME[0] =  last;
+  
+} // edn runRotate()
+
+void runGrad(char * line, LATER_ENVIRON * s) {
+  char * ptr = line;
+  uint32_t col, col2;
+  
+  /*
+  int indPos = laterUtil::indexOf(line, "->"),
+      commaPos = laterUtil::indexOf(line, ",") + 1,
+      startPos = Number(line, s->VARS),
+      howMany = LATER_PIXEL_NAME.numPixels();
+
+  if (commaPos && commaPos < indPos) howMany =  Number(line + commaPos, s->VARS);
+
+  ptr += indPos + 2;
+
+  char * ptr2 = strchr(ptr, ',');
+  ptr2[0] = '\0';
+  col = laterUtil::parseColor(ptr, s);
+  ptr2[0] = ',';
+  ptr = strchr(ptr, ',');
+  col2 = laterUtil::parseColor(ptr + 1, s);
+  byte  r1 = (col >> 16) & 0xFF,
+        g1 = (col >> 8) & 0xFF,
+        b1 = col % 256,
+        r2 = (col2 >> 16) & 0xFF,
+        g2 = (col2 >> 8) & 0xFF,
+        b2 = col2 % 256;
+
+  float fhm = howMany,
+        rd = (float)(r1 - r2) / fhm,
+        gd = (float)(g1 - g2) / fhm,
+        bd = (float)(b1 - b2) / fhm;
+
+  LATER_PIXEL_NAME.setPixelColor(startPos, col); // set first one pure
+
+  for (unsigned int i = 1, mx = howMany; i < mx; i++) {
+    LATER_PIXEL_NAME.setPixelColor(startPos + i,
+                                   r1 - (rd * i),
+                                   g1 - (gd * i),
+                                   b1 - (bd * i)
+                                  );
+  }//next i
+  LATER_PIXEL_NAME.setPixelColor(startPos + howMany, col2);// set last one pure
+*/
+}//end runGrad()
+#endif
 #ifdef ADAFRUIT_NEOPIXEL_H
 int add(int a, int b) {
   return min(a + b, 255);
@@ -1424,8 +1688,8 @@ int loadScript(String filename) { //dd666 make this a class method
 
   //    Parse program into lines
   char * lb = fileBuff; //strstr(buff, "\n");
-  char line[80];
-  //char lineCopy[80];
+  char line[96];
+  //char lineCopy[96];
   char cmd[16];
   char macro[16];
   char macroRep[64];
@@ -1673,6 +1937,11 @@ int loadScript(String filename) { //dd666 make this a class method
       if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
 #endif
 
+#ifdef HTTPClient_H_
+      //////////  &RESPONSE usage ?  32s
+      if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
+#endif
+
       ////////// output ?  16s - interpolate var and %templates% in code line itself?
 
       if (cmdChar == LATER_log || cmdChar == LATER_switch || cmdChar == LATER_print || cmdChar == LATER_println || cmdChar == LATER_ping || cmdChar == LATER_timer || cmdChar == LATER_assert || cmdChar == LATER_run || Later.addons[cmdChar]   ) {
@@ -1789,7 +2058,7 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
   int mx = SCRIPT->lineCount;
   int ind, varCache;
   char * k, * v, * c;
-
+  c =  SCRIPT->program; // prevent un-init error
   // compute Exit points for each line:
   for (int index = 0; index < mx; index++) {
     LATER_LINE * line = &whole[index];
@@ -2069,7 +2338,7 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
 
     // ratchet between commas, inclrementing ptr as needed
     unsigned int elmValue, elmsFound = 1;
-    char dlm[2] = {delim};
+    //char dlm[2] = {delim}; // dd unused
     bool valid  = false;
 
     while (ptr != NULL) {
@@ -2403,7 +2672,8 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
   x text
 
 */
-#ifdef ESP8266HTTPClient_H_
+//#ifdef ESP8266HTTPClient_H_
+#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
 void popHttpResponse() {
   if (Later.httpResponseTextBuffer[0]) return;
   if (http.getSize() > 1400) return;
@@ -2684,7 +2954,12 @@ void handleEval() {
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
   LATER_SERVER_NAME.send ( 200, LATER_PLAIN, " ");
   strcpy(linebuff, LATER_SERVER_NAME.arg("code").c_str());
-  laterCMD::runEval(linebuff, s);
+  if (strlen(linebuff) < 2) {
+    LATER_SERVER_NAME.sendContent("Error: missing code GET param.");
+  } else {
+    laterCMD::runEval(linebuff, s);
+  }
+
   LATER_SERVER_NAME.sendContent("");//ends and closes response
 }//end handleEval()
 
@@ -2694,7 +2969,7 @@ void handleDump() {
   LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
   if (!s) s = getCurrent();
   LATER_LINE * l;
-  char linebuff[80];
+  char linebuff[96];
   char respbuff[20];
   char * lp;
   char dbg[88];
@@ -2769,9 +3044,9 @@ void runScript() {
 
   LATER_ENVIRON * s = getCurrent();
   LATER_LINE * l;
-  static char linebuff[80]; // holds a copy of the code line to alter as needed to run, keeps orig intact
+  static char linebuff[96]; // holds a copy of the code line to alter as needed to run, keeps orig intact
   char * lp = s->program; // start point of master line
-  static char tempbuff[32]; // for utility use by built-in functions
+  //static char tempbuff[32]; // for utility use by built-in functions
 
   s->startedAt = micros();
   s->runs++;
@@ -2802,7 +3077,8 @@ void runScript() {
 
     // skip over all flag handling if no flag at all is set:
     if (l->flags) {
-#ifdef ESP8266HTTPClient_H_
+      //#ifdef ESP8266HTTPClient_H_
+#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
       // if ajax response operation, do that:
       if (((l->flags >> 5) & 0x01) == 1) {
         if (l->cmd == LATER_var || l->cmd == LATER_static || l->cmd == LATER_store || l->cmd == LATER_global ) { // assign ret to a vary:
@@ -2812,7 +3088,7 @@ void runScript() {
         } // end if var or other cmd?
       }//handle response access
 #endif
-      if ((l->flags % 2 == 1) && (((l->flags >> 4) & 0x01) == 1)) {
+      if ( l->flags % 2 == 1 ) {
         processTemplateExpressions2(linebuff, s);
       } // end if output-needing templates?
       if ( ((l->flags >> 4) & 0x01) == 1) {
@@ -2874,7 +3150,7 @@ void runScript() {
             }//next var name
             char * p = strchr(linebuff, '{');
             char * pcolon;
-            char * pname = varName;
+            //char * pname = varName;
             int slot = 0;
             int keyCount = 0;
             while (p) { // dig through json literal to define vars:
@@ -3100,7 +3376,7 @@ void runScript() {
           while (isSpace(k[0])) k++;
           laterUtil::splitStringByChar(k, ',');
           int i = 0;
-          for (i; i < laterUtil::split_count; i++)    s->subArgs[i] = Number(laterUtil::splits[i], s->VARS);
+          for (i = 0; i < laterUtil::split_count; i++)    s->subArgs[i] = Number(laterUtil::splits[i], s->VARS);
           s->arity = i;
         }//end if args?
 
@@ -3155,7 +3431,63 @@ void runScript() {
         s->i = l->exit;
         continue;
         break;
-#ifdef ESP8266HTTPClient_H_
+
+#ifdef __INC_FASTSPI_LED2_H
+      case LATER_pixel: // paint rgb leds
+        laterCMD::runSetPixel(lb, s);
+        continue;
+        break;
+      case LATER_render: // update painted rgb leds
+        FastLED.show();
+        continue;
+        break;
+      case LATER_rotate: // update painted rgb leds
+        laterCMD::runRotate( Number(lb, s->VARS) );
+        continue;
+        break;
+      case LATER_grad:
+        laterCMD::runGrad(lb, s);
+        continue;
+        break;
+      case LATER_solid: // paint all rgb leds
+
+        k = lb + 0;
+
+        FastLED.showColor( LATER_PIXEL_TYPE(laterUtil::parseColor(k, s)) );
+
+        continue;
+        break;
+
+#endif
+#ifdef ADAFRUIT_NEOPIXEL_H
+      case LATER_pixel: // paint rgb leds
+        laterCMD::runSetPixel(lb, s);
+        continue;
+        break;
+      case LATER_render: // update painted rgb leds
+        LATER_PIXEL_NAME.show();
+        continue;
+        break;
+      case LATER_rotate: // update painted rgb leds
+        laterCMD::runRotate( Number(lb, s->VARS) );
+        continue;
+        break;
+      case LATER_grad:
+        laterCMD::runGrad(lb, s);
+        continue;
+        break;
+      case LATER_solid: // paint all rgb leds
+
+        k = lb + 0;
+        LATER_PIXEL_NAME.fill( laterUtil::parseColor(k, s), 0, LATER_PIXEL_NAME.numPixels() );
+        LATER_PIXEL_NAME.show();
+
+        continue;
+        break;
+
+#endif
+        //#ifdef ESP8266HTTPClient_H_
+#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
       case LATER_ping: //  http request url
         yield();
         s->status = HTTPRequest(linebuff);
@@ -3191,7 +3523,18 @@ void runScript() {
           while (v[0] == ' ') v++;
           laterUtil::trimRight(v);
 
-          laterUtil::buffToFile(v, linebuff, tempInt);
+
+          if (v[0] == '%') {
+            char * fileBuff = laterUtil::fileToBuff(v);
+            if (tempInt) {
+              strcat (fileBuff, linebuff);
+            } else {
+              strcpy(fileBuff, linebuff);
+            }
+
+          } else {
+            laterUtil::buffToFile(v, linebuff, tempInt);
+          }
           s->writes++;
           k[0] = '>';
         } else {
@@ -3245,33 +3588,6 @@ void runScript() {
         laterCMD::runPortWrite(lb, s->VARS, false);
         continue;
         break;
-#ifdef ADAFRUIT_NEOPIXEL_H
-      case LATER_pixel: // paint rgb leds
-        laterCMD::runSetPixel(lb, s);
-        continue;
-        break;
-      case LATER_render: // update painted rgb leds
-        LATER_PIXEL_NAME.show();
-        continue;
-        break;
-      case LATER_rotate: // update painted rgb leds
-        laterCMD::runRotate( Number(lb, s->VARS) );
-        continue;
-        break;
-      case LATER_grad:
-        laterCMD::runGrad(lb, s);
-        continue;
-        break;
-      case LATER_solid: // paint all rgb leds
-
-        k = lb + 0;
-        LATER_PIXEL_NAME.fill( laterUtil::parseColor(k, s), 0, LATER_PIXEL_NAME.numPixels() );
-        LATER_PIXEL_NAME.show();
-
-        continue;
-        break;
-
-#endif
       case LATER_timer: // print hi-res timestamp to
         tempInt = micros();
         if (!s->timer) {
@@ -3412,6 +3728,8 @@ void finishRun(LATER_ENVIRON * s) {
   s->runTime = micros() -  s->startedAt;
   s->duration += s->runTime;
   s->resumeLineNumber = s->startLineNumber;
+  s->storeDirty = 0;
+  s->calledFromWeb = 0;
   if (s->interval > 0) {
     s->resumeMillis = (s->interval - 1) + (millis() - ( s->runTime / 1000));
   } else {
@@ -3494,7 +3812,7 @@ void handleAPI() { // break in here and look for default.bat or index.bat
 
   LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send ( 200, "text/html", F("<body><h1>Later Endpoints</h1><big><big><ul>\n"));
+  LATER_SERVER_NAME .send ( 200, "text/html", F("<body><title>Later</title><h1>Later Endpoints</h1><big><big><ul>\n<li><a href=/update>/update</a>\n<li><a href=/config/>/config</a>\n"));
   char line[64];
   for (const auto &x : PATHS) LATER_SERVER_NAME.sendContent(sprintf(line, "<li><a href=%s>%s</a>\n", x.first.c_str(), x.first.c_str()) ? line : line );
   LATER_SERVER_NAME.sendContent( "" );
@@ -3550,7 +3868,6 @@ void bindServerMethods() {
   SUB_PATH(test, handleDump);
   SUB_PATH(eval, handleEval);
   SUB_PATH(help, handleCommandList);
-  SUB_PATH(bench, handleBench);
   LATER_SERVER_NAME.on("/upload", HTTP_POST, []() {
     LATER_SERVER_NAME.send(200, LATER_PLAIN, "ok");
   }, handleFileUpload);
@@ -3850,8 +4167,16 @@ void handleUnload() {
   char *fnp = fnb + 1;
   memset(fnp, '\0', 31);
   strcpy(fnp, LATER_SERVER_NAME.arg("name").c_str());
-  if (fnp[0] != '/') fnp = fnb;
-  Later.unload(fnp);
+  if (fnp[0] == '*') {
+    for (int i = 0, mx = Later.loadedScripts; i < mx; i++) {
+      fnp = SCRIPTS[i].fileName;
+      Later.unload(fnp);
+    }
+
+  } else {
+    if (fnp[0] != '/') fnp = fnb;
+    Later.unload(fnp);
+  }
 
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
   LATER_SERVER_NAME.send(200, "text/json", "true");
@@ -4051,7 +4376,7 @@ void handleLog() {
 // before log api
 
 // after log api:
-void handleCommandList() {
+void handleCommandList2() {
 
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
   LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
@@ -4078,7 +4403,7 @@ void handleStore() {
     } else {
       LATER_STORE.set(LATER_SERVER_NAME.arg("key").c_str(), LATER_SERVER_NAME.arg("value").toInt());
     }
-
+    getCurrent()->storeDirty = 1;
   } else if (LATER_SERVER_NAME.hasArg("key")) {
     LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
     LATER_SERVER_NAME.send(200, LATER_PLAIN, String(LATER_STORE.get(LATER_SERVER_NAME.arg("key").c_str())));
@@ -4087,8 +4412,7 @@ void handleStore() {
 
   LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "key  \tepoc\tver\tvalue\n");
-
+  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "key  \ttimestamp\tver\tvalue\n");
   for (int i = 0; i <  LATER_STORE.length; i++) {
     LATER_SERVER_NAME.sendContent( LATER_STORE.stringify(i) );
     LATER_SERVER_NAME.sendContent( "\n" );
@@ -4140,6 +4464,7 @@ void handleScripts() {
   // iterate scripts:
   for (int i = 0; i < mx ; i++) {
     if (!SCRIPTS[i].lineCount) continue;
+    unsigned long runTime = (millis() - SCRIPTS[i].loadedAt) * (unsigned long)1000;
     strcat(out, "\t{\n");
 
     addJSON(out, "fileName", SCRIPTS[i].fileName);
@@ -4158,9 +4483,11 @@ void handleScripts() {
 
     addJSON(out, "parseTime", SCRIPTS[i].parseTime);
     addJSON(out, "runTime", SCRIPTS[i].runTime);
+
     if (SCRIPTS[i].runs) addJSON(out, "avgTime", SCRIPTS[i].duration / SCRIPTS[i].runs);
     addJSON(out, "cpuTime", SCRIPTS[i].duration);
-    addJSON(out, "lifeTime", (millis() - SCRIPTS[i].loadedAt) * (unsigned long)1000);
+    addJSON(out, "cpuUtil", (SCRIPTS[i].duration * 100 ) / runTime );
+    addJSON(out, "lifeTime", runTime);
     addJSON(out, "runs", SCRIPTS[i].runs);
     backtrack(out);
     strcat(out, "\n\t},\n");
@@ -4176,18 +4503,12 @@ void handleScripts() {
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
   LATER_SERVER_NAME.send(200, "text/json", out);
 }
-int ratchetPos = 0;
-void handleBench() { // w/rgb: 39267us.  w/o rgb: 9us. w/o rgb but w/ output to prevent dead code skipping: 24u
-  unsigned long st = micros();
-  unsigned long et = micros();
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send(200, "text/plain",  "rez" );
-}
-
 #endif
 
 #line 1 "mod.ino"
-#ifdef ESP8266HTTPClient_H_
+//#ifdef ESP8266HTTPClient_H_
+#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
+
 int HTTPRequest(char * url) {
   // wait for WiFi connection
   yield();
@@ -4224,6 +4545,8 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{rnd16}", randomReg() % 65536),
   REPRAW("{rnd_digit}", randomReg() % 10),
   REPRAW("{rnd_reg}", randomReg()),
+  REPRAW("{web}", getCurrent()->calledFromWeb ? 1 : 0),
+  REPRAW("{store}", getCurrent()->storeDirty ? 1 : 0),
   REPRAW("{i}", getCurrent()->forIndex[getCurrent()->forLevel]),
   REPRAW("{ii}", getCurrent()->forLevel > 0 ? (getCurrent()->forIndex[getCurrent()->forLevel - 1]) : 0),
   REPRAW("{iii}", getCurrent()->forLevel > 1 ? (getCurrent()->forIndex[getCurrent()->forLevel - 2]) : 0),
@@ -4264,6 +4587,9 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
 #ifdef ADAFRUIT_NEOPIXEL_H
   REPRAW("{leds}", LATER_PIXEL_NAME.numPixels()),
 #endif
+#ifdef __INC_FASTSPI_LED2_H
+  REPRAW("{leds}", FastLED.size()),
+#endif
   REPRAW("{line}", getCurrent()->i),
   REPRAW("{gpio0}", digitalRead(0)),
   REPRAW("{gpio2}", digitalRead(2)),
@@ -4296,8 +4622,6 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{gpio34}", digitalRead(34)),
   REPRAW("{gpio35}", digitalRead(35)),
 
-  REPRAW("{temp}", temprature_sens_read()),
-  REPRAW("{hall}", hallRead()),
 
   // replacements for 8266 versions:
   REPRAW("{cpu}", getCpuFrequencyMhz()),
@@ -4376,6 +4700,9 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
   char * ptrLeft = strchr(line, '{');
   if (!ptrLeft) return;
 
+  char * ptrRight = strchr(line, '}');
+  if (!ptrRight) return;
+
   bool storeCall = ptrLeft[1] == '&';
   bool varCall = ptrLeft[1] == '@';
   int len = strcspn (ptrLeft + 1, "}") + 2; //end param delim
@@ -4423,6 +4750,47 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
   if (strrchr ( ptrLeft + 1, '}' )) processTemplateExpressions2(line, s);
 
 }//end processTemplateExpressions2()
+void handleCommandList() {
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
+  LATER_SERVER_NAME.send(200, LATER_PLAIN, "COMMAND LISTING (duplicate keys are aliases)\n\nKey\tCommand\n");                      //Send first part WITH header
+
+  char c[2] = {0, 0};
+  for (auto const & x : LATER_CMDS)   {
+    c[0] = x.second;
+    if (!c[0]) continue;
+    LATER_SERVER_NAME.sendContent(c);
+    LATER_SERVER_NAME.sendContent("\t");
+    LATER_SERVER_NAME.sendContent(x.first);
+    LATER_SERVER_NAME.sendContent("\n");
+  }
+  LATER_SERVER_NAME.sendContent("\n\nFUNCTIONS:\n\n");
+  for (auto const & x : FUNCS)   {
+    if (strlen(x.first)) {
+      LATER_SERVER_NAME.sendContent(x.first);
+      LATER_SERVER_NAME.sendContent("\n");
+    }//end if something to send?
+  }
+  LATER_SERVER_NAME.sendContent("\n\nTEMPLATES:\n\n");
+  unsigned long val;
+
+  for (auto const & x : TEMPLATES2)   {
+    if (strlen(x.first)) {
+      LATER_SERVER_NAME.sendContent(x.first);
+      auto callback = TEMPLATES2[x.first];
+      val = 0;
+      if (callback) val = callback();
+      LATER_SERVER_NAME.sendContent("\t");
+
+      memset ( TEMPLATE_BUFFER, ' ', 24);
+      itoa(val, TEMPLATE_BUFFER, 10);
+      LATER_SERVER_NAME.sendContent(TEMPLATE_BUFFER);
+      LATER_SERVER_NAME.sendContent("\n");
+    }//end if something to send?
+  }
+  LATER_SERVER_NAME.sendContent("");
+}//end handleCommandList()
 
 
 
