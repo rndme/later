@@ -554,8 +554,8 @@ noop // do nothing
 
 
 
-**unload**   [_text_ **filename**]    [ex1](#) <br>
-unload another script by file name, starting with `/`. 
+**unload**   [_text_ **filename** or *]    [ex1](#) <br>
+unload another script by file name, starting with `/`. The star wildcard unloads all scripts.
 Useful to swap out an animation scripts upon button press, aka changing a "mode". <br>
 ```js
 unload /reds.bat
