@@ -67,6 +67,13 @@ analogWrite. Writes a PWM value to a GPIO pin, from 0 - 1023 <br>
 ```js
 analogWrite 2, 512 // turn lamp on half brightness
 ```
+**type**   [_string_ **filename** or **%RAM%**]    [ex1](#) <br>
+Prints a file to stdOut (http, socket, or serial). Prints the contents of a file by name.
+```js
+type /testinlog.txt
+// or
+type %RAM%
+```
 
 
 
