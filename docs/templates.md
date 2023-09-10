@@ -20,11 +20,12 @@ Later.addTemplate("{zip}",  TEMPLATE(90210)); // using TEMPLATE MACRO
 * **{i}**    : cursor of for-loop
 * **{line}**    : current parsed line number
 * **{gpioN}**   : digitalRead of pin #N, ex: {gpio5}
+* **{%RAM%}**   : plain text buffer contents, populated by (>)>>%RAM% output redirects
 
 
 ### Network
 * **{ip}** : last octet of IP address
-* **{net}** : network IP mask (usually a 0 or 1)
+* **{net}** : network IP mask (usually a 0 or 1) - 2nd to last octet
 * **{chan}** :  WiFi Channel  
 * **{rssi}** : WiFi Signal Strength     
 
