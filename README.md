@@ -218,6 +218,10 @@ And custom-delimiter arrays as well:
 
 `$b=[& ;11 22 33 44][2] where the char between & and _ is the delimiter`
 
+You can return  the length of an array (last index) with a `=` flag:
+
+`$count=[11, 22, 33, 44][=] - sets $count to 3, the last element's index`
+
 You can return an index instead of the element value with a `&` prefix flag:
 
 `$b=[11, 22, 33, 44][&22] - sets $b to 2. Starts at 1 so 0 is a miss`
