@@ -197,7 +197,8 @@ These single-char flags prefix the data assigned to a variable to affect the res
 
 * `var $x = 123` The normal definition, normally used via short-cut `$x = 123`
 * `static $x = 123` Only applies the first time it's run, then is ignored, good for defaulting values
-* `static $obj={a:1,b:2,c:3}` `static` (or an assign like `$x={a:1}`) can create apparent literal objects, read with a dot, eg: `$obj.b`, equal to 2 here.
+* `static $obj={a:1,b:2,c:3}` `static` can also create apparent literal objects, read with a dot, eg: `$obj.b`, equal to 2 here. The base variable contains the key:value pair count.
+* `static $obj=[1,2,3]` `static` can also create apparent literal arrays, read with a dot, eg: `$obj.1`, equal to 2 here. The base variable contains the element count.
 * `global x=123` Sets a system-wide variable, read through a template, eg: `{&x}` here. See [Store section](/docs/api.md#store) fro more info.
 * `store x=123` Sets a system-wide variable same as `global`, but the value is saved to internal storage for persistence between reboots.
 
