@@ -44,6 +44,14 @@
 #define LATER_LOG_SIZE 4096
 #endif
 
+#ifndef LATER_LINE_BUFFER
+#define LATER_LINE_BUFFER 96
+#endif
+
+#ifndef LATER_LINE_LIMIT
+#define LATER_LINE_LIMIT 128
+#endif
+
 #ifndef LATER_PIXEL_NAME
 #define LATER_PIXEL_NAME strip
 #endif
@@ -156,7 +164,7 @@ typedef struct LATER_LINE {
 typedef struct LATER_ENVIRON {
   byte index; // which numer of SCRIPTS are we?
   long i; // what line are we at?
-  LATER_LINE lines[128]; // holds meta about each line
+  LATER_LINE lines[LATER_LINE_LIMIT]; // holds meta about each line
   char program[LATER_PROGRAM_SIZE]; // program code string buffer
   long lineCount = 0; // how many parsed code lines are in the program?
   unsigned long loadedAt, startedAt, runs, duration, runTime, parseTime, reads, writes, interval; // ms timestamp at program start, how many executions?
@@ -240,6 +248,7 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 #define LATER_sub 'J'
 #define LATER_switch 'W'
 #define LATER_timer 't'
+#define LATER_type 'p'
 #define LATER_unload 'q'
 #define LATER_var 'V'
 //for the template engine:
@@ -306,6 +315,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
   {"sub", 'J'},
   {"switch", 'W'},
   {"timer", 't'},
+  {"type", 'p'},
   {"unlink", 'e'},// alias: delete
   {"unload", 'q'},
   {"var", 'V'},
@@ -330,9 +340,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 393 "danscript.ino"
+#line 399 "danscript.ino"
 unsigned long clamp(int a);
-#line 488 "danscript.ino"
+#line 499 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 820 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -376,23 +386,23 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT );
 void processVariableExpressions(char * line, unsigned long * VARS);
 #line 799 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 963 "core.ino"
+#line 970 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1171 "core.ino"
+#line 1178 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1239 "core.ino"
+#line 1246 "core.ino"
 void popHttpResponse();
-#line 1252 "core.ino"
+#line 1259 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1403 "core.ino"
+#line 1410 "core.ino"
 void processStringFormats(char* s);
-#line 1532 "core.ino"
+#line 1539 "core.ino"
 void handleEval();
-#line 1551 "core.ino"
+#line 1558 "core.ino"
 void handleDump();
-#line 1779 "core.ino"
+#line 1786 "core.ino"
 void runScript();
-#line 2597 "core.ino"
+#line 2679 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -440,9 +450,9 @@ int HTTPRequest(char * url);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 193 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 256 "templates.ino"
+#line 261 "templates.ino"
 void handleCommandList();
-#line 393 "danscript.ino"
+#line 399 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -453,6 +463,11 @@ std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned
   RAWFUNC("SQRT", sqrt(a)),
   RAWFUNC("CBRT", cbrt(a)),
   RAWFUNC("GPIO", digitalRead(a)),
+  RAWFUNC("ADC", analogRead(a)),
+  RAWFUNC("MED", a > b ? ((a < c) ? a : (b < c ? c : b)) : ((b < c) ? b : (c < a ? a : c))),
+  RAWFUNC("MODE", a == b ? a : (b == c ? b : a == c ? a : b)),
+  RAWFUNC("AVG", (a + b + (c || 0)) / 3),
+  RAWFUNC("CLAMP",  a > 0 ? (a < 255 ? a : 255) : 0 ),
   RAWFUNC("POW", pow(a, b)),
   { "MAP", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
       float rate = (float)b / (float)c;
@@ -792,7 +807,7 @@ char * replace (char * str, const char * term, const char * rep) {
     return str;
   }
 
-  char buff[96];
+  char buff[LATER_LINE_BUFFER];
   strcpy(buff, start + termlen);
 
   // char * str2 = buff;
@@ -1021,7 +1036,7 @@ void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
 
   if (!rez) {
     char * lp;
-    char linebuff[96];
+    char linebuff[LATER_LINE_BUFFER];
     lp = s->program + l->start;
     strncpy(linebuff, lp, l->len);
     linebuff[l->len] = '\0';
@@ -1688,8 +1703,8 @@ int loadScript(String filename) { //dd666 make this a class method
 
   //    Parse program into lines
   char * lb = fileBuff; //strstr(buff, "\n");
-  char line[96];
-  //char lineCopy[96];
+  char line[LATER_LINE_BUFFER];
+  //char lineCopy[LATER_LINE_BUFFER];
   char cmd[16];
   char macro[16];
   char macroRep[64];
@@ -1968,7 +1983,7 @@ int loadScript(String filename) { //dd666 make this a class method
       outptr[lineLen] = '\n';
       outptr += lineLen + 1;
 
-      if (lineCount++ > 128) break; // failsafe here, remove for prod?
+      if (lineCount++ > LATER_LINE_LIMIT) break; // failsafe here, remove for prod?
     }//end if line not empty?
   } // wend endpos > 0
 
@@ -2314,7 +2329,7 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
   //  [1,3,5][&3] == 1 addressof lookup
 
   char lookupModeFlag = 0;
-  if (strspn (indDelim, "<>&") > 0) {
+  if (strspn (indDelim, "<>&=") > 0) {
     //ptr++;
 
     lookupModeFlag = indDelim[0];
@@ -2377,6 +2392,13 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
       elmsFound++;
       ptr = strchr(ptr + 1, delim);  // skip commas until count == index
     }//wend comma segment
+
+    if (lookupModeFlag == '=') {
+      if (varSlot > -1) {
+        VARS[varSlot] = elmsFound - 1;
+        return true;
+      }
+    }
 
     if (varSlot > -1) {//DMA?
       VARS[varSlot] = 0;
@@ -2969,7 +2991,7 @@ void handleDump() {
   LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
   if (!s) s = getCurrent();
   LATER_LINE * l;
-  char linebuff[96];
+  char linebuff[LATER_LINE_BUFFER];
   char respbuff[20];
   char * lp;
   char dbg[88];
@@ -3044,7 +3066,7 @@ void runScript() {
 
   LATER_ENVIRON * s = getCurrent();
   LATER_LINE * l;
-  static char linebuff[96]; // holds a copy of the code line to alter as needed to run, keeps orig intact
+  static char linebuff[LATER_LINE_BUFFER]; // holds a copy of the code line to alter as needed to run, keeps orig intact
   char * lp = s->program; // start point of master line
   //static char tempbuff[32]; // for utility use by built-in functions
 
@@ -3176,6 +3198,68 @@ void runScript() {
             s->VARS[slot] = keyCount;
             continue;
           }//end if "json" literal?
+
+          // look for array literals
+          if (strchr(linebuff, ',') && strchr(linebuff, '[') && strchr(linebuff, ']')) { // defining a json literal?
+            unsigned int b = linebuff[1] - 65;
+            char varName[24];
+            char varNameTemp[24];
+            int baseLen = 0;
+            //  reflect human var names from shortcut char to use for adding .prop names to base var name.
+            for (auto const & x : LATER_VAR_NAMES[s->index])   {
+              if (x.second == b ) {
+                strcpy(varName, x.first.c_str());
+                strcat(varName, ".");
+                baseLen = strlen(varName);
+                break;
+              }//end if matching var?
+            }//next var name
+
+            // array routine, using numbers to name vars as index
+            char * p = strchr(linebuff, '[');
+            //char * pcomma;
+            //char * pname = varName;
+            int slot = 0;
+            int keyCount = 0;
+            while (p) { // dig through json literal to define vars:
+
+              p++;
+              while (p[0] == ' ') p++; // trimleft
+
+
+              varName[baseLen] = '\0'; // reset composite var name holder
+              std::sprintf(varNameTemp, "%d", keyCount);
+              strncat(varName, varNameTemp, baseLen);
+
+              slot = getVarNameNumber(varName, s->index); // use composite to get/make allocated slot
+              s->VARS[slot] = Number(p, s->VARS); // set var value from literal
+
+              /*
+                uniPrint("varName:");
+                uniPrintln(String(varName));
+
+                uniPrint("keyCount:");
+                uniPrintln(String(keyCount));
+
+                uniPrint("p:");
+                uniPrintln(String(p));
+
+                uniPrint("baseLen:");
+                uniPrintln(String(baseLen));
+              */
+
+              keyCount++;
+              p = strchr(p, ','); // next k:v pair
+              if (!p) break; //p = strchr(p, ']'); // last pair?
+
+            }//wend , array values
+            // now set root object to a count of properties:
+            varName[baseLen - 1] = '\0';
+            slot = getVarNameNumber(varName, s->index); // use composite to get/make allocated slot
+            s->VARS[slot] = keyCount;
+            continue;
+          }//end if "array" literal?
+
         }//end if static/define?
 
         if (usedDMA) continue;
@@ -3524,7 +3608,7 @@ void runScript() {
           laterUtil::trimRight(v);
 
 
-          if (v[0] == '%') {
+          if (v[0] == '%' && v[1] == 'R' && v[4] == '%') {
             char * fileBuff = laterUtil::fileToBuff(v);
             if (tempInt) {
               strcat (fileBuff, linebuff);
@@ -3547,6 +3631,10 @@ void runScript() {
         continue;
         break;
 
+      case LATER_type: // print file by name to "stdout"
+        uniPrintln(laterUtil::fileToBuff(linebuff));
+        continue;
+        break;
       case LATER_log: // log value
         processStringFormats(linebuff);
         laterCMD::logMe(linebuff);
@@ -4710,7 +4798,10 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
 
   memcpy(TEMPLATE_KEY_BUFF, ptrLeft, len);
   TEMPLATE_KEY_BUFF[len] = '\0';
-
+  if (strstr(TEMPLATE_KEY_BUFF, "%RAM%")) { // was  nsLATER::laterUtil
+    laterUtil::replace(line, TEMPLATE_KEY_BUFF, laterUtil::fileToBuff("%RAM%"));
+    return;
+  }
   auto callback = TEMPLATES2[TEMPLATE_KEY_BUFF];
   if (callback) val = callback();
   if (storeCall) {
