@@ -288,7 +288,7 @@ sub
 ```
 
 
-**gosub**   [_text_ **name** [[[,_int_ **arg0**], _int_ **arg1**], _int_ **arg2**], _int_ **arg3** ]  [ex1](#) <br>
+**gosub**   [_text_ **name** [[[_int_ **arg0**], _int_ **arg1**], _int_ **arg2**], _int_ **arg3** ]  [ex1](#) <br>
 Jumps to a subroutine, executes code in that sub, continues flow on the following line.
 Optional arguments can be passed after the sub name, up to 4, separated by commas.
 These data are available inside the sub as `{arg0} .. {arg3}` template placeholders.
