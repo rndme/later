@@ -28,6 +28,47 @@ Later.addCommand("name", COMMAND( WiFi.hostname(value); return 1; ));
 // script usage: name my_cool_name
 ```
 
+
+Print JSON of many variables to http response:
+```c++
+  // print JSON response with a list of named variables, eg: json age, mode, lastTime
+    Later.addCommand("json", [](char * v, LATER_LINE * ln, LATER_ENVIRON * s )->bool {
+      nsLATER::laterUtil::splitStringByChar(v, ',');
+      if (nsLATER::laterUtil::split_count > 1) {
+
+        nsLATER::uniPrintln("{");
+
+        for (int i = 0; i < nsLATER::laterUtil::split_count; i++) {
+          // trim left:
+          while (nsLATER::laterUtil::splits[i][0] == ' ')nsLATER::laterUtil::splits[i]++;
+          
+          // find comma delim:
+          char * ptr = strchr(nsLATER::laterUtil::splits[i], ',');
+          if (ptr) ptr[0] = '\0'; // chop at first comma
+          
+          // trim right:
+          ptr = strchr(nsLATER::laterUtil::splits[i], ' ');
+          if (ptr) ptr[0] = '\0'; // chop at first space
+          
+          char* slot;
+          char key[16];
+          key[0] = '$';
+          
+          strcpy(key + 1, nsLATER::laterUtil::splits[i]);
+          slot = nsLATER::getVarName(key, s->index); // use composite to get/make allocated slot
+          nsLATER::uniPrint(" \"");
+          nsLATER::uniPrint(key + 1);
+          nsLATER::uniPrint("\":\t");
+          nsLATER::uniPrint(String(s->VARS[slot[1] - 65]));
+          nsLATER::uniPrintln(", ");
+
+        }//next var
+        nsLATER::uniPrintln("} ");
+      }//end if vars passed?
+    });//end command json
+```
+
+
 Send a line with WebSockets:
 ```c++
 // up top in sketch body:
