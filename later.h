@@ -388,21 +388,21 @@ void processVariableExpressions(char * line, unsigned long * VARS);
 bool processArray(char * line, unsigned long * VARS, int varSlot);
 #line 970 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1178 "core.ino"
+#line 1189 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1246 "core.ino"
+#line 1257 "core.ino"
 void popHttpResponse();
-#line 1259 "core.ino"
+#line 1270 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1410 "core.ino"
+#line 1421 "core.ino"
 void processStringFormats(char* s);
-#line 1539 "core.ino"
+#line 1550 "core.ino"
 void handleEval();
-#line 1558 "core.ino"
+#line 1569 "core.ino"
 void handleDump();
-#line 1786 "core.ino"
+#line 1797 "core.ino"
 void runScript();
-#line 2679 "core.ino"
+#line 2691 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -450,7 +450,7 @@ int HTTPRequest(char * url);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 193 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 261 "templates.ino"
+#line 262 "templates.ino"
 void handleCommandList();
 #line 399 "danscript.ino"
 unsigned long  clamp(int a) {
@@ -745,7 +745,7 @@ bool LaterClass::addCommand(const char * commandName, bool(*callBack)(char *, LA
 #line 1 "commands.ino"
 
 namespace laterUtil {
-char * splits[10];
+char * splits[24];
 int split_count;
 int intFromHexChar(char c) {
   if (c < 58) return c - 48;
@@ -971,9 +971,9 @@ void runPortWrite (char * line, unsigned long * VARS, bool isDigital) {
   if (isDigital) {
     digitalWrite(Number(k, VARS), Number(v, VARS));
   } else {
-#ifdef ESP8266
+
     analogWrite(Number(k, VARS), Number(v, VARS));
-#endif
+
   }
 }//end runPortWrite()
 void compositeLine(char * linebuff, LATER_ENVIRON * s) {
@@ -2483,7 +2483,7 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
     ptrCmd = laterUtil::copyUntilChar(s, '(');
     // find command prefix if any:
     for (unsigned int i = strlen(ptrCmd) - 2; i > 0; i--) {
-      if (!isupper(ptrCmd[i])) {
+      if (!isupper(ptrCmd[i]) && (ptrCmd[i] != '.') ) {
         ptrCmd += i + 1;
         break;
       }// endif upper?
@@ -2518,13 +2518,14 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
     pos = strcspn (ptr, "+-*/%<>!&?,:)=|");
 
   }
-
+  unsigned long arity = 1;
   while (pos) {//put num/term into stack, slide string, try to grab next
 
     nums[i] = Number(ptr, VARS); //atoi(ptr);
     ops[i] = ptr[pos];
     if (ops[i++] == ')') break;
     if (i > 7) break;
+    arity++;
     ptr += pos + 1;
     pos = strcspn (ptr , "+*-/%<>=!&?,:)|");
   }//wend pos
@@ -2555,7 +2556,14 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
 
   if (hasFunc) { // has function
     auto cb = FUNCS[ptrCmd];
-    if (cb) varCache = cb( nums[0], nums[1], nums[2] );
+    if (cb) {
+      switch (arity) {
+        case 1: varCache = cb( nums[0], -1, -1 ); break;
+        case 2: varCache = cb( nums[0], nums[1], -1 ); break;
+        default:  varCache = cb( nums[0], nums[1], nums[2] ); break;
+      }
+    }
+
   } else { // calc
 
 
@@ -3574,10 +3582,10 @@ void runScript() {
 #if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
       case LATER_ping: //  http request url
         yield();
+        Later.httpResponseTextBuffer[0] = '\0';
         s->status = HTTPRequest(linebuff);
         yield();
 
-        Later.httpResponseTextBuffer[0] = '\0';
         Later.httpResponseText = Later.httpResponseTextBuffer;
 
         //Later.httpResponseText = Later.httpResponseTextBuffer;
@@ -3617,9 +3625,9 @@ void runScript() {
             }
 
           } else {
+            s->writes++;
             laterUtil::buffToFile(v, linebuff, tempInt);
           }
-          s->writes++;
           k[0] = '>';
         } else {
           if (l->cmd == LATER_println) {
@@ -4715,7 +4723,6 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{cpu}", getCpuFrequencyMhz()),
   REPRAW("{mac}", chipID),
   REPRAW("{flash}", ESP.getFlashChipSize()),
-  REPRAW("{cycle}", xthal_get_ccount()),
   REPRAW("{micros64}", xTaskGetTickCount()),
 
 
@@ -4793,12 +4800,12 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
 
   bool storeCall = ptrLeft[1] == '&';
   bool varCall = ptrLeft[1] == '@';
-  int len = strcspn (ptrLeft + 1, "}") + 2; //end param delim
+  int len = (ptrRight - ptrLeft) + 1;
   unsigned long val = 0;
 
   memcpy(TEMPLATE_KEY_BUFF, ptrLeft, len);
   TEMPLATE_KEY_BUFF[len] = '\0';
-  if (strstr(TEMPLATE_KEY_BUFF, "%RAM%")) { // was  nsLATER::laterUtil
+  if (strstr(TEMPLATE_KEY_BUFF, "%RAM%")) { // was  nsLATER::laterUtil  ddns
     laterUtil::replace(line, TEMPLATE_KEY_BUFF, laterUtil::fileToBuff("%RAM%"));
     return;
   }
@@ -4869,6 +4876,10 @@ void handleCommandList() {
   for (auto const & x : TEMPLATES2)   {
     if (strlen(x.first)) {
       LATER_SERVER_NAME.sendContent(x.first);
+      if ( strstr(x.first, "[pop") || strstr(x.first, "[shift") ) { // prevent destructive reads
+        LATER_SERVER_NAME.sendContent("\t  n/a in help\n");
+        continue;
+      }
       auto callback = TEMPLATES2[x.first];
       val = 0;
       if (callback) val = callback();
