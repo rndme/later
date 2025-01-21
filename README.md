@@ -155,7 +155,8 @@ They are replaced early, so they can be used anywhere a number would be used, li
 All variables are positive integers. All scope is global to the single script. Subroutines don't have private variables, they read/write the same variables as inline code. 
 There is no way to undefine a variable within a script once created, without reloading the script.
 Default variable value if un-assigned is 0, positive integers only, init once via `$a=123`.
-GET runtime setting: `/batch?mode=3` sets `$mode=3` before `/batch.bat` runs.
+GET runtime setting: `/batch?mode=3` sets `$mode=3` before `/batch.bat` runs. If using `option persist` or `option interval=n`, url-named variables are set at the `start` section code. You can sniff for url-set variables passed zero using marco url insertion, for example to sniff a url-set `mode` command that _could_ be zero, `if 9@mode < 10`, which evaluates to `90 < 10` when passed a zero and `9` if nothing was passed at all.
+
 You can create "local static" variables using the `static` command, eg. `static $count=0`, which only assign a value the first time they are encountered. You can create supervariables accessible to all scripts using the `global` command, eg. `global lastseen={timer}`, which are read via &-prefixed template-syntax: `{&lastseen}`. If you want the superglobal value to persist between reboots, you can save it to a local file/EEPROM during assignment by using the `store` command the same as `global`.
 
 
