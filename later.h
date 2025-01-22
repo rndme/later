@@ -150,6 +150,7 @@ typedef struct LATER_OPTIONS {
   bool strict; // disable legacy handlers and slower features?
   bool persist; // keep the script in ram?
   bool socket; // use web socket as print mechanism?
+  bool noget; // disables GET param var value mapping
 } LATER_OPTIONS;
 
 // 37800b free before bumping up lines from 64 to 96
@@ -198,7 +199,7 @@ typedef struct LATER_ENVIRON {
 
 LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 // cdefnoqrstux
-// left: YA py
+// left: y
 // char cmd name constants
 #define LATER_analogWrite 'w'
 #define LATER_assert 'k'
@@ -331,7 +332,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 
 // supports the auto end point recording and simplified http path/handler
 #ifdef ESP8266WEBSERVER_H
-#define SUB_PATH(_key, _expr) LATER_SERVER_NAME.on("/" #_key, _expr); LATER_SERVER_NAME.on("/" #_key "/", _expr);PATHS["/" #_key]=#_expr
+#define SUB_PATH(_key, _expr, _blurb) LATER_SERVER_NAME.on("/" #_key, _expr); LATER_SERVER_NAME.on("/" #_key "/", _expr);PATHS["/" #_key]=#_expr;BLURBS["/" #_key]=#_blurb
 #endif
 //<<
 // used inline in intitial expression function and template libs
@@ -340,9 +341,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 399 "danscript.ino"
+#line 400 "danscript.ino"
 unsigned long clamp(int a);
-#line 499 "danscript.ino"
+#line 500 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 820 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -372,77 +373,77 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 452 "core.ino"
+#line 454 "core.ino"
 void removeDoubleLines(char * buff);
-#line 462 "core.ino"
+#line 464 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 478 "core.ino"
+#line 480 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 496 "core.ino"
+#line 498 "core.ino"
 void autoEqualsInsert(char * line);
-#line 529 "core.ino"
+#line 531 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 778 "core.ino"
+#line 780 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 799 "core.ino"
+#line 801 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 970 "core.ino"
+#line 972 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1189 "core.ino"
+#line 1191 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1257 "core.ino"
+#line 1259 "core.ino"
 void popHttpResponse();
-#line 1270 "core.ino"
+#line 1272 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1421 "core.ino"
+#line 1423 "core.ino"
 void processStringFormats(char* s);
-#line 1550 "core.ino"
+#line 1552 "core.ino"
 void handleEval();
-#line 1569 "core.ino"
+#line 1571 "core.ino"
 void handleDump();
-#line 1797 "core.ino"
+#line 1799 "core.ino"
 void runScript();
-#line 2691 "core.ino"
+#line 2707 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
-#line 71 "http.ino"
+#line 73 "http.ino"
 void handleAPI();
-#line 88 "http.ino"
+#line 179 "http.ino"
 void handleDelete();
-#line 110 "http.ino"
+#line 201 "http.ino"
 void handleReboot();
-#line 119 "http.ino"
+#line 210 "http.ino"
 void bindServerMethods();
-#line 178 "http.ino"
+#line 277 "http.ino"
 void handleLS();
-#line 257 "http.ino"
+#line 356 "http.ino"
 void handleEditor();
-#line 288 "http.ino"
+#line 387 "http.ino"
 String getContentType(String filename);
-#line 310 "http.ino"
+#line 409 "http.ino"
 bool handleFileRead(String path);
-#line 383 "http.ino"
+#line 482 "http.ino"
 void handleFileUpload();
-#line 423 "http.ino"
+#line 522 "http.ino"
 void handleFileList();
-#line 530 "http.ino"
+#line 629 "http.ino"
 void handleUnload();
-#line 555 "http.ino"
+#line 654 "http.ino"
 void handleRun();
-#line 618 "http.ino"
+#line 717 "http.ino"
 void handleLog();
-#line 808 "http.ino"
+#line 907 "http.ino"
 void handleCommandList2();
-#line 846 "http.ino"
+#line 945 "http.ino"
 void handleStore();
-#line 885 "http.ino"
+#line 984 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 893 "http.ino"
+#line 992 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 902 "http.ino"
+#line 1001 "http.ino"
 void backtrack(char * buff);
-#line 906 "http.ino"
+#line 1005 "http.ino"
 void handleScripts();
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
@@ -452,7 +453,7 @@ unsigned long processTemplateExpressionsNumber(const char * line);
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
 #line 262 "templates.ino"
 void handleCommandList();
-#line 399 "danscript.ino"
+#line 400 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -634,6 +635,7 @@ void LaterClass::unload(const char * fileName) {
   s->resumeLineNumber = 0;
   s->exitLineNumber = 0;
   s->lineCount = 0;
+  s->options.noget = 0;
   s->options.debug = 0;
   s->options.socket = 0;
   s->options.persist = 0;
@@ -1942,7 +1944,9 @@ int loadScript(String filename) { //dd666 make this a class method
       } else {
         if (strchr(linePtr, '@')) flag += 2;// vars
       }
-
+      if (cmdChar == LATER_option) {
+        if (strstr(linePtr, "noget!") )SCRIPT->options.noget = true;
+      }
       if (strchr(linePtr, '(') && strchr(linePtr, ')') && !isStaticPrintBlock ) flag += 4;
       //////////  [x,y][arrays] ?  8s
       if (strstr(linePtr, "][") && !isStaticPrintBlock ) flag += 8;
@@ -3268,6 +3272,19 @@ void runScript() {
             continue;
           }//end if "array" literal?
 
+          if (1) { // look out for url-inserted values
+            unsigned int b = linebuff[1] - 65;
+            char varName[24];
+            //  reflect human var names from shortcut char to use for adding .prop names to base var name.
+            for (auto const & x : LATER_VAR_NAMES[s->index])   {
+              if (x.second == b ) {
+                strcpy(varName, x.first.c_str());
+                break;
+              }//end if matching var?
+            }//next var name
+            if (server.hasArg(varName + 1)) continue;
+          }
+
         }//end if static/define?
 
         if (usedDMA) continue;
@@ -3708,6 +3725,7 @@ void runScript() {
         if (strstr(lb, "strict")) s->options.strict = true;
         if (strstr(lb, "persist")) s->options.persist = true;
         if (strstr(lb, "socket")) s->options.socket = true;
+        if (strstr(lb, "noget")) s->options.noget = true;
 
         if ((k = strstr(lb, "interval"))) {
           // find next digits
@@ -3862,6 +3880,8 @@ const char * const FLASH_SIZE_MAP_NAMES[] = {
 ////////////////////////////////////////////
 #ifdef ESP8266WEBSERVER_H
 std::map<std::string,  std::string> PATHS;
+std::map<std::string,  std::string> BLURBS;
+
 void handleGenericHttpRun(String fn) {
 
   LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -3873,16 +3893,18 @@ void handleGenericHttpRun(String fn) {
     LATER_SERVER_NAME.sendContent("");
     return;
   }
-  // load vars from url into script enviroment:
-  String key, value, banned = ",$name,$content-type";
-  for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
-    key =  "$" + LATER_SERVER_NAME.argName(i);
-    value = LATER_SERVER_NAME.arg(i);
-    if (banned.indexOf(',' + key + ',') > -1) continue;
-    char slot = getVarNameNumber((char*)key.c_str(), s->index);
-    s->VARS[(int)slot] = value.toInt();
-  }
 
+  if (!s->options.noget) {
+    // load vars from url into script enviroment:
+    String key, value, banned = ",$name,$content-type";
+    for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
+      key =  "$" + LATER_SERVER_NAME.argName(i);
+      value = LATER_SERVER_NAME.arg(i);
+      if (banned.indexOf(',' + key + ',') > -1) continue;
+      char slot = getVarNameNumber((char*)key.c_str(), s->index);
+      s->VARS[(int)slot] = value.toInt();
+    }
+  }
   LATER_SERVER_NAME.send ( 200, s->contentType, ""); // start response
   s->calledFromWeb = 1;
   Later.run((char*)fn.c_str()); // execute em!
@@ -3908,9 +3930,81 @@ void handleAPI() { // break in here and look for default.bat or index.bat
 
   LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME .send ( 200, "text/html", F("<body><title>Later</title><h1>Later Endpoints</h1><big><big><ul>\n<li><a href=/update>/update</a>\n<li><a href=/config/>/config</a>\n"));
+
+  char * TAGLINE = "Later";
+
+#ifdef LATER_PROJECT
+  TAGLINE = LATER_PROJECT;
+#endif
+  LATER_SERVER_NAME .send ( 200, "text/html", F("<html><body><title>"));
+
+  LATER_SERVER_NAME.sendContent(TAGLINE);
+
+  LATER_SERVER_NAME.sendContent(F("</title><style>*{font: 26px monospace;background:#222; color: #ccc; }a{text-decoration:none;color:#77a;}li>a:first-child:visited{color: #aaf;font-weight:bold;}li{list-style:none;padding-bottom: 0.5em;}small{font-size: 80%;white-space:pre; color:#777;}li>a:first-child{width: 7em;display: inline-block;}li:first-child small,li:first-child a{color:#fff}aside{font-size: 20px;opacity:0.8;}h1{font-size: 32px;}</style><h1>"));
+
+  LATER_SERVER_NAME.sendContent(TAGLINE);
+
+  LATER_SERVER_NAME.sendContent(F("</h1><big><big><ul><li>\n<a href=#>Endpoint </a> <small> Kind  Type  Params/Description</small></b>\n<li><a href=/autoexec.bat>/autoexec.bat</a> <small> API TXT View startup script</small>\n<li><a href=/config/>/config</a> <small> UI  HTML  Config options interface</small>\n"));
+  delay(5);
+
   char line[64];
-  for (const auto &x : PATHS) LATER_SERVER_NAME.sendContent(sprintf(line, "<li><a href=%s>%s</a>\n", x.first.c_str(), x.first.c_str()) ? line : line );
+  char blurb[160];
+  for (const auto &x : PATHS) {
+
+    Serial.print(x.first.c_str());
+    Serial.print(" - ");
+
+    int len = strlen(BLURBS[x.first.c_str()].c_str()) - 1;
+    strncpy(blurb, BLURBS[x.first.c_str()].c_str(), len );
+    blurb[len] = '\0';
+    if (strlen(blurb) < 5 ) strcpy(blurb , "missin");
+    //blurb = "teeee";
+
+
+    delay(1);
+
+    LATER_SERVER_NAME.sendContent(sprintf(line, "<li><a href=%s>%s</a> ", x.first.c_str(), x.first.c_str() ) ? line : line );
+    LATER_SERVER_NAME.sendContent(" <small> ");
+    LATER_SERVER_NAME.sendContent(blurb + 1);
+    LATER_SERVER_NAME.sendContent("</small>\n");
+  }
+  delay(5);
+
+  LATER_SERVER_NAME.sendContent("\n<li><a href=/update>/update</a> <small> UI HTML  OTA update interface</small>\n");
+
+  LATER_SERVER_NAME.sendContent("<br><br><aside>Built on ");
+  LATER_SERVER_NAME.sendContent(__DATE__);
+  LATER_SERVER_NAME.sendContent(" for ");
+
+#ifdef ARDUINO_BOARD
+  LATER_SERVER_NAME.sendContent(ARDUINO_BOARD);
+#else
+  LATER_SERVER_NAME.sendContent("Unknown Board");
+#endif
+  LATER_SERVER_NAME.sendContent(" w/ ");
+
+  itoa (ESP.getFlashChipRealSize() / 1024, line, 10);
+
+  LATER_SERVER_NAME.sendContent( line ) ;
+  LATER_SERVER_NAME.sendContent("k flash ");
+
+  LATER_SERVER_NAME.sendContent(" as ");
+#ifdef LATER_PROJECT
+  LATER_SERVER_NAME.sendContent(LATER_PROJECT);//manual name
+#else
+#ifdef ESP8266
+  LATER_SERVER_NAME.sendContent(WiFi.hostname());//esp32
+#else
+  LATER_SERVER_NAME.sendContent(WiFi.getHostname());//esp32
+#endif
+#endif
+
+  LATER_SERVER_NAME.sendContent("<br>");
+  LATER_SERVER_NAME.sendContent(WiFi.macAddress());
+
+  LATER_SERVER_NAME.sendContent(" at ");
+  LATER_SERVER_NAME.sendContent(WiFi.localIP().toString());
+  LATER_SERVER_NAME.sendContent("</aside></body></html>");
   LATER_SERVER_NAME.sendContent( "" );
 }
 
@@ -3950,20 +4044,28 @@ void bindServerMethods() {
   LATER_SERVER_NAME.on("/", handleAPI); // this style of sub won't be listed
 
   // subscript public GET endpoints:
-  SUB_PATH(run, handleRun);
   //@TAKE
-  SUB_PATH(scripts, handleScripts);
-  SUB_PATH(log, handleLog);
-  SUB_PATH(dir, handleFileList);
-  SUB_PATH(ls, handleLS);
-  SUB_PATH(delete, handleDelete);
-  SUB_PATH(reboot, handleReboot);
-  SUB_PATH(editor, handleEditor);
-  SUB_PATH(store, handleStore);
-  SUB_PATH(unload, handleUnload);
-  SUB_PATH(test, handleDump);
-  SUB_PATH(eval, handleEval);
-  SUB_PATH(help, handleCommandList);
+
+  // subscript public GET endpoints:
+  SUB_PATH(run, handleRun, "API  TXT @name Runs a script by filename");
+  //@TAKE
+  SUB_PATH(scripts, handleScripts, "API  JSON  Details of running scripts");
+  SUB_PATH(log, handleLog, "API  TXT View logged messages. See <a target=_blank href=https://github.com/rndme/later/blob/master/docs/api.md#log>docs</a> for GET options. ");
+  SUB_PATH(dir, handleFileList, "API JSON  Lists stored files w/ details");
+
+  SUB_PATH(ls, handleLS, "UI HTML  File manager interface - allows deletes and uploads");
+  SUB_PATH(delete, handleDelete, "API  JSON  @name Deletes a script by filename");
+  SUB_PATH(reboot, handleReboot, "API  HTML  Reboots the ESP");
+  SUB_PATH(editor, handleEditor, "UI HTML  Script editor interface");
+
+
+  SUB_PATH(store, handleStore, "API TSV Stored vars. See <a target=_blank href=https://github.com/rndme/later/blob/master/docs/api.md#store>docs</a> for GET options. ");
+  SUB_PATH(unload, handleUnload, "API  JSON  @name Unloads a running Script by filename");
+  SUB_PATH(test, handleDump, "API  TXT @name Get debug information of a running script by script filename");
+
+  SUB_PATH(eval, handleEval, "API  TXT @name Runs a Script by filename");
+  SUB_PATH(help, handleCommandList, "API TXT List available commands and functions and templates");
+
   LATER_SERVER_NAME.on("/upload", HTTP_POST, []() {
     LATER_SERVER_NAME.send(200, LATER_PLAIN, "ok");
   }, handleFileUpload);
