@@ -343,7 +343,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 unsigned long randomReg();
 #line 400 "danscript.ino"
 unsigned long clamp(int a);
-#line 500 "danscript.ino"
+#line 502 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 820 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -409,41 +409,45 @@ void finishRun(LATER_ENVIRON * s);
 void handleGenericHttpRun(String fn);
 #line 73 "http.ino"
 void handleAPI();
-#line 179 "http.ino"
+#line 184 "http.ino"
 void handleDelete();
-#line 201 "http.ino"
+#line 206 "http.ino"
 void handleReboot();
-#line 210 "http.ino"
+#line 217 "http.ino"
+void handleResume();
+#line 237 "http.ino"
+void handleSuspend();
+#line 299 "http.ino"
 void bindServerMethods();
-#line 277 "http.ino"
+#line 407 "http.ino"
 void handleLS();
-#line 356 "http.ino"
+#line 486 "http.ino"
 void handleEditor();
-#line 387 "http.ino"
+#line 517 "http.ino"
 String getContentType(String filename);
-#line 409 "http.ino"
+#line 539 "http.ino"
 bool handleFileRead(String path);
-#line 482 "http.ino"
+#line 612 "http.ino"
 void handleFileUpload();
-#line 522 "http.ino"
+#line 652 "http.ino"
 void handleFileList();
-#line 629 "http.ino"
+#line 759 "http.ino"
 void handleUnload();
-#line 654 "http.ino"
+#line 784 "http.ino"
 void handleRun();
-#line 717 "http.ino"
+#line 847 "http.ino"
 void handleLog();
-#line 907 "http.ino"
+#line 1037 "http.ino"
 void handleCommandList2();
-#line 945 "http.ino"
+#line 1075 "http.ino"
 void handleStore();
-#line 984 "http.ino"
+#line 1114 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 992 "http.ino"
+#line 1122 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 1001 "http.ino"
+#line 1131 "http.ino"
 void backtrack(char * buff);
-#line 1005 "http.ino"
+#line 1135 "http.ino"
 void handleScripts();
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
@@ -525,6 +529,8 @@ class LaterClass {
     LATER_ENVIRON * getByName(const char * fileName);
     LATER_ENVIRON *  load(const char * fileName);
     void init(const char * fileName);
+    bool suspend(const char * fileName);
+    bool resume(const char * fileName);
     void unload(const char * fileName);
     void run(const char * fileName);
     void dump(const char * fileName);
@@ -608,6 +614,55 @@ void LaterClass::init(const char * fileName) {
   LATER_ENVIRON * s = getByName(fileName);
   if (s) return;
 }//end DS init()
+
+bool LaterClass::resume(const char * fileName) {
+
+  LaterClass::load(fileName);
+  LATER_ENVIRON * s = getByName(fileName);
+
+  if (!s) return false;
+
+  char stateFileName[32];
+  strcpy(stateFileName, s->fileName);
+  strcpy(stateFileName + strlen(stateFileName) , ".ram" );
+
+  long int ssize = sizeof(*s);
+
+  File file5 = SPIFFS.open( stateFileName, "r");
+  if (file5) {
+    const size_t bytes_read = file5.read((byte*) s, ssize);
+    file5.close();
+  } else {
+    return false;
+  }
+
+  LaterClass::run(fileName);
+
+  return true;
+}//end DS resume()
+
+bool LaterClass::suspend(const char * fileName) {
+  LATER_ENVIRON * s = getByName(fileName);
+  if (!s) return false;
+
+  char stateFileName[32];
+  strcpy(stateFileName, s->fileName);
+  strcpy(stateFileName + strlen(stateFileName) , ".ram" );
+
+  long int ssize = sizeof(*s);
+
+  File file5 = SPIFFS.open( stateFileName, "w");
+  if (file5) {
+    file5.write((byte*) s, ssize);
+    file5.close();
+  } else {
+    return false;
+  }
+
+  LaterClass::unload(s->fileName);
+
+  return true;
+}//end DS suspend()
 void LaterClass::unload(const char * fileName) {
   LATER_ENVIRON * s = getByName(fileName);
   if (!s) return;
@@ -3931,10 +3986,10 @@ void handleAPI() { // break in here and look for default.bat or index.bat
   LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
 
-  char * TAGLINE = "Later";
+  char TAGLINE[25] = "Later";
 
 #ifdef LATER_PROJECT
-  TAGLINE = LATER_PROJECT;
+  strcpy(TAGLINE, LATER_PROJECT);
 #endif
   LATER_SERVER_NAME .send ( 200, "text/html", F("<html><body><title>"));
 
@@ -3983,14 +4038,18 @@ void handleAPI() { // break in here and look for default.bat or index.bat
 #endif
   LATER_SERVER_NAME.sendContent(" w/ ");
 
+ #ifdef ESP8266
   itoa (ESP.getFlashChipRealSize() / 1024, line, 10);
+#else
+  itoa (ESP.getFlashChipSize() / 1024, line, 10);
+#endif
 
   LATER_SERVER_NAME.sendContent( line ) ;
   LATER_SERVER_NAME.sendContent("k flash ");
 
   LATER_SERVER_NAME.sendContent(" as ");
 #ifdef LATER_PROJECT
-  LATER_SERVER_NAME.sendContent(LATER_PROJECT);//manual name
+  LATER_SERVER_NAME.sendContent(LATER_SKETCH);//manual name
 #else
 #ifdef ESP8266
   LATER_SERVER_NAME.sendContent(WiFi.hostname());//esp32
@@ -4004,7 +4063,8 @@ void handleAPI() { // break in here and look for default.bat or index.bat
 
   LATER_SERVER_NAME.sendContent(" at ");
   LATER_SERVER_NAME.sendContent(WiFi.localIP().toString());
-  LATER_SERVER_NAME.sendContent("</aside></body></html>");
+  LATER_SERVER_NAME.sendContent("</aside>");
+  LATER_SERVER_NAME.sendContent(F(" <form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body></html>"));
   LATER_SERVER_NAME.sendContent( "" );
 }
 
@@ -4038,21 +4098,125 @@ void handleReboot() {
   yield();
   resetFunc();
 }
+void handleResume(){
+  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
+  
+  unsigned long st = millis();
+  bool status = Later.resume(fn);
+  unsigned long et = millis();
 
+  String resp = String(fn)+" resumed.\nTime taken in ms: " + String(et-st);
+   
+  if(!status){
+    resp = String(fn)+" failed to resume.\nTime taken in ms: " + String(et-st);
+  }
+    
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/plain", resp);
+  
+}
+  
+void handleSuspend(){
+  
+  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
+  unsigned long st = millis();
+  bool status = Later.suspend(fn);
+  unsigned long et = millis();
+
+  String resp = String(fn)+" suspended.\nTime taken in ms: " + String(et-st);
+  if(!status){
+    resp = String(fn)+" failed to suspend.\nTime taken in ms: " + String(et-st);
+  }
+    
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/plain", resp);
+}
+#ifdef ESP32
+const char* serverIndex =
+  "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
+  "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
+  "<input type='file' name='update'>"
+  "<input type='submit' value='Update'>"
+  "</form>"
+  "<div id='prg'>progress: 0%</div>"
+  "<script>"
+  "$('form').submit(function(e){"
+  "e.preventDefault();"
+  "var form = $('#upload_form')[0];"
+  "var data = new FormData(form);"
+  " $.ajax({"
+  "url: '/update',"
+  "type: 'POST',"
+  "data: data,"
+  "contentType: false,"
+  "processData:false,"
+  "xhr: function() {"
+  "var xhr = new window.XMLHttpRequest();"
+  "xhr.upload.addEventListener('progress', function(evt) {"
+  "if (evt.lengthComputable) {"
+  "var per = evt.loaded / evt.total;"
+  "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
+  "}"
+  "}, false);"
+  "return xhr;"
+  "},"
+  "success:function(d, s) {"
+  "console.log('success!')"
+  "},"
+  "error: function (a, b, c) {"
+  "}"
+  "});"
+  "});"
+  "</script>";
+
+#endif
 void bindServerMethods() {
+#ifdef ESP32
+  LATER_SERVER_NAME.on("/update", HTTP_GET, []() {
+    LATER_SERVER_NAME.sendHeader("Connection", "close");
+    LATER_SERVER_NAME.send(200, "text/html", serverIndex);
+  });
+  /*handling uploading firmware file */
+  LATER_SERVER_NAME.on("/update", HTTP_POST, []() {
+    LATER_SERVER_NAME.sendHeader("Connection", "close");
+    LATER_SERVER_NAME.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+    ESP.restart();
+  }, []() {
+    HTTPUpload& upload = LATER_SERVER_NAME.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+      Serial.printf("Update: %s\n", upload.filename.c_str());
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      /* flashing firmware to ESP*/
+      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_END) {
+      if (Update.end(true)) { //true to set the size to the current progress
+        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+      } else {
+        Update.printError(Serial);
+      }
+    }
+  });
 
+#endif
   LATER_SERVER_NAME.on("/", handleAPI); // this style of sub won't be listed
-
-  // subscript public GET endpoints:
+ // subscript public GET endpoints:
   //@TAKE
 
-  // subscript public GET endpoints:
+  // subscribe public GET endpoints:
   SUB_PATH(run, handleRun, "API  TXT @name Runs a script by filename");
   //@TAKE
   SUB_PATH(scripts, handleScripts, "API  JSON  Details of running scripts");
   SUB_PATH(log, handleLog, "API  TXT View logged messages. See <a target=_blank href=https://github.com/rndme/later/blob/master/docs/api.md#log>docs</a> for GET options. ");
   SUB_PATH(dir, handleFileList, "API JSON  Lists stored files w/ details");
 
+  SUB_PATH(resume, handleResume, "API JSON  @name Resumes a suspended script file by name. ");
+  SUB_PATH(suspend, handleSuspend, "API JSON  @name Suspends and unloads a script file by name. ");
+ 
   SUB_PATH(ls, handleLS, "UI HTML  File manager interface - allows deletes and uploads");
   SUB_PATH(delete, handleDelete, "API  JSON  @name Deletes a script by filename");
   SUB_PATH(reboot, handleReboot, "API  HTML  Reboots the ESP");
