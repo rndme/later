@@ -452,7 +452,7 @@ It's a decent idea to add a pause before running any files or commands, to allow
 
 
 ## autoexec.lnk
-A one-per-line text file list of bat files to run on boot names `/autoexec.lnk`. Unlike `/autoexec.bat`, this is just a simple list of file names, no commands, comments, whitespace, etc allowed. This feature doesn'tuse a temp script slot like `/autoexec.bat`, allowing one more program on ram-constrained devices. Thus, when `LATER_INSTANCES` is only 2, you can run two custom scripts on boot instead of one.
+A one-per-line text file list of bat files to run on boot names `/autoexec.lnk`. Unlike `/autoexec.bat`, this is just a simple list of file names, no commands, comments, whitespace, etc allowed. This feature doesn't use a temp script slot like `/autoexec.bat`, allowing one more program on ram-constrained devices. Thus, when `LATER_INSTANCES` is only 2, you can run two custom scripts on boot instead of one as you don't need to parse and run `/autoexec.bat` as one of those two just to `run /file.bat` and load custom scripts.
 
 
 
