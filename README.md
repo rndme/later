@@ -451,6 +451,10 @@ Code contained in the special `/autoexec.bat` file runs upon startup. Use it to 
 It's a decent idea to add a pause before running any files or commands, to allow a manual over-ride in case a broken script is saved.
 
 
+## autoexec.lnk
+A one-per-line text file list of bat files to run on boot names `/autoexec.lnk`. Unlike `/autoexec.bat`, this is just a simple list of file names, no commands, comments, whitespace, etc allowed. This feature doesn'tuse a temp script slot like `/autoexec.bat`, allowing one more program on ram-constrained devices. Thus, when `LATER_INSTANCES` is only 2, you can run two custom scripts on boot instead of one.
+
+
 
 
 ## Program Execution
