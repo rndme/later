@@ -54,6 +54,18 @@ sleep 500 // wait half a second
 set 2, 0 // light off
 ```
 
+**suspend**   [_string_ **filename** or int_ **ms**]    [ex1](#) <br>
+Suspends and unloads a script by name, or if given a number, suspends the current script and sets it to resume in that milliseconds. This saves all the state and variables to the flash and then frees up a program slot. <br>
+```js
+suspend 30000 // persists state, exits, unloads, and resumes in 30 seconds
+suspend /other.bat // persist and unload other script, continue running after
+```
+
+**resume**   [_string_ **filename** ]    [ex1](#) <br>
+Loads and restores persited state of suspended script by name. This loads all the state and variables from the flash and then executes the named script. If state cannot be loaded, this performs the same as `run`. If there are no free program slots at time of calling, it will automatically queue for 100ms and try again until successful. <br>
+```js
+resume /other.bat // load and rehydrate other script, continue running after
+```
 
 **set**   [_int_ **pin**, _int_ **value**]    [ex1](#) <br>
 digitalWrite. aka gpio, write, digitalWrite, and set<br>
