@@ -1,12 +1,22 @@
 
 # HTTP APIs
 
+* [/help/](#help)
 * [/log/](#log)
 * [/store/](#store)
 * [/run/](#run)
+* [/delete/](#delete)
+* [/reboot/](#reboot)
+* [/resume/](#resume)
+* [/suspend/](#suspend)
 * [/dir/](#dir)
 * [/test/](#test)
 * [/scripts/](#scripts)
+
+
+## /help/
+
+Lists the available Commands, Templates (along with thier current values if possible), and Custom/Native Functions. This includes expansions added to later within the sketch.
 
 
 ## /log/
@@ -107,6 +117,21 @@ else
   println SAFE MODE!
 end if
 ```
+
+## /delete/
+delete a stored file by calling the endpoint: `/run/?name=file.bat`. Returns `true|false` json reflecting if the file was actually deleted. 
+
+
+## /resume/
+ Loads and restores persited state of suspended script by name. This loads all the state and variables from the flash and then executes the named script. Returns `true|false` json reflecting if the file was actually executed. 
+
+
+## /suspend/
+Suspends and unloads a script by name.  If given a ms param number, also sets it to resume in that number of milliseconds. This saves all the state and variables to the flash and then frees up a program slot. Returns `true|false` json reflecting if the file was actually suspended (found, running, and saved). 
+
+
+## /reboot/
+Resets the ESP, same as pressing the reset button. Returns HTML response with a re-direct when the device returns to the wifi network.
 
 ## /dir/
 A JSON Array of Objects decribing the files save on the ESP.
