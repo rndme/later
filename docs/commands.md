@@ -5,13 +5,14 @@ As an interpreted language, even loops, conditionals, etc are commands.
 The list below details the built-in commands, and you can create custom script commands inside your sketch using `Later.addCommand`.
 
 
-* [Basic](#basic)  [ pinMode, fetch, sleep, freeze, suspend, resume, set, analogWrite, type ]
+* [Basic](#basic)  [ pinMode, sleep, freeze, set, analogWrite, type ]
+* [IO](#io)  [ delete, fetch, println, print, resume, suspend, type ]
 * [Neopixel](#neopixel)  [ solid, pixel, grad, render, rotate ]
-* [Debug](#debug)  [ log, clear, println, print, assert, timer ]
+* [Debug](#debug)  [ log, clear, assert, timer ]
 * [Flow](#flow)  [ if, iif, else, fi, switch, case, default, end switch, sub, gosub, on, interval, call, return, exit, start, finish ]
 * [Loops](#loops)  [ for, next, continue, do, loop, break ]
 * [Variables](#variables)  [ var, static, global, store ]
-* [System](#system)  [ #include=, #define=KEY literal value(s), run, option, cgi, delete, noop, unload ]
+* [System](#system)  [ #include=, #define=KEY literal value(s), run, option, cgi, noop, unload ]
 
 
 ## Basic
@@ -21,19 +22,6 @@ Sets the mode on a GPIO pin as [OUTPUT, INPUT, INPUT_PULLUP] <br>
 ```js
 pinMode 2, INPUT_PULLUP
 pinMode 5, OUTPUT
-```
-
-
-**fetch**   [_text_ **url**]    [ex1](examples#test) <br>
-GET a URL. Used to phone home and grab external data for scripts. Accepts variable and template placeholders in url. For more info about handling and processing a response, see RESPONSE section. alias: ping<br>
-```js
-// basic phone-home to node-red:
-fetch http://192.168.0.1:1880/temps/?place=basement&temp=$temp
-
-// basic scrape:
-fetch http://192.168.0.1:1880/doors/
-$status = &RESPONSE->json("front") // grab front door state from node-red's api
-digitalWrite 2, $status // update indicator LED
 ```
 
 
@@ -53,20 +41,6 @@ set 2, 1 // light on
 sleep 500 // wait half a second
 set 2, 0 // light off
 ```
-
-**suspend**   [_string_ **filename** or int_ **ms**]    [ex1](#) <br>
-Suspends and unloads a script by name, or if given a number, suspends the current script and sets it to resume in that milliseconds. This saves all the state and variables to the flash and then frees up a program slot. <br>
-```js
-suspend 30000 // persists state, exits, unloads, and resumes in 30 seconds
-suspend /other.bat // persist and unload other script, continue running after
-```
-
-**resume**   [_string_ **filename** ]    [ex1](#) <br>
-Loads and restores persited state of suspended script by name. This loads all the state and variables from the flash and then executes the named script. If state cannot be loaded, this performs the same as `run`. If there are no free program slots at time of calling, it will automatically queue for 100ms and try again until successful. <br>
-```js
-resume /other.bat // load and rehydrate other script, continue running after
-```
-
 **set**   [_int_ **pin**, _int_ **value**]    [ex1](#) <br>
 digitalWrite. aka gpio, write, digitalWrite, and set<br>
 ```js
@@ -79,6 +53,59 @@ analogWrite. Writes a PWM value to a GPIO pin, from 0 - 1023 <br>
 ```js
 analogWrite 2, 512 // turn lamp on half brightness
 ```
+
+
+
+## IO
+
+**delete**   [_text_ **fileName**]    [ex1](#) <br>
+Removes a stored file. Cannot be recovered, except maybe by 3-letter agencies.<br>
+```js
+delete /file.ext
+```
+
+**fetch**   [_text_ **url**]    [ex1](examples#test) <br>
+GET a URL. Used to phone home and grab external data for scripts. Accepts variable and template placeholders in url. For more info about handling and processing a response, see RESPONSE section. alias: ping<br>
+```js
+// basic phone-home to node-red:
+fetch http://192.168.0.1:1880/temps/?place=basement&temp=$temp
+
+// basic scrape:
+fetch http://192.168.0.1:1880/doors/
+$status = &RESPONSE->json("front") // grab front door state from node-red's api
+digitalWrite 2, $status // update indicator LED
+```
+
+
+**println**   [_text_ **content**]    [ex1](#) <br>
+Prints composited line to uart (Serial) or response (http) and inserts a new line after<br>
+```js
+option persist
+println you have seen this message {runs} times
+```
+
+
+**print**   [_text_ **content**]    [ex1](#) <br>
+Prints composited line (w/o break) to uart (Serial) or response (http)<br>
+```js
+option persist
+print {rnd}, 
+```
+
+
+**resume**   [_string_ **filename** ]    [ex1](#) <br>
+Loads and restores persited state of suspended script by name. This loads all the state and variables from the flash and then executes the named script. If state cannot be loaded, this performs the same as `run`. If there are no free program slots at time of calling, it will automatically queue for 100ms and try again until successful. <br>
+```js
+resume /other.bat // load and rehydrate other script, continue running after
+```
+
+**suspend**   [_string_ **filename** or int_ **ms**]    [ex1](#) <br>
+Suspends and unloads a script by name, or if given a number, suspends the current script and sets it to resume in that milliseconds. This saves all the state and variables to the flash and then frees up a program slot. <br>
+```js
+suspend 30000 // persists state, exits, unloads, and resumes in 30 seconds
+suspend /other.bat // persist and unload other script, continue running after
+```
+
 **type**   [_string_ **filename** or **%RAM%**]    [ex1](#) <br>
 Prints a file to stdOut (http, socket, or serial). Prints the contents of a file by name.
 ```js
@@ -86,7 +113,6 @@ type /testinlog.txt
 // or
 type %RAM%
 ```
-
 
 
 ## Neopixel
@@ -162,23 +188,6 @@ Clears all logged data from the RAM debug buffer.<br>
 clear 
 log this is the only line in the log right now
 ```
-
-
-**println**   [_text_ **content**]    [ex1](#) <br>
-Prints composited line to uart (Serial) or response (http) and inserts a new line after<br>
-```js
-option persist
-println you have seen this message {runs} times
-```
-
-
-**print**   [_text_ **content**]    [ex1](#) <br>
-Prints composited line (w/o break) to uart (Serial) or response (http)<br>
-```js
-option persist
-print {rnd}, 
-```
-
 
 **assert**   [( _int_ **term1** _compare operator_ _int_ **term2** )   `->` _text_ **description**]   [ex1](#) <br>
 Compares two values and prints the result as a test summary, perfect for unit testing.<br>
@@ -559,12 +568,6 @@ cgi=/temp.cgi
 ```
 
 
-
-**delete**   [_text_ **fileName**]    [ex1](#) <br>
-Removes a stored file. Cannot be recovered, except maybe by 3-letter agencies.<br>
-```js
-delete /file.ext
-```
 
 
 **noop**   [void]    [ex1](#) <br>
