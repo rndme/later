@@ -5,13 +5,13 @@ As an interpreted language, even loops, conditionals, etc are commands.
 The list below details the built-in commands, and you can create custom script commands inside your sketch using `Later.addCommand`.
 
 
-* [Basic](#basic)
-* [Neopixel](#neopixel)
-* [Debug](#debug)
-* [Flow](#flow)
-* [Loops](#loops)
-* [Variables](#variables)
-* [System](#system)
+* [Basic](#basic)  [ pinMode, fetch, sleep, freeze, suspend, resume, set, analogWrite, type ]
+* [Neopixel](#neopixel)  [ solid, pixel, grad, render, rotate ]
+* [Debug](#debug)  [ log, clear, println, print, assert, timer ]
+* [Flow](#flow)  [ if, iif, else, fi, switch, case, default, end switch, sub, gosub, on, interval, call, return, exit, start, finish ]
+* [Loops](#loops)  [ for, next, continue, do, loop, break ]
+* [Variables](#variables)  [ var, static, global, store ]
+* [System](#system)  [ #include=, #define=KEY literal value(s), run, option, cgi, delete, noop, unload ]
 
 
 ## Basic
