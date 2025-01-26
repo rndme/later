@@ -499,10 +499,39 @@ global
 ```
 
 
-**store**   [_int_ **pin**, _text_ **mode**]    [ex1](#) <br>
+**store**   [_text_ **name** = _int_ **value**]    [ex1](#) <br>
 defines a system-wide variable reached via `{&name}` syntax and available to read/write from the `/store/` api. The namespace is shared with `global`. These values are written to SPIFFS so values as persisted across reboots. The super globals are available to all scripts to enable IPC and async HTTP interaction with non-currently-running programs. <br>
 ```js
-store 
+store myVar = 123
+```
+```js
+$mySavedVar = {&myVar}
+```
+
+**flash**   [_text_ **fileName** [<|>]  **vars[,...]**  ]    [ex1](#) <br>
+Load or save a list of variables to a text file. Good for persisting certain vars over power cycles, without exposing to the `store` interface. Can also be used for versioning, or creating "modes" with groups of presets. This is faster than using `suspend` / `resume` to persist application state.
+
+
+```js
+$a = 1
+$b = 2
+$c = 3
+// save these vars  for later
+flash mystate < a, b, c
+/* creates a file (/mystate.var) containing:
+a=1
+b=2
+c=3
+*/
+```
+
+```js
+$a = 101
+$b = 420
+$c = 99
+// load some vars saved in above example:
+flash mystate > a, c
+println $a, $b, $c // shows 1, 420, 3
 ```
 
 ## System
