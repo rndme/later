@@ -52,6 +52,17 @@
 #define LATER_LINE_LIMIT 128
 #endif
 
+
+#ifndef LATER_RESUME_LIMIT
+#define LATER_RESUME_LIMIT 5
+#endif
+
+
+#ifndef LATER_HTTP_CACHE
+#define LATER_HTTP_CACHE 1400
+#endif
+
+
 #ifndef LATER_PIXEL_NAME
 #define LATER_PIXEL_NAME strip
 #endif
@@ -155,7 +166,10 @@ typedef struct LATER_OPTIONS {
 
 // 37800b free before bumping up lines from 64 to 96
 // 35644
-
+typedef struct LATER_RESUME {
+  unsigned long timestamp; // when to re-activate script?
+  char fileName[32]; // name of script file to activate
+} LATER_RESUME;
 typedef struct LATER_LINE {
   int start, stop; // position of line in raw program[] buffer
   byte data, len, flags, exit; //line nums/size, exit line num, flag bits: {hasTemplate,hasVar,hasStatic,hasParens}
@@ -193,6 +207,7 @@ typedef struct LATER_ENVIRON {
   unsigned long subReturnValue = 99; // stores var slot for call command to recieve value
   bool calledFromWeb; // switches print from Serial to server
   bool storeDirty; // set by store update, reset after first thereafter run
+  bool isSuspended; // used by unload() to skip finish section code when suspending
   LATER_OPTIONS options;
 } LATER_ENVIRON;
 //<<
@@ -218,6 +233,7 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 #define LATER_endsub 'Q'
 #define LATER_exit 'x'
 #define LATER_fi 'F'
+#define LATER_flash '3'
 #define LATER_for 'R'
 #define LATER_freeze 'f'
 #define LATER_global 'm'
@@ -238,6 +254,7 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 #define LATER_print 'T'
 #define LATER_println 'l'
 #define LATER_render 'r'
+#define LATER_resume '1'
 #define LATER_return 'Z'
 #define LATER_rotate 'o'
 #define LATER_run 'u'
@@ -247,6 +264,7 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 #define LATER_static 'd'
 #define LATER_store 'g'
 #define LATER_sub 'J'
+#define LATER_suspend '2'
 #define LATER_switch 'W'
 #define LATER_timer 't'
 #define LATER_type 'p'
@@ -281,6 +299,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
   {"fetch", 'H'}, //alias: ping
   {"fi", 'F'},
   {"finish", 'x'},
+  {"flash", '3'},
   {"for", 'R'},
   {"freeze", 'f'},
   {"global", 'm'},
@@ -303,6 +322,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
   {"println", 'l'},
   {"pixel", 'A'},
   {"render", 'r'},
+  {"resume", '1'},
   {"return", 'Z'},
   {"rotate", 'o'},
   {"run", 'u'},
@@ -314,6 +334,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
   {"static", 'd'},
   {"store", 'g'},
   {"sub", 'J'},
+  {"suspend", '2'},
   {"switch", 'W'},
   {"timer", 't'},
   {"type", 'p'},
@@ -341,9 +362,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 400 "danscript.ino"
+#line 418 "danscript.ino"
 unsigned long clamp(int a);
-#line 502 "danscript.ino"
+#line 521 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 820 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -403,7 +424,7 @@ void handleEval();
 void handleDump();
 #line 1799 "core.ino"
 void runScript();
-#line 2707 "core.ino"
+#line 2839 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -415,39 +436,39 @@ void handleDelete();
 void handleReboot();
 #line 217 "http.ino"
 void handleResume();
-#line 237 "http.ino"
+#line 231 "http.ino"
 void handleSuspend();
-#line 299 "http.ino"
+#line 291 "http.ino"
 void bindServerMethods();
-#line 407 "http.ino"
+#line 399 "http.ino"
 void handleLS();
-#line 486 "http.ino"
+#line 478 "http.ino"
 void handleEditor();
-#line 517 "http.ino"
+#line 509 "http.ino"
 String getContentType(String filename);
-#line 539 "http.ino"
+#line 531 "http.ino"
 bool handleFileRead(String path);
-#line 612 "http.ino"
+#line 604 "http.ino"
 void handleFileUpload();
-#line 652 "http.ino"
+#line 644 "http.ino"
 void handleFileList();
-#line 759 "http.ino"
+#line 751 "http.ino"
 void handleUnload();
-#line 784 "http.ino"
+#line 776 "http.ino"
 void handleRun();
-#line 847 "http.ino"
+#line 839 "http.ino"
 void handleLog();
-#line 1037 "http.ino"
+#line 1029 "http.ino"
 void handleCommandList2();
-#line 1075 "http.ino"
+#line 1067 "http.ino"
 void handleStore();
-#line 1114 "http.ino"
+#line 1106 "http.ino"
 void addJSON(char * buff, const char * key, unsigned long value);
-#line 1122 "http.ino"
+#line 1114 "http.ino"
 void addJSON(char * buff, const char * key, const char * value);
-#line 1131 "http.ino"
+#line 1123 "http.ino"
 void backtrack(char * buff);
-#line 1135 "http.ino"
+#line 1127 "http.ino"
 void handleScripts();
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
@@ -457,7 +478,7 @@ unsigned long processTemplateExpressionsNumber(const char * line);
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
 #line 262 "templates.ino"
 void handleCommandList();
-#line 400 "danscript.ino"
+#line 418 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -517,9 +538,10 @@ class LaterClass {
     int currentScript = 0;
     int loadedScripts = 0;
     int lastEventSlot = -1;
+    LATER_RESUME resumes[LATER_RESUME_LIMIT];
 
     bool started = 0; // has .setup() been called yet?
-    char httpResponseTextBuffer[1400] = {0};
+    char httpResponseTextBuffer[LATER_HTTP_CACHE] = {0};
     char * httpResponseText;
 
     unsigned long bootRam; // how big is heap on load
@@ -529,7 +551,7 @@ class LaterClass {
     LATER_ENVIRON * getByName(const char * fileName);
     LATER_ENVIRON *  load(const char * fileName);
     void init(const char * fileName);
-    bool suspend(const char * fileName);
+    bool suspend(const char * fileName, unsigned long resumeMs);
     bool resume(const char * fileName);
     void unload(const char * fileName);
     void run(const char * fileName);
@@ -573,11 +595,41 @@ void LaterClass::setup() {
   Later.addFunction("DMA", FUNCTION( getCurrent()->VARS[a] = b; return b;  )); // using FUNCTION MACRO
   // run autoexec.bat if available
   if (SPIFFS.exists("/autoexec.bat")) {
-    if (debug) LATER_PRINTLN("Later - Autoexec will run");
+    if (debug) LATER_PRINTLN("Later - Autoexec.bat will run");
     run("/autoexec.bat");
-    if (debug) LATER_PRINTLN("Later - Autoexec ran");
+    if (debug) LATER_PRINTLN("Later - Autoexec.bat ran");
     unload("/autoexec.bat");
   }
+  // run autoexec.lnk if available
+
+  if (SPIFFS.exists("/autoexec.lnk")) {
+    if (debug) LATER_PRINTLN("Later - Autoexec.lnk will run");
+
+    char buff[128];
+    char * files = buff;
+    memset(files, '\0', 128);
+
+    File file = SPIFFS.open("/autoexec.lnk", "r");
+    file.readBytes(files, 128);
+    file.close();
+    char fileName[42];
+    char * pch;
+    char * eol;
+
+    pch = strtok (files, "\n");
+    while (pch != NULL) {
+      strcpy(fileName, pch);
+      eol = strchr(fileName, '\n');
+      if (eol) eol[0] = '\0';
+      if (strlen(fileName) > 3 && fileName[0] == '/' && strstr(fileName, ".bat") ) {
+        if (debug) LATER_PRINTLN("autoexec.lnk file: " + String(fileName));
+        run(fileName);
+      }
+      pch = strtok (NULL, "\n");
+    }
+
+    if (debug) LATER_PRINTLN("Later - Autoexec.lnk ran");
+  }//end if autoexec.lnk?
 }//end DS setup()
 void LaterClass::loop() {
 
@@ -597,6 +649,12 @@ void LaterClass::loop() {
     }
   }//next i
 
+  // look for suspended processes ready to resume:
+  for (int i = 0; i < LATER_RESUME_LIMIT; i++) {
+    if (Later.resumes[i].timestamp && (ms > Later.resumes[i].timestamp) ) {
+      resume(Later.resumes[i].fileName);
+    }
+  }//next i
 }//end DS loop()
 LATER_ENVIRON * LaterClass::getByName(const char * fileName) {
   int slot = -1;
@@ -620,7 +678,30 @@ bool LaterClass::resume(const char * fileName) {
   LaterClass::load(fileName);
   LATER_ENVIRON * s = getByName(fileName);
 
-  if (!s) return false;
+  if (!s) {
+    if (SPIFFS.exists(fileName)) { // schedule to run soon, hopefully it can
+      int i = 0;
+      for (int mx = LATER_RESUME_LIMIT; i < mx; i++) if (strstr(Later.resumes[i].fileName, s->fileName)) break;
+      if (i == LATER_RESUME_LIMIT) { // find first unused slot
+        i = 0;
+        for (int mx = LATER_RESUME_LIMIT; i < mx; i++) if ( Later.resumes[i].timestamp == 0) break;
+      }
+      if (i == LATER_RESUME_LIMIT) return false;
+      //add to LATER_RESUME with ms and filename
+      strcpy(Later.resumes[i].fileName, s->fileName);
+      Later.resumes[i].timestamp = millis() + 100;
+    }
+    return false;
+  }
+
+  s->isSuspended = false;
+
+  int i = 0; // wipe out any stored  resumes ref to this program:
+  for (int mx = LATER_RESUME_LIMIT; i < mx; i++) if (strstr(Later.resumes[i].fileName, fileName)) break;
+  if (i != LATER_RESUME_LIMIT) {
+    Later.resumes[i].fileName[0] = '\0';
+    Later.resumes[i].timestamp = 0;
+  }//end if old schedule found?
 
   char stateFileName[32];
   strcpy(stateFileName, s->fileName);
@@ -633,7 +714,7 @@ bool LaterClass::resume(const char * fileName) {
     const size_t bytes_read = file5.read((byte*) s, ssize);
     file5.close();
   } else {
-    return false;
+    //return false;
   }
 
   LaterClass::run(fileName);
@@ -641,13 +722,26 @@ bool LaterClass::resume(const char * fileName) {
   return true;
 }//end DS resume()
 
-bool LaterClass::suspend(const char * fileName) {
+bool LaterClass::suspend(const char * fileName, unsigned long resumeMs) {
   LATER_ENVIRON * s = getByName(fileName);
   if (!s) return false;
 
+  s->isSuspended = true;
   char stateFileName[32];
   strcpy(stateFileName, s->fileName);
   strcpy(stateFileName + strlen(stateFileName) , ".ram" );
+  if (resumeMs > 0) {
+    int i = 0;
+    for (int mx = LATER_RESUME_LIMIT; i < mx; i++) if (strstr(Later.resumes[i].fileName, s->fileName)) break;
+    if (i == LATER_RESUME_LIMIT) { // find first unused slot
+      i = 0;
+      for (int mx = LATER_RESUME_LIMIT; i < mx; i++) if ( Later.resumes[i].timestamp == 0) break;
+    }
+
+    //add to LATER_RESUME with ms and filename
+    strcpy(Later.resumes[i].fileName, s->fileName);
+    Later.resumes[i].timestamp = millis() + resumeMs;
+  }
 
   long int ssize = sizeof(*s);
 
@@ -669,7 +763,7 @@ void LaterClass::unload(const char * fileName) {
 
   // check here if linecount and lastline are the same, if not, run code after that exit point
 
-  if (s->lineCount != s->exitLineNumber ) {
+  if (s->lineCount != s->exitLineNumber && !s->isSuspended) {
     int oldScript = Later.currentScript;
     Later.currentScript = s->index;
 
@@ -720,15 +814,13 @@ LATER_ENVIRON *  LaterClass::load(const char * fileName) {
     return NULL;
   }
 
-  loadedScripts++;
-
-
   s = getByName(fileName);
   if (!s) {
     if (debug) LATER_PRINTLN("Later - load failed2: " + String(fileName));
     return NULL;
   }
 
+  loadedScripts++;
   s->duration = 0;
   s->calledFromWeb = 0;
   s->runs = 0;
@@ -3672,6 +3764,15 @@ void runScript() {
         laterUtil::replace(linebuff, "\\s", " ");
         processStringFormats(linebuff);
 
+        // look for input redirects
+        if ( (v = strstr(linebuff, "<<")) ) {
+          char * tempFileName = strstr(linebuff, "<<") + 2;
+          while (tempFileName[0] == ' ') tempFileName++;
+          laterUtil::trimRight(tempFileName);
+          uniPrintln(laterUtil::fileToBuff(tempFileName));
+          continue;
+        }
+
         // look for output redirect:
         if ( (v = strstr(linebuff, ">>")) ) {
           // i think this might need to be copied to a buff to get the filename w/o fucking up the rest of the system.
@@ -3707,6 +3808,91 @@ void runScript() {
           } else {
             uniPrint(linebuff);
           }
+        }
+        continue;
+        break;
+
+      case LATER_flash: // persist list of variables to flash memory, if changed, or load vars
+
+        if (1) {
+          bool isRead = strchr(linebuff, '>') ? 1 : 0;
+          bool isRTC =  strstr(linebuff, "RTC") ? 1 : 0;
+          char fileName[32] = {'/'};
+          char * args = strchr(linebuff, '<');
+          char valbuff [18];
+          char fileBuffer[48];
+          char keyBuff[8];
+          std::map<char,  bool> VAR_MAPPING;
+          if (!args) args = strchr(linebuff, '>');
+          if (!args) continue; // nothing to do
+
+          strcat(fileName, linebuff);
+          fileName[(args - linebuff) + 1] = '\0';
+          strcat(fileName, ".var");
+          args++; // hop over <>
+          while (args[0] == ' ') args++; // trim left
+
+          laterUtil::splitStringByChar(args, ',');
+
+          File file5;
+          if (isRead && !strstr(fileName, "RTC") ) file5 = SPIFFS.open( fileName, "r");
+          if (!isRead && !strstr(fileName, "RTC") ) file5 = SPIFFS.open( fileName, "w");
+
+
+          for (int i = 0; i < laterUtil::split_count; i++) {
+            char * arg = laterUtil::splits[i];
+            while (arg[0] == ' ') arg++;
+
+            // find comma delim:
+            char * ptr = strchr(arg, ',');
+            if (ptr) ptr[0] = '\0'; // chop at first comma
+
+            // trim :
+            ptr = strchr(arg, ' ');
+            if (ptr) ptr[0] = '\0'; // chop at first space
+
+            char* slot;
+            char key[16] = {'$'};
+
+            strcpy(key + 1, arg);
+            slot = getVarName(key, s->index); // use composite to get/make allocated slot
+
+            if (isRead) { // add key:value pair of arg:slot[1] to mapping
+              VAR_MAPPING[slot[1]] = true;
+            } else { // print file right here and now.
+              file5.print(arg);
+              file5.print("=");
+              itoa (s->VARS[slot[1] - 65], valbuff, 10);
+              file5.println(valbuff);
+            }
+
+          }//next arg
+
+          if (isRead) {
+            //iterate file and look for mappings, update inplace if found
+
+            while (file5.available()) {
+
+              int l = file5.readBytesUntil('\n', fileBuffer, sizeof(fileBuffer));
+              fileBuffer[l] = '\0';
+              char * delim = strchr(fileBuffer, '=');
+              delim[0] = '\0';
+
+              // reset key buffer
+              keyBuff[0] = '$';
+              keyBuff[1] = '\0';
+              strcat(keyBuff, fileBuffer);
+
+              char * savedValue = delim + 1;
+              char * slot = getVarName(keyBuff, s->index);
+              if (VAR_MAPPING[slot[1]]) s->VARS[slot[1] - 65] = atol(savedValue);
+            }
+          }
+
+          if (file5) file5.close();
+
+
+          //s->status =
         }
         continue;
         break;
@@ -3858,6 +4044,23 @@ void runScript() {
         continue;
         break;
 
+      case LATER_suspend: // suspend operation for given MS, unload script
+        varCache = Number(lb, s->VARS);
+        if ( varCache > 0 ) { // number passed, suspend current script for ms
+          s->resumeLineNumber = s->i + 1;
+          s->duration = (micros() -  s->startedAt) / 1000;
+          Later.suspend(s->fileName, varCache);
+          return;
+        } else { // file name passed , suspend other script asap, no resume period
+          Later.suspend(lb, 0);
+        }
+
+        continue;
+        break;
+      case LATER_resume: // resumes a script by file name, can't resume self, but could pretend they meant suspend
+        Later.resume(lb);
+        continue;
+        break;
       case LATER_start:
         if (lb[0] == '0' && lb[1] == '0') { // default 00
           s->startLineNumber = s->i + 1; // next line is new top
@@ -4038,7 +4241,7 @@ void handleAPI() { // break in here and look for default.bat or index.bat
 #endif
   LATER_SERVER_NAME.sendContent(" w/ ");
 
- #ifdef ESP8266
+#ifdef ESP8266
   itoa (ESP.getFlashChipRealSize() / 1024, line, 10);
 #else
   itoa (ESP.getFlashChipSize() / 1024, line, 10);
@@ -4072,7 +4275,7 @@ void handleDelete() {
   String fn = LATER_SERVER_NAME.arg("name");
 
   if (!LATER_SERVER_NAME.hasArg("name")) {
-    LATER_SERVER_NAME.send ( 403, "text/plain", F("403 - no file specified by name GET param"));
+    LATER_SERVER_NAME.send ( 404, "text/json", F("false"));
     return;
   }
 
@@ -4080,12 +4283,12 @@ void handleDelete() {
 
   if (SPIFFS.exists(fn)) {
     SPIFFS.remove(fn);
-    LATER_SERVER_NAME.send ( 200, "text/plain", F("200 - file deleted"));
+    LATER_SERVER_NAME.send ( 200, "text/plain", F("true"));
     return;
   }//end if bat file found?
 
   // should not make it this far, file not found:
-  LATER_SERVER_NAME.send ( 402, "text/plain", F("402 - existing file not specified by name GET param"));
+  LATER_SERVER_NAME.send ( 402, "text/plain", F("false"));
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -4098,36 +4301,27 @@ void handleReboot() {
   yield();
   resetFunc();
 }
-void handleResume(){
-  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
-  
-  unsigned long st = millis();
-  bool status = Later.resume(fn);
-  unsigned long et = millis();
+void handleResume() {
 
-  String resp = String(fn)+" resumed.\nTime taken in ms: " + String(et-st);
-   
-  if(!status){
-    resp = String(fn)+" failed to resume.\nTime taken in ms: " + String(et-st);
-  }
-    
+  char resp[10] = "false";
+  bool status = false;
+  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
+  status = Later.resume(fn);
+  if (status) strcpy(resp, "true");
+
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
   LATER_SERVER_NAME.send(200, "text/plain", resp);
-  
 }
-  
-void handleSuspend(){
-  
-  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
-  unsigned long st = millis();
-  bool status = Later.suspend(fn);
-  unsigned long et = millis();
+void handleSuspend() {
 
-  String resp = String(fn)+" suspended.\nTime taken in ms: " + String(et-st);
-  if(!status){
-    resp = String(fn)+" failed to suspend.\nTime taken in ms: " + String(et-st);
-  }
-    
+  char resp[10] = "false";
+  bool status = false;
+
+  unsigned int ms = LATER_SERVER_NAME.arg("ms").toInt();
+  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
+  if (fn[0] == '/') status = Later.suspend(fn, ms);
+  if (status) strcpy(resp, "true");
+
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
   LATER_SERVER_NAME.send(200, "text/plain", resp);
 }
@@ -4204,7 +4398,7 @@ void bindServerMethods() {
 
 #endif
   LATER_SERVER_NAME.on("/", handleAPI); // this style of sub won't be listed
- // subscript public GET endpoints:
+  // subscript public GET endpoints:
   //@TAKE
 
   // subscribe public GET endpoints:
@@ -4215,8 +4409,8 @@ void bindServerMethods() {
   SUB_PATH(dir, handleFileList, "API JSON  Lists stored files w/ details");
 
   SUB_PATH(resume, handleResume, "API JSON  @name Resumes a suspended script file by name. ");
-  SUB_PATH(suspend, handleSuspend, "API JSON  @name Suspends and unloads a script file by name. ");
- 
+  SUB_PATH(suspend, handleSuspend, "API JSON  @name @ms Suspends and unloads a script file by name. ");
+
   SUB_PATH(ls, handleLS, "UI HTML  File manager interface - allows deletes and uploads");
   SUB_PATH(delete, handleDelete, "API  JSON  @name Deletes a script by filename");
   SUB_PATH(reboot, handleReboot, "API  HTML  Reboots the ESP");
