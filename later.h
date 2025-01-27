@@ -63,6 +63,11 @@
 #endif
 
 
+#ifndef LATER_EVENT_COUNT
+#define LATER_EVENT_COUNT 5
+#endif
+
+
 #ifndef LATER_PIXEL_NAME
 #define LATER_PIXEL_NAME strip
 #endif
@@ -152,8 +157,9 @@ typedef struct LATER_EVENT {
   unsigned long value; // pin value, maybe other data
   unsigned long ms; // timer when event happened
   unsigned long msNext; // timer when event happened
+  int programSlot = -1; // holds link to running script
 } LATER_EVENT;
-LATER_EVENT EVENT[3];
+LATER_EVENT EVENT[LATER_EVENT_COUNT];
 
 typedef struct LATER_OPTIONS {
   bool debug; // print debug info to the console?
@@ -204,6 +210,7 @@ typedef struct LATER_ENVIRON {
   byte arity; // how many args passed
   byte startLineNumber = 0; // over-rides the default of 0 as top line, to allow simple+effecient run-once code via start command
   byte exitLineNumber = 0; // over-rides the default last line from the real last line. can be jumped over in unload() to allow cleanup routine
+  int eventSlot = -1; // when using events, store slot# here for unload to clean up
   unsigned long subReturnValue = 99; // stores var slot for call command to recieve value
   bool calledFromWeb; // switches print from Serial to server
   bool storeDirty; // set by store update, reset after first thereafter run
@@ -362,9 +369,9 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 418 "danscript.ino"
+#line 422 "danscript.ino"
 unsigned long clamp(int a);
-#line 521 "danscript.ino"
+#line 525 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 820 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -404,27 +411,27 @@ void replaceVarNames(char * line, int scriptIndex);
 void autoEqualsInsert(char * line);
 #line 531 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 780 "core.ino"
+#line 781 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 801 "core.ino"
+#line 802 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 972 "core.ino"
+#line 973 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1191 "core.ino"
+#line 1192 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1259 "core.ino"
+#line 1260 "core.ino"
 void popHttpResponse();
-#line 1272 "core.ino"
+#line 1278 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1423 "core.ino"
+#line 1429 "core.ino"
 void processStringFormats(char* s);
-#line 1552 "core.ino"
+#line 1558 "core.ino"
 void handleEval();
-#line 1571 "core.ino"
+#line 1577 "core.ino"
 void handleDump();
-#line 1799 "core.ino"
+#line 1805 "core.ino"
 void runScript();
-#line 2839 "core.ino"
+#line 2849 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -472,13 +479,13 @@ void backtrack(char * buff);
 void handleScripts();
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
-#line 161 "templates.ino"
+#line 162 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 193 "templates.ino"
+#line 194 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 262 "templates.ino"
+#line 263 "templates.ino"
 void handleCommandList();
-#line 418 "danscript.ino"
+#line 422 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -655,6 +662,18 @@ void LaterClass::loop() {
       resume(Later.resumes[i].fileName);
     }
   }//next i
+
+  // roll these loops
+
+  // look for interupts here, from a table or something.
+  for (int i = 0; i < LATER_EVENT_COUNT; i++) {
+    auto e = EVENT[i];
+    if (e.pin != -1 && digitalRead(e.pin) != e.value) {
+      // run script here and now, if loaded.
+      LaterClass::run( SCRIPTS[e.programSlot].fileName  );
+    }
+
+  }//next i
 }//end DS loop()
 LATER_ENVIRON * LaterClass::getByName(const char * fileName) {
   int slot = -1;
@@ -795,6 +814,14 @@ void LaterClass::unload(const char * fileName) {
   s->duration = 0;
   //s->program[0] = '\0';
   strcpy(s->contentType, LATER_PLAIN);
+
+  if (s->eventSlot > -1) { // cleanup events by resetting times and pint to defaults
+    EVENT[s->eventSlot].pin = -1;
+    EVENT[s->eventSlot].value = 0;
+    EVENT[s->eventSlot].msNext = 0;
+    EVENT[s->eventSlot].ms = 0;
+    EVENT[s->eventSlot].programSlot = -1;
+  } // end event cleanup
 
   // reset any used VARs to zero
   for (int i = 0, mx = VAR_NAME_COUNT[s->index]; i < mx; i++) s->VARS[i] = 0;
@@ -2115,7 +2142,7 @@ int loadScript(String filename) { //dd666 make this a class method
       } else { // don't need whitespace in any other command, right. asume and let's try iy
         // collapse whitespace here
 
-        if ( (!isPrintBlock) && strchr(line, ' ') && (cmdChar != LATER_gosub) && (cmdChar != LATER_call) && (cmdChar != LATER_interval)  && (cmdChar != LATER_option) && (cmdChar != LATER_var) && (!strstr(linePtr, "][")) &&  (!Later.addons[cmdChar])  ) {
+        if ( (!isPrintBlock) && strchr(line, ' ') && (cmdChar != LATER_gosub) && (cmdChar != LATER_call) && (cmdChar != LATER_interval) && (cmdChar != LATER_flash) && (cmdChar != LATER_option) && (cmdChar != LATER_var) && (!strstr(linePtr, "][")) &&  (!Later.addons[cmdChar])  ) {
 
           while (strchr(linePtr, ' ')) laterUtil::replace(linePtr, " ", "");
           lineLen = strlen(linePtr);
@@ -2368,10 +2395,10 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
         varCache = 0;
 
         //cut in here and scoot k down if it's an on call instead of gosub
-        if ( line->cmd == LATER_on) {
+        if ( line->cmd == LATER_on) {// set line.data to edge type, and line.exit to subroutine start
           k = strchr(k, ',') + 1; // find 1st comma, 2nd arg (sub name)
           while ( !isalnum(k[0]) )k++; // advance to subname start
-
+          line->data = 0;
           v = strchr(k, ','); // 3rd argument (event type)?
           if (v) {
             varCache = 1; // flag as spoilt with 3rd arg, or maybe used line.data, duh
@@ -2857,11 +2884,15 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
 #if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
 void popHttpResponse() {
   if (Later.httpResponseTextBuffer[0]) return;
-  if (http.getSize() > 1400) return;
   if (http.getSize() == 0) return;
 
 
-  strcpy(Later.httpResponseTextBuffer, (char*) http.getString().c_str());
+  if (http.getSize() > LATER_HTTP_CACHE) {
+    strncpy(Later.httpResponseTextBuffer, (char*) http.getString().c_str(), LATER_HTTP_CACHE - 1);
+    Later.httpResponseTextBuffer[LATER_HTTP_CACHE] = '\0';
+  } else {
+    strcpy(Later.httpResponseTextBuffer, (char*) http.getString().c_str());
+  }
   Later.httpResponseTextBuffer[http.getSize()] = '\0';
   Later.httpResponseText = Later.httpResponseTextBuffer;
   //Later.httpResponseText[0] = '\0';
@@ -3987,15 +4018,16 @@ void runScript() {
         break;
       case LATER_on: // subscript pin change and other events
         //on= pin, sub[, FALLING|RISING|CHANGE|EDGE]
+        // we have exit to sub top, and data of edge type pre-set
         varCache = Number(lb, s->VARS); // pin
-
-        varSlot = -1; // known handler? if so, grab slot
-        for (int i = 0; i < 3; i++) {
+        varSlot = -1; // known handler? if so, grab event slot #
+        for (int i = 0; i < LATER_EVENT_COUNT; i++) {
           if (varCache == EVENT[i].pin) { // stop on first non-set slot, since -1 is default and matches varSlot
             varSlot = i;
             break;
           }
         }//next
+
 
         if (varSlot > -1) { // known? run sub
           // compare sub with event object and parsed params
@@ -4019,7 +4051,7 @@ void runScript() {
         } else { // unknown event, subscribe it by populating first empty event slot
 
           // find first unused slot:
-          for (int i = 0; i < 3; i++) {
+          for (int i = 0; i < LATER_EVENT_COUNT; i++) {
             if (EVENT[i].pin == -1) {
               varSlot = i;
               break;
@@ -4029,6 +4061,9 @@ void runScript() {
           EVENT[varSlot].value = digitalRead(varCache);
           EVENT[varSlot].msNext = millis();
         }//end if known handler?
+
+        s->eventSlot = varSlot;
+        EVENT[varSlot].programSlot = s->index;
 
         continue;
         break;
@@ -4283,12 +4318,12 @@ void handleDelete() {
 
   if (SPIFFS.exists(fn)) {
     SPIFFS.remove(fn);
-    LATER_SERVER_NAME.send ( 200, "text/plain", F("true"));
+    LATER_SERVER_NAME.send ( 200, "text/json", F("true"));
     return;
   }//end if bat file found?
 
   // should not make it this far, file not found:
-  LATER_SERVER_NAME.send ( 402, "text/plain", F("false"));
+  LATER_SERVER_NAME.send ( 402, "text/json", F("false"));
 }
 
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -5192,6 +5227,7 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{E.value}", EVENT[Later.lastEventSlot].value),
   REPRAW("{E.time}", EVENT[Later.lastEventSlot].ms),
   REPRAW("{E.ms}", EVENT[Later.lastEventSlot].msNext - EVENT[Later.lastEventSlot].ms ),
+  REPRAW("{E.program}", EVENT[Later.lastEventSlot].programSlot),
   REPRAW("{args}", LATER_SERVER_NAME.args()),
   REPRAW("{arity}", getCurrent()->arity),
   REPRAW("{arg0}", getCurrent()->subArgs[0]),
