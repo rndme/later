@@ -6,13 +6,13 @@ The list below details the built-in commands, and you can create custom script c
 
 
 * [Basic](#basic)  [ pinMode, sleep, freeze, set, analogWrite, type ]
-* [IO](#io)  [ delete, fetch, println, print, resume, suspend, type ]
+* [IO](#io)  [ delete, fetch, flash, json, println, print, resume, suspend, type ]
 * [Neopixel](#neopixel)  [ solid, pixel, grad, render, rotate ]
 * [Debug](#debug)  [ log, clear, assert, timer ]
 * [Flow](#flow)  [ if, iif, else, fi, switch, case, default, end switch, sub, gosub, on, interval, call, return, exit, start, finish ]
 * [Loops](#loops)  [ for, next, continue, do, loop, break ]
 * [Variables](#variables)  [ var, static, global, store ]
-* [System](#system)  [ #include=, #define=KEY literal value(s), run, option, cgi, noop, unload ]
+* [System](#system)  [ #include=, #define=, run, option, cgi, noop, unload ]
 
 
 ## Basic
@@ -75,6 +75,79 @@ fetch http://192.168.0.1:1880/doors/
 $status = &RESPONSE->json("front") // grab front door state from node-red's api
 digitalWrite 2, $status // update indicator LED
 ```
+
+
+**flash**   [_text_ **fileName** [<|>]  **vars[,...]**  ]    [ex1](#) <br>
+Load or save a list of variables to a text file. Good for persisting certain vars over power cycles, without exposing to the `store` interface. Can also be used for versioning, or creating "modes" with groups of presets. This is faster than using `suspend` / `resume` to persist application state.
+
+```js
+$a = 1
+$b = 2
+$c = 3
+// save these vars  for later
+flash mystate < a, b, c
+/* creates a file (/mystate.var) containing:
+a=1
+b=2
+c=3
+*/
+```
+
+```js
+$a = 101
+$b = 420
+$c = 99
+// load some vars saved in above example:
+flash mystate > a, c
+println $a, $b, $c // shows 1, 420, 3
+```
+
+**json**   [vars[,...]]    [ex1](#) <br>
+Prints a list of variables in JSON format. Omit the "$" in var names, as that would cause them to be interpolated into values before rendering. You can also use a `name:value` format to add keys instead of var names, for example `executions:{runs}`.
+
+```js
+option interval=500
+
+pinMode 0, INPUT_PULLUP
+
+// example data and counters:
+$build = 3455
+$total = 0;
+$clicks = 0;
+
+start
+$time={timer}
+$local={rnd}
+$total=+$local // accumulate some data
+
+// count button presses
+if {gpio0} < 1
+  $clicks=+1
+fi
+
+// generate web api response mid-script:
+if $token ! 90210 // auth users only
+ println error: token GET param missing or unauthorized.
+else
+  json time, build, clicks, total, runs:{runs}, static:23
+fi
+
+$token = 0 // wipe token after response is served
+```
+Which when fetched like `/run?name=testcgi.bat&token=90210` and clicking nodeMCU's button 3 times, returns a response like:
+
+```json
+{
+ "time":	1806000, 
+ "build":	3455, 
+ "clicks":	3, 
+ "total":	2767891, 
+ "runs":	5413, 
+ "static":	23 
+} 
+```
+
+
 
 
 **println**   [_text_ **content**]    [ex1](#) <br>
@@ -506,32 +579,6 @@ store myVar = 123
 ```
 ```js
 $mySavedVar = {&myVar}
-```
-
-**flash**   [_text_ **fileName** [<|>]  **vars[,...]**  ]    [ex1](#) <br>
-Load or save a list of variables to a text file. Good for persisting certain vars over power cycles, without exposing to the `store` interface. Can also be used for versioning, or creating "modes" with groups of presets. This is faster than using `suspend` / `resume` to persist application state.
-
-
-```js
-$a = 1
-$b = 2
-$c = 3
-// save these vars  for later
-flash mystate < a, b, c
-/* creates a file (/mystate.var) containing:
-a=1
-b=2
-c=3
-*/
-```
-
-```js
-$a = 101
-$b = 420
-$c = 99
-// load some vars saved in above example:
-flash mystate > a, c
-println $a, $b, $c // shows 1, 420, 3
 ```
 
 ## System
