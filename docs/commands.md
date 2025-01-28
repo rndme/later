@@ -640,8 +640,53 @@ Avilable features include `$vars`, `{templates}`, and `(paren expressions)`.
 This makes it easier to format custom web responses or spit out formatted serial data to externally log.
 
 ```js
-cgi=/temp.cgi
+option interval=500
+
+pinMode 0, INPUT_PULLUP
+
+// example data and counters:
+$build = 3455
+$total = 0;
+$clicks = 0;
+
+start
+$time={timer}
+$local={rnd}
+$total=+$local // accumulate some data
+
+// count button presses
+if {gpio0} < 1
+  $clicks=+1
+fi
+
+// generate web api response mid-script:
+if $token ! 90210 // auth users only
+ println error: token GET param missing or unauthorized.
+else
+  cgi /demo.cgi
+fi
+$token = 0 // wipe token after response is served
 ```
+With a `demo.cgi` file that contains something like this:
+```js
+{
+"time": {timer},
+"build": $build,
+"clicks": $clicks,
+"total": $total
+}
+```
+Which when fetched like `/run?name=demo-cgi.bat&token=90210` and clicking nodeMCU's button 5 times, returns a response like:
+
+```json
+{
+ "time":	2192845, 
+ "build":	3455, 
+ "clicks":	5, 
+ "total":	872
+} 
+```
+
 
 
 
