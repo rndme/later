@@ -201,6 +201,8 @@ typedef struct LATER_ENVIRON {
   byte intervalCount = 0; // how many intervals are active?
   unsigned long VARS[57];// holds variable values
   unsigned long subArgs[8];
+  unsigned long jumpIfOperand = 0; // stores one compare term per program for fast jumping around
+  char jumpIfOperator = 0;
   byte subReturnLine; // for calling subs, calling line goes here
   int status; // for returning web call success, errs, etc
   byte resumeLineNumber; // for freeze, where to thaw?
@@ -245,6 +247,7 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 #define LATER_freeze 'f'
 #define LATER_global 'm'
 #define LATER_gosub 'Y'
+#define LATER_goto '4'
 #define LATER_grad 'a'
 #define LATER_if 'I'
 #define LATER_iif 'b'
@@ -311,6 +314,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
   {"freeze", 'f'},
   {"global", 'm'},
   {"gosub", 'Y'},
+  {"goto", '4'},
   {"gpio", 'G'},// alias: digitalWrite
   {"grad", 'a'},
   {"if", 'I'},
@@ -369,15 +373,15 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
 
 unsigned long randomReg();
-#line 422 "danscript.ino"
+#line 426 "danscript.ino"
 unsigned long clamp(int a);
-#line 525 "danscript.ino"
+#line 529 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 820 "commands.ino"
+#line 817 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 838 "commands.ino"
+#line 835 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 998 "commands.ino"
+#line 995 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -401,37 +405,37 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 454 "core.ino"
+#line 457 "core.ino"
 void removeDoubleLines(char * buff);
-#line 464 "core.ino"
+#line 467 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 480 "core.ino"
+#line 483 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 498 "core.ino"
+#line 501 "core.ino"
 void autoEqualsInsert(char * line);
-#line 531 "core.ino"
+#line 534 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 781 "core.ino"
+#line 784 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 802 "core.ino"
+#line 805 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 973 "core.ino"
+#line 976 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1192 "core.ino"
+#line 1195 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1260 "core.ino"
+#line 1263 "core.ino"
 void popHttpResponse();
-#line 1278 "core.ino"
+#line 1281 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1429 "core.ino"
+#line 1432 "core.ino"
 void processStringFormats(char* s);
-#line 1558 "core.ino"
+#line 1561 "core.ino"
 void handleEval();
-#line 1577 "core.ino"
+#line 1580 "core.ino"
 void handleDump();
-#line 1805 "core.ino"
+#line 1814 "core.ino"
 void runScript();
-#line 2849 "core.ino"
+#line 3029 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -485,7 +489,7 @@ unsigned long processTemplateExpressionsNumber(const char * line);
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
 #line 263 "templates.ino"
 void handleCommandList();
-#line 422 "danscript.ino"
+#line 426 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -643,19 +647,16 @@ void LaterClass::loop() {
 
   unsigned long ms = millis();
 
-  // look for interval processes:
   for (int i = 0; i < scriptCount; i++) {
-    if (  (SCRIPTS[i].interval > 0) && (ms > SCRIPTS[i].resumeMillis) ) {
-      run(SCRIPTS[i].fileName);
-    }
-  }//next i
-  // look for frozen processes
-  for (int i = 0; i < scriptCount; i++) {
-    if (SCRIPTS[i].resumeMillis && (ms > SCRIPTS[i].resumeMillis) ) {
-      run(SCRIPTS[i].fileName);
-    }
-  }//next i
+    if (ms > SCRIPTS[i].resumeMillis) {
+      // look for interval processes:
+      if ( SCRIPTS[i].interval > 0) run(SCRIPTS[i].fileName);
 
+      // look for frozen processes
+      if (SCRIPTS[i].resumeMillis  ) run(SCRIPTS[i].fileName);
+    }
+
+  }//next i
   // look for suspended processes ready to resume:
   for (int i = 0; i < LATER_RESUME_LIMIT; i++) {
     if (Later.resumes[i].timestamp && (ms > Later.resumes[i].timestamp) ) {
@@ -791,6 +792,13 @@ void LaterClass::unload(const char * fileName) {
     runScript();
     Later.currentScript = oldScript;
   }//end if
+
+  // remove line data and exit points
+  for (int i = 0; i < s->lineCount; i++) {
+    s->lines[i].exit = 0;
+    s->lines[i].data = 0;
+  }
+
   //remove script and reset options
   loadedScripts--;
   s->fileName[0] = '\0';
@@ -1093,23 +1101,23 @@ uint32_t parseColor(char * ptr, LATER_ENVIRON * s) {
   while (isspace(ptr[0])) ptr++; // trim left, maybe move to compilation stage, as optomization
   colorLength = strlen(ptr);
   uint32_t buff;
-    commaPos = laterUtil::indexOf(ptr, ",");
-    if (commaPos > 0) {  // $r, $g, $b
-      byte r, g, b;
-      r = Number(ptr, s->VARS);
-      ptr += commaPos + 1;
-      g = Number(ptr, s->VARS);
-      b = Number(strchr(ptr, ',') + 1, s->VARS);
-      buff+= b;
-    buff+= g * 256;
-    buff+= r * (256 * 256);
+  commaPos = laterUtil::indexOf(ptr, ",");
+  if (commaPos > 0) {  // $r, $g, $b
+    byte r, g, b;
+    r = Number(ptr, s->VARS);
+    ptr += commaPos + 1;
+    g = Number(ptr, s->VARS);
+    b = Number(strchr(ptr, ',') + 1, s->VARS);
+    buff += b;
+    buff += g * 256;
+    buff += r * (256 * 256);
     return buff;
-    } else { // no comma, just a big long
-      color = LATER_PIXEL_TYPE(Number(ptr, s->VARS)); //strtoul(ptr, NULL, 10);
-    }//end non-hex color handling
-  buff+= color.raw[2];
-  buff+= color.raw[1] * 256;
-  buff+= color.raw[0] * (256 * 256);
+  } else { // no comma, just a big long
+    color = LATER_PIXEL_TYPE(Number(ptr, s->VARS)); //strtoul(ptr, NULL, 10);
+  }//end non-hex color handling
+  buff += color.raw[2];
+  buff += color.raw[1] * 256;
+  buff += color.raw[0] * (256 * 256);
   return buff;
 }//end parseColor()
 #endif
@@ -1161,26 +1169,23 @@ void compositeLine(char * linebuff, LATER_ENVIRON * s) {
 
 void runCGI(char * lb, LATER_ENVIRON * s) {
   char * buff = laterUtil::fileToBuff(String(lb));
-  char * p = buff; //strchr(buff, '\n');
-  int offset = 0;
-  char * linebuff;
+  char * p = buff;
+  int len = 0;
+  char linebuff[LATER_LINE_BUFFER];
+  int lineNumber = 0;
 
-  while (p) {
+  strcat(buff, "\n");
 
-    linebuff = laterUtil::copyUntilChar(p + offset, '\n');
-    if (!offset) offset = 1;
-    /*
-        // composite line :
-        replaceVarNames(linebuff, s->index);
-        processTemplateExpressions2(linebuff, s);
-        processVariableExpressions(linebuff, s->VARS);
-        evalMath(linebuff, s, -1);
-    */
+  while (1) {
+    char * nextLine = strchr(p, '\n');
+    if (!nextLine) break;
+    len = nextLine - p;
+    strncpy(linebuff, p, len);
+    linebuff[len] = '\0';
     compositeLine(linebuff, s);
-    uniPrintln(linebuff);
-    p = strchr(p + 1, '\n');
+    if (strlen(linebuff)) uniPrintln(linebuff);
+    p = nextLine + 1;
   }//wend line
-  // now process each line of the buffer:
 }//end runCGI()
 
 void runEval(char * lb, LATER_ENVIRON * s) {
@@ -1235,12 +1240,12 @@ int subtract(int a, int b) {
 
 uint8_t within(uint8_t  range, uint8_t  base) {
   uint8_t amt = randomReg() % range;
-  if(randomReg() % 2){//add
+  if (randomReg() % 2) { //add
     return qadd8(amt, base);
-  }else{//subtract
-   if(base > amt) return base - amt;
-   return 0;
-  }  
+  } else { //subtract
+    if (base > amt) return base - amt;
+    return 0;
+  }
 }
 int rndSubtract(int range, int base) {
   int n = randomReg() % range;
@@ -1266,35 +1271,29 @@ void runSetPixel(char * line, LATER_ENVIRON * s) {
   //  1,2->|#11,22,33
   // look for
 
-/*
-  dblog+= "\n\n@"+String(millis())+"\n line: " + String(line) +"\n";  
-  dblog+= " ptr: " + String(ptr) +"\n"; 
-  dblog+= " startPos: " + String(startPos) +"\n";
-  dblog+= " howMany: " + String(howMany) +"\n";  
-*/
+  /*
+    dblog+= "\n\n@"+String(millis())+"\n line: " + String(line) +"\n";
+    dblog+= " ptr: " + String(ptr) +"\n";
+    dblog+= " startPos: " + String(startPos) +"\n";
+    dblog+= " howMany: " + String(howMany) +"\n";
+  */
 
   char flag = 0;
   if (strpbrk (ptr, "+-<>*&LR") == ptr) {
     flag = ptr[0];
     ptr++;
   }
-  
-  if(flag=='@'){ // wtf is this needed? fixes flag getting matched as "@"
-  flag = '\0';
-  ptr--;
-  }
-  
-  
-  
-  if (startPos + howMany >  FastLED.size()) return;
-  
 
+  if (flag == '@') { // wtf is this needed? fixes flag getting matched as "@"
+    flag = '\0';
+    ptr--;
+  }
+
+  if (startPos + howMany >  FastLED.size()) return;
   color = laterUtil::parseColor(ptr, s);  // LATER_PRINTLN("pix color:" + String(color));
   // here we can apply shit like bright, avg, rnd, etc
-  
-  
-  
-   
+
+
   if (flag) {
 
     byte  rArg = (color >> 16) & 0xFF,
@@ -1302,29 +1301,29 @@ void runSetPixel(char * line, LATER_ENVIRON * s) {
           bArg = color % 256;
     LATER_PIXEL_TYPE colorNow;
 
-  byte rNow,gNow,bNow;
-  
-  CHSV hsv;
-   
+    byte rNow, gNow, bNow;
+
+    CHSV hsv;
+
     for (int i = startPos, mx = startPos + howMany; i < mx; i++) {
 
       colorNow = LATER_PIXEL_NAME[i];
 
-    rNow = colorNow.red;
-        gNow = colorNow.green;
-        bNow = colorNow.blue;
+      rNow = colorNow.red;
+      gNow = colorNow.green;
+      bNow = colorNow.blue;
 
       switch (flag) {
         case '+':
-      LATER_PIXEL_NAME[i]+= colorNow;
+          LATER_PIXEL_NAME[i] += colorNow;
           break;
 
         case '-':
-      LATER_PIXEL_NAME[i]-= colorNow;
+          LATER_PIXEL_NAME[i] -= colorNow;
           break;
 
         case '*':
-      LATER_PIXEL_NAME[i].setRGB( within(rArg, rNow), within(gArg, gNow), within(bArg, bNow) );
+          LATER_PIXEL_NAME[i].setRGB( within(rArg, rNow), within(gArg, gNow), within(bArg, bNow) );
           break;
 
         case '>':
@@ -1338,45 +1337,40 @@ void runSetPixel(char * line, LATER_ENVIRON * s) {
         case '&':
           LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( (rArg + rNow) / 2, (gArg + gNow) / 2, (bArg + bNow) / 2);
           break;
-      
-    case 'R':
-      hsv = rgb2hsv_approximate(colorNow);
-      hsv.hue = qadd8(hsv.hue, rArg);
-      hsv.sat = qadd8(hsv.sat, gArg);
-      hsv.val = qadd8(hsv.val, bArg);
-      LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( hsv );
-      break;
-            
-    case 'L':
-      hsv = rgb2hsv_approximate(CRGB(colorNow));
-      if(hsv.hue >= rArg){
-      hsv.hue -= rArg;
-      }else{
-      hsv.hue = (255 + hsv.hue) - rArg;
-      }
-      
-      hsv.sat -= gArg;
-      hsv.val -= bArg;
-      LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( hsv );
-      break;
-      
+
+        case 'R':
+          hsv = rgb2hsv_approximate(colorNow);
+          hsv.hue = qadd8(hsv.hue, rArg);
+          hsv.sat = qadd8(hsv.sat, gArg);
+          hsv.val = qadd8(hsv.val, bArg);
+          LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( hsv );
+          break;
+
+        case 'L':
+          hsv = rgb2hsv_approximate(CRGB(colorNow));
+          if (hsv.hue >= rArg) {
+            hsv.hue -= rArg;
+          } else {
+            hsv.hue = (255 + hsv.hue) - rArg;
+          }
+
+          hsv.sat -= gArg;
+          hsv.val -= bArg;
+          LATER_PIXEL_NAME[i] = LATER_PIXEL_TYPE( hsv );
+          break;
+
           //case '': break;
       }//end switch()
 
-  //  LATER_PIXEL_NAME[i]=parsedColor;
-    
+      //  LATER_PIXEL_NAME[i]=parsedColor;
+
     }//next pixel
     return;
   }//end if flag?
-  
-  
- 
- 
-  
   for (int i = startPos, mx = startPos + howMany; i < mx; i++) {
-    LATER_PIXEL_NAME[i]= color;
+    LATER_PIXEL_NAME[i] = color;
   }
-  
+
 
 }//end setPixel()
 void runRotate(long dist) {
@@ -1389,52 +1383,52 @@ void runRotate(long dist) {
   last = LATER_PIXEL_NAME[mx];
   for (i = mx; i > 0; i--)  LATER_PIXEL_NAME[i] = LATER_PIXEL_NAME[ i - 1 ];
   LATER_PIXEL_NAME[0] =  last;
-  
+
 } // edn runRotate()
 
 void runGrad(char * line, LATER_ENVIRON * s) {
   char * ptr = line;
   uint32_t col, col2;
-  
+
   /*
-  int indPos = laterUtil::indexOf(line, "->"),
+    int indPos = laterUtil::indexOf(line, "->"),
       commaPos = laterUtil::indexOf(line, ",") + 1,
       startPos = Number(line, s->VARS),
       howMany = LATER_PIXEL_NAME.numPixels();
 
-  if (commaPos && commaPos < indPos) howMany =  Number(line + commaPos, s->VARS);
+    if (commaPos && commaPos < indPos) howMany =  Number(line + commaPos, s->VARS);
 
-  ptr += indPos + 2;
+    ptr += indPos + 2;
 
-  char * ptr2 = strchr(ptr, ',');
-  ptr2[0] = '\0';
-  col = laterUtil::parseColor(ptr, s);
-  ptr2[0] = ',';
-  ptr = strchr(ptr, ',');
-  col2 = laterUtil::parseColor(ptr + 1, s);
-  byte  r1 = (col >> 16) & 0xFF,
+    char * ptr2 = strchr(ptr, ',');
+    ptr2[0] = '\0';
+    col = laterUtil::parseColor(ptr, s);
+    ptr2[0] = ',';
+    ptr = strchr(ptr, ',');
+    col2 = laterUtil::parseColor(ptr + 1, s);
+    byte  r1 = (col >> 16) & 0xFF,
         g1 = (col >> 8) & 0xFF,
         b1 = col % 256,
         r2 = (col2 >> 16) & 0xFF,
         g2 = (col2 >> 8) & 0xFF,
         b2 = col2 % 256;
 
-  float fhm = howMany,
+    float fhm = howMany,
         rd = (float)(r1 - r2) / fhm,
         gd = (float)(g1 - g2) / fhm,
         bd = (float)(b1 - b2) / fhm;
 
-  LATER_PIXEL_NAME.setPixelColor(startPos, col); // set first one pure
+    LATER_PIXEL_NAME.setPixelColor(startPos, col); // set first one pure
 
-  for (unsigned int i = 1, mx = howMany; i < mx; i++) {
+    for (unsigned int i = 1, mx = howMany; i < mx; i++) {
     LATER_PIXEL_NAME.setPixelColor(startPos + i,
                                    r1 - (rd * i),
                                    g1 - (gd * i),
                                    b1 - (bd * i)
                                   );
-  }//next i
-  LATER_PIXEL_NAME.setPixelColor(startPos + howMany, col2);// set last one pure
-*/
+    }//next i
+    LATER_PIXEL_NAME.setPixelColor(startPos + howMany, col2);// set last one pure
+  */
 }//end runGrad()
 #endif
 #ifdef ADAFRUIT_NEOPIXEL_H
@@ -1988,6 +1982,9 @@ int loadScript(String filename) { //dd666 make this a class method
         laterUtil::replace(line, "= ", "=");
         lineLen = strlen(line);
       }//end if plain syntax var declaration line?
+
+      // turn lables into noops
+      if (line[0] == ':') laterUtil::replace(line, ":", "noop=:");
 
       //replace range operators with csv ints within the range bounds
       char * rangePtr = strstr(line, "..");
@@ -3196,13 +3193,17 @@ void handleDump() {
   LATER_SERVER_NAME.sendContent(dbg);
   LATER_SERVER_NAME.sendContent(s->fileName);
 
-  sprintf(dbg, "\nRAM:%d,  runs:%lu,  subRet:%u, resumeLine:%u\n", ESP.getFreeHeap(), s->runs, s->subReturnLine,  s->resumeLineNumber);
+  sprintf(dbg, "\nRAM:%d  runs:%lu  subRet:%u resumeLine:%u\n", ESP.getFreeHeap(), s->runs, s->subReturnLine,  s->resumeLineNumber);
   LATER_SERVER_NAME.sendContent(dbg);
-  sprintf(dbg, "Line:%ld, forStart:%ld, forEnd:%ld, forStep:%ld, forIndex:%ld", s->i, s->forStart[s->forLevel], s->forEnd[s->forLevel], s->forStep[s->forLevel], s->forIndex[s->forLevel]);
+
+  unsigned long avg = s->runTime;
+  if (s->runs) avg = s->duration / s->runs;
+  sprintf(dbg, "Line:%ld run:%ld parse:%ld avg:%ld",
+          s->i, s->runTime, s->parseTime, avg);
   LATER_SERVER_NAME.sendContent(dbg);
   //String bonus = " ";
   bool bonus = true;
-  LATER_SERVER_NAME.sendContent("\n\nLINES:\n #  exit         HOAEVT flags  \tOP  value\n");
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    HOAEVT OP dat code\n");
   for (int i = 0, mx = s->lineCount; i < mx; i++) {
     l = &s->lines[i];
     lp = s->program + l->start;
@@ -3211,7 +3212,7 @@ void handleDump() {
     if (i > 9) bonus = false;
     if (bonus) LATER_SERVER_NAME.sendContent(" ");
     LATER_SERVER_NAME.sendContent(itoa(i, respbuff, 10));
-    LATER_SERVER_NAME.sendContent(" -> ");
+    LATER_SERVER_NAME.sendContent("->");
     LATER_SERVER_NAME.sendContent(itoa(l->exit, respbuff, 10));
     LATER_SERVER_NAME.sendContent(" \t[");
     itoa(l->flags + 256, respbuff, 2);
@@ -3220,16 +3221,22 @@ void handleDump() {
     for (int f = 0; f < 6; f++)  lp[f] = (lp[f] == '1') ? flagList[f] : ' ';
 
     LATER_SERVER_NAME.sendContent(lp);
-    LATER_SERVER_NAME.sendContent("]\t");
+    LATER_SERVER_NAME.sendContent("] ");
     respbuff[0] = l->cmd ? l->cmd : '?';
     respbuff[1] = '\0';
     LATER_SERVER_NAME.sendContent(respbuff);
-    LATER_SERVER_NAME.sendContent(" = ");
+    LATER_SERVER_NAME.sendContent(" ");
+
+    itoa(l->data, respbuff, 16);
+    if (l->data < 16)  LATER_SERVER_NAME.sendContent("0");
+    LATER_SERVER_NAME.sendContent(respbuff);
+    LATER_SERVER_NAME.sendContent("  ");
+
     LATER_SERVER_NAME.sendContent(linebuff);
     LATER_SERVER_NAME.sendContent("\n");
   }//next line
 
-  LATER_SERVER_NAME.sendContent(" #  exit         HOAEVT flags  \tOP  value\n");
+  LATER_SERVER_NAME.sendContent(" # ex    HOAEVT OP dat code\n");
   LATER_SERVER_NAME.sendContent("\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
 
   for (auto const & x : LATER_VAR_NAMES[s->index])   {
@@ -3339,6 +3346,12 @@ void runScript() {
     switch (l->cmd) { // do command-y stuff with value by cmd, see COMMANDS:
 
       case LATER_noop:  continue; // do nothing. res (removed) still fired line prep, noop doesn't case LATER_res:
+
+      //  not needed because IFs will always come out line after fi or else, which is co-incidently IF's line.exit
+      case LATER_else: // ELSE
+        s->i = l->exit;
+        continue;
+        break;
 
       case LATER_var: case LATER_static: case LATER_store: case LATER_global: // init variable to value
 
@@ -3564,6 +3577,167 @@ void runScript() {
 
         continue;
         break;
+
+      case LATER_goto: // quick jump command for home-made flow control. use wisely.
+
+        if (l->exit) { // handle pre-processed conditionals
+
+          switch (s->jumpIfOperator) {
+            case '>':
+              if ( s->VARS[l->data] > s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            case '<':
+              if ( s->VARS[l->data] < s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            case '=':
+              if ( s->VARS[l->data] == s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            case '!':
+              if ( s->VARS[l->data] != s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            default: s->i++; continue;
+
+          }//end operation switch
+
+        }//end if pre-processed?
+
+        // parse conditional expressions and store :
+        if (strlen(linebuff) > 4) { // conditional, parse it
+          /*
+            goto 6 if $x < $mx
+            becomes   6if@A_<@B_
+          */
+
+          // set goto destination
+          if (linebuff[0] == '-') { // relative line count
+            l->exit = s->i - (atoi(linebuff + 1) );
+          } else { // absolute line index
+            l->exit = atoi(linebuff) + 1;
+          }//end if neg line ref?
+          char * ptr = strstr(linebuff, "if@") + 3;
+
+          if (l->exit == 1  &&  linebuff[0] != '0'  ) { // find label/landmark
+
+            // find subroutine matching name named here
+            // set sub end line exit  to goto line
+
+            char labelCache[20];
+            strncpy(labelCache, linebuff, (ptr - 3) - linebuff);
+
+            // find non-label navpoints:
+            if (labelCache[0] != ':') { // find pre-defined nav points in program
+
+              if ( !strcmp ( labelCache, "TOP" )) {
+                l->exit = 1;
+              } else if ( !strcmp ( labelCache, "FINISH" )) {
+                l->exit = s->exitLineNumber + 1;
+              } else if ( !strcmp ( labelCache, "END" )) {
+                l->exit = s->lineCount;
+              } else if ( !strcmp ( labelCache, "BOTTOM" )) {
+                l->exit = s->lineCount;
+              } else if ( !strcmp ( labelCache, "START" )) {
+                l->exit = s->startLineNumber + 1;
+              }
+
+            } else { // find labels by matching text
+
+              auto * whole = s->lines;
+              for (int i = 0; i < s->lineCount; i++) {
+                LATER_LINE * currentLine = &whole[i];
+                if (currentLine->cmd == LATER_noop) {
+                  char * tLine =  s->program + currentLine->start;
+                  if (  laterUtil::startsWith(tLine, labelCache)  ) {
+                    l->exit = i + 1;
+                    break;
+                  }
+                }//end if sub dec line?
+              }//next
+
+            }
+            if (!l->exit) l->exit = s->i + 1;
+          }//end if subroutine name?
+
+          l->data = ptr[0] - 65; // left-side var ref
+
+          // handle default>0
+          if (strlen(ptr) < 4) {
+            s->jumpIfOperator = '>';
+            s->jumpIfOperand  = 0;
+          } else {
+            ptr += 2;
+            s->jumpIfOperator = ptr[0];
+            ptr++;
+            if (ptr[0] == '@') { //eval var:
+              s->jumpIfOperand  = s->VARS[ptr[1] - 65];
+            } else { // parse literal
+              s->jumpIfOperand  = atoi(ptr);
+            }
+
+          }
+
+          switch (s->jumpIfOperator) {
+            case '>':
+              if ( s->VARS[l->data] > s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            case '<':
+              if ( s->VARS[l->data] < s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            case '=':
+              if ( s->VARS[l->data] == s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            case '!':
+              if ( s->VARS[l->data] != s->jumpIfOperand) {
+                s->i = l->exit - 1;
+                continue;
+              }
+              break;
+
+            default:
+              s->i++;
+              continue;
+
+          }//end operation switch
+        } else { // just a number mode, mutate to LATER_else, since it does what we need
+
+          varCache = atoi(linebuff);
+          if (varCache) {
+            varCache = varCache - 1;
+            l->exit = varCache;
+            l->cmd = LATER_else;
+            s->i = varCache;
+          }
+        }
+
+        continue;
+        break;
       case LATER_do: // do
         if (linebuff[0] == 'w') {
           if (!laterUtil::startsWith(linebuff, "while")) continue;
@@ -3581,13 +3755,6 @@ void runScript() {
         if (!evalConditionalExpression(linebuff, s)) s->i = l->exit;
         continue;
         break;
-
-      //  not needed because IFs will always come out line after fi or else, which is co-incidently IF's line.exit
-      case LATER_else: // ELSE
-        s->i = l->exit;
-        continue;
-        break;
-
       case LATER_switch: // sWitch
         strcpy(s->switchTerm, linebuff);
         s->switchTerm[strlen(linebuff)] = '\0';
