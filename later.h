@@ -90,6 +90,14 @@
 
 
 
+#ifndef SAMPLER_LENGTH
+#define SAMPLER_LENGTH 100
+#endif
+
+
+#ifndef SAMPLER_TYPE
+#define SAMPLER_TYPE unsigned long
+#endif
 
 
 
@@ -252,6 +260,7 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 #define LATER_if 'I'
 #define LATER_iif 'b'
 #define LATER_interval 'i'
+#define LATER_json '5'
 #define LATER_log 'L'
 #define LATER_loop 'P'
 #define LATER_next 'N'
@@ -321,6 +330,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
   {"iif", 'b'},
   {"int", 'V'}, // alias: var
   {"interval", 'i'},
+  {"json", '5'},
   {"log", 'L'},
   {"loop", 'P'},
   {"next", 'N'},
@@ -371,11 +381,84 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = {
 #define RAWFUNC(key,expr) { key, [](unsigned long a=0, unsigned long b=0, unsigned long c=0)->unsigned long {return expr;}}
 #define REPRAW(key,expr) { key, []()->unsigned long {return expr;}}
 #define TEMPLATE(expr) []()->unsigned long {return expr;}
+#ifdef SAMPLER_ENABLED
+
+typedef struct LATER_SAMPLE {
+  SAMPLER_TYPE value;
+  unsigned long time;
+};
+typedef struct LATER_SAMPLER {
+  LATER_SAMPLE data[SAMPLER_LENGTH];
+
+  SAMPLER_TYPE lastValue;
+  SAMPLER_TYPE total;
+  SAMPLER_TYPE min;
+  SAMPLER_TYPE max;
+  SAMPLER_TYPE avg;
+
+  unsigned long minTime;
+  unsigned long maxTime;
+
+  unsigned long lastTime;
+  unsigned int limit = SAMPLER_LENGTH;
+  unsigned int length;
+
+  unsigned int add(SAMPLER_TYPE value);
+  unsigned int clear(void);
+};
+unsigned int LATER_SAMPLER::add( SAMPLER_TYPE value ) {
+  lastValue = value;
+  lastTime = millis();
+
+  if (length == limit) return 0;
+
+  if (length == 0  ) {
+    min = value;
+    minTime = lastTime;
+  }
+
+  data[length++].value = value;
+  data[length].time = lastTime;
+
+  total += value;
+  avg = total / length;
+
+  if (min > value) {
+    min = value;
+    minTime = lastTime;
+  }
+
+  if (max < value) {
+    max = value;
+    maxTime = lastTime;
+  }
+
+  return length;
+}
+unsigned int LATER_SAMPLER::clear( ) {
+  for (int i = 0; i < limit; i++) {
+    data[i].value = 0;
+    data[i].time = 0;
+  }
+  total = 0;
+  avg = 0;
+  min = 0;
+  max = 0;
+  minTime = 0;
+  maxTime = 0;
+  lastValue = 0;
+  lastTime = 0;
+  length = 0;
+}
+
+LATER_SAMPLER Sampler;
+
+#endif
 
 unsigned long randomReg();
-#line 426 "danscript.ino"
+#line 511 "danscript.ino"
 unsigned long clamp(int a);
-#line 529 "danscript.ino"
+#line 620 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 817 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -435,7 +518,7 @@ void handleEval();
 void handleDump();
 #line 1814 "core.ino"
 void runScript();
-#line 3029 "core.ino"
+#line 3086 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -483,13 +566,13 @@ void backtrack(char * buff);
 void handleScripts();
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
-#line 162 "templates.ino"
+#line 178 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 194 "templates.ino"
+#line 210 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 263 "templates.ino"
+#line 279 "templates.ino"
 void handleCommandList();
-#line 426 "danscript.ino"
+#line 511 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -511,6 +594,12 @@ std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned
       return rate * (float) a;
     }
   },
+
+#ifdef SAMPLER_ENABLED
+  RAWFUNC("DATA", Sampler.add(a) ),
+  RAWFUNC("DATA_VAL", Sampler.data[a].value ),
+  RAWFUNC("DATA_AT", Sampler.data[a].time ),
+#endif
 
 #ifdef ADAFRUIT_NEOPIXEL_H
   RAWFUNC("RGB", Adafruit_NeoPixel::Color(a, b, c)),
@@ -3740,12 +3829,10 @@ void runScript() {
         break;
       case LATER_do: // do
         if (linebuff[0] == 'w') {
-          if (!laterUtil::startsWith(linebuff, "while")) continue;
           if (!evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
         }//end if while
 
         if (linebuff[0] == 'u') { //blah
-          if (!laterUtil::startsWith(linebuff, "until")) continue;
           if (evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
         }//end if until
 
@@ -4285,7 +4372,58 @@ void runScript() {
         laterCMD::runCGI(lb, s);
         continue;
         break;
+      case LATER_json:
+        laterUtil::splitStringByChar(lb, ',');
+        if (laterUtil::split_count > 1) {
 
+          uniPrintln("{");
+
+          char valbuff [18];
+
+          for (int i = 0; i < laterUtil::split_count; i++) {
+            // trim left:
+            while (laterUtil::splits[i][0] == ' ')laterUtil::splits[i]++;
+
+            // find comma delim:
+            char * ptr = strchr(laterUtil::splits[i], ',');
+            if (ptr) ptr[0] = '\0'; // chop at first comma
+
+            // trim right:
+            ptr = strchr(laterUtil::splits[i], ' ');
+            if (ptr) ptr[0] = '\0'; // chop at first space
+
+            char* slot;
+            char key[16];
+            key[0] = '$';
+
+            strcpy(key + 1, laterUtil::splits[i]);
+            slot = getVarName(key, s->index); // use composite to get/make allocated slot
+            uniPrint(" \"");
+
+            char * colon = strchr(key, ':');
+            if (!colon) {
+              uniPrint(key + 1);
+            } else {
+              colon[0] = '\0';
+              uniPrint(key + 1);
+              uniPrint("\":\t");
+              uniPrint( colon + 1 );
+              if ( i + 1 < laterUtil::split_count) uniPrint(",");
+              uniPrintln(" ");
+              continue;
+            }
+            uniPrint("\":\t");
+            itoa (s->VARS[slot[1] - 65], valbuff, 10);
+            uniPrint( valbuff );
+            if ( i + 1 < laterUtil::split_count) uniPrint(",");
+            uniPrintln(" ");
+
+          }//next var
+          uniPrintln("} ");
+        }//end if vars passed?
+
+        continue;
+        break;
       default:
         if ( Later.addons[ l->cmd  ] ) {
           Later.addons[ l->cmd  ](  lb, l, s);
@@ -5411,6 +5549,20 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{self.runs}", getCurrent()->runs  ),
   REPRAW("{self.lines}", getCurrent()->lineCount  ),
 
+#ifdef SAMPLER_ENABLED
+  REPRAW( "{data.total}", Sampler.total  ),
+  REPRAW( "{data.avg}", Sampler.avg  ),
+  REPRAW( "{data.min}", Sampler.min  ),
+  REPRAW( "{data.max}", Sampler.max  ),
+  REPRAW( "{data.minTime}", Sampler.minTime  ),
+  REPRAW( "{data.maxTime}", Sampler.maxTime  ),
+  REPRAW( "{data.lastValue}", Sampler.lastValue  ),
+  REPRAW( "{data.lastTime}", Sampler.lastTime  ),
+  REPRAW( "{data.length}", Sampler.length  ),
+  REPRAW( "{data.total}", Sampler.total  ),
+  REPRAW( "{data.total}", Sampler.total  ),
+  REPRAW( "{data.total}", Sampler.total  ),
+#endif
 };//end map
 bool LaterClass::addTemplate(  const char * key, unsigned long(* callBack)()   ) {
   if (started) {
