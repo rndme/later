@@ -75,12 +75,11 @@ Later.addTemplate("{zip}",  TEMPLATE(90210)); // using TEMPLATE MACRO
 * **{time.minute}** : time - min of hour
 * **{time.second}** : time - second of min
 * **{time.epoc}**   : time - epoc unix timestamp
-
-
-
-
-
-
+* **{time.year}**   : time - the 4 digit year
+* **{time.month}**   : time - month of year from 1-12
+* **{time.date}**   : time - the date, aka day of month 1-31
+* **{%DAY%}**   : time - 3-letter string day name, Sun-Sat
+* **{%MONTH%}**   : time - 3-letter string month name, Jan-Dec
 
 
 
