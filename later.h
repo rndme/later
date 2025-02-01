@@ -449,6 +449,7 @@ unsigned int LATER_SAMPLER::clear( ) {
   lastValue = 0;
   lastTime = 0;
   length = 0;
+  return 1;
 }
 
 LATER_SAMPLER Sampler;
@@ -456,15 +457,15 @@ LATER_SAMPLER Sampler;
 #endif
 
 unsigned long randomReg();
-#line 511 "danscript.ino"
+#line 512 "danscript.ino"
 unsigned long clamp(int a);
-#line 620 "danscript.ino"
+#line 621 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 817 "commands.ino"
+#line 816 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 835 "commands.ino"
+#line 834 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 995 "commands.ino"
+#line 994 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -518,7 +519,7 @@ void handleEval();
 void handleDump();
 #line 1814 "core.ino"
 void runScript();
-#line 3086 "core.ino"
+#line 3085 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -566,13 +567,15 @@ void backtrack(char * buff);
 void handleScripts();
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
-#line 178 "templates.ino"
+#line 16 "templates.ino"
+void getDate(unsigned long epoc);
+#line 215 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 210 "templates.ino"
+#line 247 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 279 "templates.ino"
+#line 362 "templates.ino"
 void handleCommandList();
-#line 511 "danscript.ino"
+#line 512 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -820,7 +823,7 @@ bool LaterClass::resume(const char * fileName) {
 
   File file5 = SPIFFS.open( stateFileName, "r");
   if (file5) {
-    const size_t bytes_read = file5.read((byte*) s, ssize);
+    file5.read((byte*) s, ssize);
     file5.close();
   } else {
     //return false;
@@ -1261,7 +1264,6 @@ void runCGI(char * lb, LATER_ENVIRON * s) {
   char * p = buff;
   int len = 0;
   char linebuff[LATER_LINE_BUFFER];
-  int lineNumber = 0;
 
   strcat(buff, "\n");
 
@@ -2975,7 +2977,7 @@ void popHttpResponse() {
 
   if (http.getSize() > LATER_HTTP_CACHE) {
     strncpy(Later.httpResponseTextBuffer, (char*) http.getString().c_str(), LATER_HTTP_CACHE - 1);
-    Later.httpResponseTextBuffer[LATER_HTTP_CACHE] = '\0';
+    Later.httpResponseTextBuffer[LATER_HTTP_CACHE-1] = '\0';
   } else {
     strcpy(Later.httpResponseTextBuffer, (char*) http.getString().c_str());
   }
@@ -4101,7 +4103,6 @@ void runScript() {
 
         if (1) {
           bool isRead = strchr(linebuff, '>') ? 1 : 0;
-          bool isRTC =  strstr(linebuff, "RTC") ? 1 : 0;
           char fileName[32] = {'/'};
           char * args = strchr(linebuff, '<');
           char valbuff [18];
@@ -5433,6 +5434,41 @@ uint64_t macAddress = ESP.getEfuseMac();
 uint64_t macAddressTrunc = macAddress << 40;
 unsigned long chipID = macAddressTrunc >> 40;
 #endif
+
+#ifdef NTP_DEFAULT_LOCAL_PORT
+
+unsigned int DATES[4];
+const char * MONTHNAMES =  "JanFebMarArpMayJunJulAugSepOctNovDec";
+const char * DAYNAMES =  "SunMonTueWedThuFriSat";
+
+void getDate(unsigned long epoc) {
+  if (!epoc) epoc = timeClient.getEpochTime();
+  epoc += (24 * 60 * 60);
+  unsigned long since2024 = epoc - 1704002400;
+  unsigned int monthLengths[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30 , 31, 30, 31};
+  //var monthNames="JanFebMarArpMayJunJulAugSepOctNovDec";
+  unsigned int  days = (since2024 / 86400);
+  unsigned int  monthsSince = 0;
+  unsigned int  counted = 0;
+  unsigned int  month = 0;
+  unsigned int  year = 2023;
+
+  while (counted < days) {
+    month = (monthsSince++ % 12);
+    if (month == 0) year++;
+    if (month == 1 && !(year % 4)) counted++; // leap days
+    counted += monthLengths[month];
+  }
+
+  monthsSince--;
+  unsigned int day = monthLengths[month] - (counted - days);
+  DATES[0] = year;
+  DATES[1] = month + 1;
+  DATES[2] = day;
+  DATES[3] = days % 7;
+}
+#endif
+
 std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{timer}", millis()),
   REPRAW("{rnd}", randomReg() % 1024),
@@ -5456,6 +5492,11 @@ std::map < const char *, unsigned long(*)(), cmp_str > TEMPLATES2 = {
   REPRAW("{time.minute}", timeClient.getMinutes()),
   REPRAW("{time.second}", timeClient.getSeconds()),
   REPRAW("{time.epoc}", timeClient.getEpochTime()),
+
+  {"{time.date}", []()->unsigned long {getDate(0); return DATES[2];}},
+  {"{time.month}", []()->unsigned long {getDate(0); return DATES[1];}},
+  {"{time.year}", []()->unsigned long {getDate(0); return DATES[0];}},
+
 #endif
   REPRAW("{micros}", micros()),
 
@@ -5620,10 +5661,51 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
 
   memcpy(TEMPLATE_KEY_BUFF, ptrLeft, len);
   TEMPLATE_KEY_BUFF[len] = '\0';
-  if (strstr(TEMPLATE_KEY_BUFF, "%RAM%")) { // was  nsLATER::laterUtil  ddns
-    laterUtil::replace(line, TEMPLATE_KEY_BUFF, laterUtil::fileToBuff("%RAM%"));
-    return;
-  }
+  if (TEMPLATE_KEY_BUFF[1] == '%') { //{%RAM%}
+
+    if (strstr(TEMPLATE_KEY_BUFF, "%RAM%")) { // was  nsLATER::laterUtil  ddns
+      laterUtil::replace(line, TEMPLATE_KEY_BUFF, laterUtil::fileToBuff("%RAM%"));
+      return;
+    }//end if RAM?
+
+#ifdef NTP_DEFAULT_LOCAL_PORT
+    if (strstr(TEMPLATE_KEY_BUFF, "%TIME%")) {
+      laterUtil::replace(line, TEMPLATE_KEY_BUFF, timeClient.getFormattedTime().c_str());
+      processTemplateExpressions2(line, s);
+      return;
+    }//end if RAM?
+
+    getDate(0);
+
+    if (strstr(TEMPLATE_KEY_BUFF, "%DATE%")) {
+      String ds = String(DATES[0]) + "/" + String(DATES[1]) + "/" + String(DATES[2]);
+      laterUtil::replace(line, TEMPLATE_KEY_BUFF, ds.c_str());
+      processTemplateExpressions2(line, s);
+      return;
+    }//end if DATE?
+
+    if (strstr(TEMPLATE_KEY_BUFF, "%MONTH%")) {
+      int offset = (DATES[1] - 1) * 3;
+      char mn[4];
+      strncpy(mn, MONTHNAMES + offset, 3);
+      mn[3] = '\0';
+      laterUtil::replace(line, TEMPLATE_KEY_BUFF, mn  );
+      processTemplateExpressions2(line, s);
+      return;
+    }//end if MONTH?
+
+    if (strstr(TEMPLATE_KEY_BUFF, "%DAY%")) {
+      int offset = (DATES[3]) * 3;
+      char dn[4];
+      strncpy(dn, DAYNAMES + offset, 3);
+      dn[3] = '\0';
+      laterUtil::replace(line, TEMPLATE_KEY_BUFF, dn  );
+      processTemplateExpressions2(line, s);
+      return;
+    }//end if DATE?
+#endif
+  }//end if [0]=='%' ?
+
   auto callback = TEMPLATES2[TEMPLATE_KEY_BUFF];
   if (callback) val = callback();
   if (storeCall) {
