@@ -519,7 +519,7 @@ void handleEval();
 void handleDump();
 #line 1814 "core.ino"
 void runScript();
-#line 3085 "core.ino"
+#line 3096 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -2349,7 +2349,7 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
         for (int i = index + 1, need = 1; i < mx; i++) {
           LATER_LINE * x = &whole[i];
           if (x->cmd == LATER_fi) need--;
-          if (x->cmd == LATER_else) need--;
+          if (x->cmd == LATER_else && need==1) need--;
           if (x->cmd == LATER_if) need++;
           if (need == 0) {
             line->exit = i;
@@ -2367,7 +2367,6 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
           LATER_LINE * x = &whole[i];
           if (x->cmd == LATER_fi) need--;
           if (x->cmd == LATER_if) need++;
-          if (x->cmd == LATER_else) need++;
           if (need == 0) {
             line->exit = i;
             break;
@@ -2977,7 +2976,7 @@ void popHttpResponse() {
 
   if (http.getSize() > LATER_HTTP_CACHE) {
     strncpy(Later.httpResponseTextBuffer, (char*) http.getString().c_str(), LATER_HTTP_CACHE - 1);
-    Later.httpResponseTextBuffer[LATER_HTTP_CACHE-1] = '\0';
+    Later.httpResponseTextBuffer[LATER_HTTP_CACHE - 1] = '\0';
   } else {
     strcpy(Later.httpResponseTextBuffer, (char*) http.getString().c_str());
   }
@@ -3351,13 +3350,13 @@ void handleDump() {
 } // end handle dump()
 #endif
 void runScript() {
-
+  unsigned long loopLimit = 32700;
   LATER_ENVIRON * s = getCurrent();
   LATER_LINE * l;
   static char linebuff[LATER_LINE_BUFFER]; // holds a copy of the code line to alter as needed to run, keeps orig intact
   char * lp = s->program; // start point of master line
-  //static char tempbuff[32]; // for utility use by built-in functions
-
+  static char tempbuff[LATER_LINE_BUFFER]; // for DEBUGGING output
+  if (s->options.debug)  loopLimit = 1000;
   s->startedAt = micros();
   s->runs++;
 
@@ -3424,13 +3423,24 @@ void runScript() {
 
     }//end if flags?
 
-    if (hits++ > 32700) {
+    if (hits++ > loopLimit) {
       uniPrintln("runaway loop detected, aborting");
       break;
     }
 
-    if (s->options.debug) uniPrintln(linebuff);
-
+    if (s->options.debug) {
+      strcpy(tempbuff, "           ");
+      char * tb = tempbuff;
+      itoa (s->i, tb, 10);
+      strcat(tb, ">");
+      itoa (l->exit, tb + strlen(tb), 10);
+      strcat(tb, "\t");
+      char tiny[4] = {l->cmd, 0};
+      strcat(tb, tiny);
+      strcat(tb, " =");
+      strcat(tb, linebuff);
+      uniPrintln(tempbuff);
+    }
     ////////////////////////////////////
     ////////////////////////////////////
     // linebuff has been pre-processed by flag and is ready to feed to commands
