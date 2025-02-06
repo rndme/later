@@ -362,6 +362,28 @@ switch $outcome
 end switch
 ```
 
+A subtle but powerful differnce between c/c++ and later's switch case is that you can compare expressions, not just values. Expressions can be provided for both _switch_ and _case_ statements:
+
+```js
+$val = 3
+
+switch ($val - 1)
+case 1
+ println one
+case (1 + 1)
+ println two
+case 3
+ println three
+default:
+ println something else
+end switch
+// prints two
+```
+
+
+
+
+
 **case**   [_int_ **offer**]    [ex1](#) <br>
 Inside of switch block, offers a match for the switched value. <br>
 
