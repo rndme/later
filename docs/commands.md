@@ -385,7 +385,7 @@ end switch
 
 
 **case**   [_int_ **offer**]    [ex1](#) <br>
-Inside of switch block, offers a match for the switched value. <br>
+Inside of switch block, offers a match for the switched value. *Don't* use a `:` delimiter after the value/expression, just end the line. <br>
 
 **default**   [void]    [ex1](#) <br>
 Inside of switch block, offers a default code section to run is no match is found for the switched value. <br>
