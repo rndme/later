@@ -159,6 +159,51 @@ char setRunLog[LATER_LOG_SIZE] = "";
 
 */
 //>> public types, used to make callbacks for commands+function, run backups or mods, etc
+#ifdef HIGH_RES_TIMING
+typedef struct HIGH_RES_PERF_TIMING {
+  unsigned long total; // ()
+  unsigned long count; // ()  
+  unsigned long avg; // ()
+};
+
+void dumpSection(HIGH_RES_PERF_TIMING * sec, const char * label){
+  if(!sec->count) return;
+  unsigned long avg = sec->total;
+  avg = avg / sec->count; 
+  HIGH_RES_TIMING.println( String(label) +": " + String(sec->count)+"x in\t"+ String(sec->total)+"us,\t~" + String(avg)  );
+}
+
+typedef struct HIGH_RES_PERF_TIMINGS {
+  
+  HIGH_RES_PERF_TIMING array;
+  HIGH_RES_PERF_TIMING cond;
+  HIGH_RES_PERF_TIMING math;
+  HIGH_RES_PERF_TIMING templates;
+  HIGH_RES_PERF_TIMING vars;
+  HIGH_RES_PERF_TIMING loop;
+  
+  void reset(){
+    array={0,0,0};    
+    cond={0,0,0};
+    math={0,0,0};
+    templates={0,0,0};
+    vars={0,0,0};
+    loop={0,0,0};   
+  };
+  
+  void report(){
+    dumpSection(&array, "arrs");
+    dumpSection(&cond, "cond");
+    dumpSection(&math, "math");
+    dumpSection(&templates, "tmpl");
+    dumpSection(&vars, "vars");
+    dumpSection(&loop, "loop");   
+  }; 
+  
+} HIGH_RES_PERF_TIMINGS;
+HIGH_RES_PERF_TIMINGS HR_PERF;
+#endif
+
 typedef struct LATER_EVENT {
   int pin = -1; // which pin to watch?
   // char name[16]; // name of subroutine to run when true
@@ -233,62 +278,62 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 // cdefnoqrstux
 // left: y
 // char cmd name constants
+#define LATER_noop 'n'
+#define LATER_else 'E'
+#define LATER_var 'V'
+#define LATER_store 'g'
+#define LATER_global 'm'
+#define LATER_static 'd'
+#define LATER_goto '4'
+#define LATER_fi 'F'
+#define LATER_if 'I'
+#define LATER_end 'X'
+#define LATER_pixel 'A'
+#define LATER_solid 's'
+#define LATER_render 'r'
+#define LATER_rotate 'o'
+#define LATER_sub 'J'
+#define LATER_digitalWrite 'G'
 #define LATER_analogWrite 'w'
+#define LATER_print 'T'
+#define LATER_println 'l'
+#define LATER_for 'R'
+#define LATER_next 'N'
+#define LATER_start 'z'
+#define LATER_gosub 'Y'
+#define LATER_timer 't'
+#define LATER_case 'K'
+#define LATER_option 'c'
+#define LATER_interval 'i'
+#define LATER_sleep 'S'
+#define LATER_pinMode 'M'
+#define LATER_log 'L'
+#define LATER_switch 'W'
+#define LATER_ping 'H'
 #define LATER_assert 'k'
 #define LATER_break 'B'
 #define LATER_call 'h'
-#define LATER_case 'K'
 #define LATER_cgi 'j'
 #define LATER_clear 'C'
 #define LATER_continue 'O'
 #define LATER_default 'U'
 #define LATER_delete 'e'
-#define LATER_digitalWrite 'G'
 #define LATER_do 'D'
-#define LATER_else 'E'
-#define LATER_end 'X'
 #define LATER_endsub 'Q'
 #define LATER_exit 'x'
-#define LATER_fi 'F'
 #define LATER_flash '3'
-#define LATER_for 'R'
 #define LATER_freeze 'f'
-#define LATER_global 'm'
-#define LATER_gosub 'Y'
-#define LATER_goto '4'
 #define LATER_grad 'a'
-#define LATER_if 'I'
 #define LATER_iif 'b'
-#define LATER_interval 'i'
 #define LATER_json '5'
-#define LATER_log 'L'
 #define LATER_loop 'P'
-#define LATER_next 'N'
-#define LATER_noop 'n'
 #define LATER_on 'v'
-#define LATER_option 'c'
-#define LATER_ping 'H'
-#define LATER_pinMode 'M'
-#define LATER_pixel 'A'
-#define LATER_print 'T'
-#define LATER_println 'l'
-#define LATER_render 'r'
 #define LATER_resume '1'
 #define LATER_return 'Z'
-#define LATER_rotate 'o'
 #define LATER_run 'u'
-#define LATER_sleep 'S'
-#define LATER_solid 's'
-#define LATER_start 'z'
-#define LATER_static 'd'
-#define LATER_store 'g'
-#define LATER_sub 'J'
 #define LATER_suspend '2'
-#define LATER_switch 'W'
-#define LATER_timer 't'
 #define LATER_type 'p'
 #define LATER_unload 'q'
-#define LATER_var 'V'
 //for the template engine:
 // container for user-defined program variables
 std::map<const char *,  char, cmp_str> LATER_CMDS = {
@@ -457,9 +502,9 @@ LATER_SAMPLER Sampler;
 #endif
 
 unsigned long randomReg();
-#line 512 "danscript.ino"
+#line 559 "danscript.ino"
 unsigned long clamp(int a);
-#line 621 "danscript.ino"
+#line 668 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 816 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -489,37 +534,37 @@ char * getVarName(char * longName, int scriptIndex);
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 457 "core.ino"
+#line 481 "core.ino"
 void removeDoubleLines(char * buff);
-#line 467 "core.ino"
+#line 491 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 483 "core.ino"
+#line 507 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 501 "core.ino"
+#line 525 "core.ino"
 void autoEqualsInsert(char * line);
-#line 534 "core.ino"
+#line 558 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 784 "core.ino"
+#line 808 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 805 "core.ino"
+#line 840 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 976 "core.ino"
+#line 1030 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1195 "core.ino"
-bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
 #line 1263 "core.ino"
+bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
+#line 1359 "core.ino"
 void popHttpResponse();
-#line 1281 "core.ino"
+#line 1377 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1432 "core.ino"
+#line 1528 "core.ino"
 void processStringFormats(char* s);
-#line 1561 "core.ino"
+#line 1657 "core.ino"
 void handleEval();
-#line 1580 "core.ino"
+#line 1676 "core.ino"
 void handleDump();
-#line 1814 "core.ino"
+#line 1909 "core.ino"
 void runScript();
-#line 3096 "core.ino"
+#line 3223 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -573,9 +618,9 @@ void getDate(unsigned long epoc);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 247 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 362 "templates.ino"
+#line 374 "templates.ino"
 void handleCommandList();
-#line 512 "danscript.ino"
+#line 559 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -1976,9 +2021,12 @@ int loadScript(String filename) { //dd666 make this a class method
   char temp[12];
   bool isPrintBlock = 0;
   bool isStaticPrintBlock = 0;
+  unsigned long lineData = 0;
+
   // build up lines:
   while (strlen(lb) > 1) {
 
+    lineData = 0;
     // copy program code into line buffer so we can mess it up
     strncpy( line, lb, endpos);
     line[endpos] = '\0';
@@ -2067,6 +2115,8 @@ int loadScript(String filename) { //dd666 make this a class method
           laterUtil::replace(line, "$", "define=$");
         } else {
           laterUtil::replace(line, "$", "var=$");
+          laterUtil::replace(line, "++", "=+1");
+          laterUtil::replace(line, "--", "=-1");
         }
 
         laterUtil::replace(line, " =", "=");
@@ -2201,14 +2251,33 @@ int loadScript(String filename) { //dd666 make this a class method
       if (tempPtr && tempPtr[1] != ' ' && strchr(tempPtr + 1, '}') && !isStaticPrintBlock) flag += 1; // also has later close template delim
       //////////  $vars ? 2s
       // look for var usage, minding var commands themselves
-      if (cmdChar == 'V' || cmdChar == LATER_static) { // look only after first equal for this
+      if (cmdChar == LATER_var || cmdChar == LATER_static) { // look only after first equal for this
         if (strchr(strchr(linePtr, '='), '@')) flag += 2;// vars after assign
+
+        if (strpbrk (line, "*/-+")) {
+          laterUtil::replace(line, "+=", "=+");
+          laterUtil::replace(line, "-=", "=-");
+          laterUtil::replace(line, "*=", "=*");
+          laterUtil::replace(line, "/=", "=/");
+
+          if (strstr(line, "=+1")) lineData = 1;
+          if (strstr(line, "=-1")) lineData = 2;
+          if (strstr(line, "=+@")) lineData = 3;
+          if (strstr(line, "=-@")) lineData = 3;
+
+        }
+
       } else {
         if (strchr(linePtr, '@')) flag += 2;// vars
       }
       if (cmdChar == LATER_option) {
         if (strstr(linePtr, "noget!") )SCRIPT->options.noget = true;
       }
+      if (cmdChar == LATER_solid) {
+        if (strstr(linePtr, "0,0,0")) lineData = 1;
+        if (strstr(linePtr, "#000")) lineData = 1;
+      }
+
       if (strchr(linePtr, '(') && strchr(linePtr, ')') && !isStaticPrintBlock ) flag += 4;
       //////////  [x,y][arrays] ?  8s
       if (strstr(linePtr, "][") && !isStaticPrintBlock ) flag += 8;
@@ -2242,6 +2311,7 @@ int loadScript(String filename) { //dd666 make this a class method
       sLine->start = (outptr - cleanptr); // first line byte in clean buffer
       sLine->stop  = (outptr - cleanptr) + lineLen;// last line byte in clean buffer
       sLine->cmd = cmdChar;
+      sLine->data = lineData;
       SCRIPT->lines[lineCount].flags = flag;
 
       // copy to clean:
@@ -2349,7 +2419,7 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
         for (int i = index + 1, need = 1; i < mx; i++) {
           LATER_LINE * x = &whole[i];
           if (x->cmd == LATER_fi) need--;
-          if (x->cmd == LATER_else && need==1) need--;
+          if (x->cmd == LATER_else && need == 1) need--;
           if (x->cmd == LATER_if) need++;
           if (need == 0) {
             line->exit = i;
@@ -2560,7 +2630,12 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
     }//end switch()
   }//next line
 }//end buildExitPoints()
-void processVariableExpressions(char * line, unsigned long * VARS) {
+void processVariableExpressions(char * line, unsigned long * VARS) {// composites var values into literals for output
+
+#ifdef HIGH_RES_TIMING
+  unsigned long st = micros();
+#endif
+
   static char buff[16];
   static char varname[8];
   char * atPtr = strchr(line, '@');
@@ -2576,8 +2651,17 @@ void processVariableExpressions(char * line, unsigned long * VARS) {
     atPtr = strchr(atPtr + 1, '@');
   }//end if var declaration?
 
+#ifdef HIGH_RES_TIMING
+  unsigned long et = micros();
+  HR_PERF.vars.total += et - st;
+  HR_PERF.vars.count++;
+#endif
+
 }//end processVariableExpressions()
 bool processArray(char * line, unsigned long * VARS, int varSlot) {
+#ifdef HIGH_RES_TIMING
+  unsigned long st = micros();
+#endif
   char * ptr  = strchr(line, '[');
   //
 
@@ -2658,6 +2742,12 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
       ptr = strchr(ptr + 1, delim);  // skip commas until count == index
     }//wend comma segment
 
+#ifdef HIGH_RES_TIMING
+    unsigned long et = micros();
+    HR_PERF.array.total += et - st;
+    HR_PERF.array.count++;
+#endif
+
     if (lookupModeFlag == '=') {
       if (varSlot > -1) {
         VARS[varSlot] = elmsFound - 1;
@@ -2723,14 +2813,29 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
 
   } else { // no ptr, missed elm, default to 0:
     if (varSlot > -1) {//DMA?
+#ifdef HIGH_RES_TIMING
+      unsigned long et = micros();
+      HR_PERF.array.total += et - st;
+      HR_PERF.array.count++;
+#endif
       VARS[varSlot] = 0;
       return true;
     }//dma?
   }//ptr?
 
+#ifdef HIGH_RES_TIMING
+  unsigned long et = micros();
+  HR_PERF.array.total += et - st;
+  HR_PERF.array.count++;
+#endif
   return false;
 }//end processArray()
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
+
+#ifdef HIGH_RES_TIMING
+  unsigned long st = micros();
+#endif
+
   char * ptr = strchr(s, '(');
   if (!ptr) return 0;
 
@@ -2884,6 +2989,11 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
 
   if (DMA > -1) {
     VARS[DMA] = varCache;
+#ifdef HIGH_RES_TIMING
+    unsigned long et = micros();
+    HR_PERF.math.total += et - st;
+    HR_PERF.math.count++;
+#endif
     return 1;
   }
 
@@ -2905,9 +3015,17 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
 
   if (strchr(s, ')') ) evalMath(s, script,  DMA);
 
+#ifdef HIGH_RES_TIMING
+  unsigned long et = micros();
+  HR_PERF.math.total += et - st;
+  HR_PERF.math.count++;
+#endif
   return 0;
 } // end evalMath
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
+#ifdef HIGH_RES_TIMING
+  unsigned long st = micros();
+#endif
   unsigned long * VARS = s->VARS;
   char * ptr = string_condition;
   char op;
@@ -2921,10 +3039,31 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
     while (ptr[0] == ' ') ptr++; // trim left
   }
   char * opPtr = strpbrk (ptr, "=!<>%&|");
+  if (opPtr[0] == '%'  && opPtr[1] == 0) { //
+    if (ptr[0] == '@') {
+      ifConditionTrue = VARS[ptr[1] - 65] > (randomReg() % 100);
+    } else {
+      ifConditionTrue = strtoul(ptr, NULL, 10) > (randomReg() % 100);
+    }
+
+#ifdef HIGH_RES_TIMING
+    unsigned long et = micros();
+    HR_PERF.cond.total += et - st;
+    HR_PERF.cond.count++;
+#endif
+    return ifConditionTrue;
+  }//end if random change conditional?
+
   term1 =  Number(ptr, VARS); // atoi(ptr); LHS
+
   if (!opPtr) { // if asking for truthyness of a single term, compare to zero and leave
     ifConditionTrue = term1 > 0;
     if (shouldInvert) ifConditionTrue = !ifConditionTrue;
+#ifdef HIGH_RES_TIMING
+    unsigned long et = micros();
+    HR_PERF.cond.total += et - st;
+    HR_PERF.cond.count++;
+#endif
     return ifConditionTrue;
   }
 
@@ -2950,7 +3089,11 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
   }
 
   if (shouldInvert) ifConditionTrue = !ifConditionTrue;
-
+#ifdef HIGH_RES_TIMING
+  unsigned long et = micros();
+  HR_PERF.cond.total += et - st;
+  HR_PERF.cond.count++;
+#endif
   return ifConditionTrue;
 } // end evalConditionalExpression()
 /*  RESPONSE METHODS AND PROPERTIES
@@ -3368,10 +3511,19 @@ void runScript() {
   bool usedDMA = false; // dma needed? (since varSlot 0 is legit, this ride-along flag is needed)
 
   if (!s->exitLineNumber) s->exitLineNumber = s->lineCount;
+#ifdef HIGH_RES_TIMING
+  unsigned long st = 0;
+  HR_PERF.reset();
+#endif
 
   for (s->i = s->resumeLineNumber; s->i < s->exitLineNumber; s->i++) {
+#ifdef HIGH_RES_TIMING
+    if (st > 0) {
+      HR_PERF.loop.total += micros() - st;
+      HR_PERF.loop.count++;
+    }
+#endif
     l = &s->lines[s->i]; //    parsed line struct, members: [start, stop, data, len, flags, cmd]
-    if (l->cmd == LATER_noop) continue; // the fastest command, no pre-processing done. used by static/define et al.
 
     // pop temp line buffer:
     lp = s->program + l->start;
@@ -3389,7 +3541,7 @@ void runScript() {
       //#ifdef ESP8266HTTPClient_H_
 #if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
       // if ajax response operation, do that:
-      if (((l->flags >> 5) & 0x01) == 1) {
+      if ( l->flags > 31  ) {
         if (l->cmd == LATER_var || l->cmd == LATER_static || l->cmd == LATER_store || l->cmd == LATER_global ) { // assign ret to a vary:
           processResponseEmbeds(strchr(linebuff, '=') + 1, s);
         } else { // template result into line:
@@ -3441,6 +3593,10 @@ void runScript() {
       strcat(tb, linebuff);
       uniPrintln(tempbuff);
     }
+
+#ifdef HIGH_RES_TIMING
+    st = micros();
+#endif
     ////////////////////////////////////
     ////////////////////////////////////
     // linebuff has been pre-processed by flag and is ready to feed to commands
@@ -3584,6 +3740,21 @@ void runScript() {
         // split on equal, get name and value
         v = strchr(linebuff, '=') + 1;
         varSlot = linebuff[1] - 65;
+
+        if (l->data) { // look for logical perf-improving shortcuts found in parsing
+
+          switch (l->data) {
+            case 1: s->VARS[varSlot]++; continue; // increment 1
+            case 2: s->VARS[varSlot]--; continue; // decrement 1
+            case 3: s->VARS[varSlot] += s->VARS[linebuff[6] - 65]; continue; // increment var
+            case 4: s->VARS[varSlot] -= s->VARS[linebuff[6] - 65]; continue; // decrement var
+            default: break;
+          }
+
+          //@A_=+@C_
+
+        }//end if data shortcuts?
+
         while (v[0] == ' ') v++; // trim lef, right of compare operator char
         if (isdigit(v[0])) {
           varCache = strtoul(v, NULL, 10); // atol(v);
@@ -3631,51 +3802,6 @@ void runScript() {
           }
 
         }
-        continue;
-        break;
-
-      case LATER_for: // forLoop
-        if (s->forTop[s->forLevel] != -1) { // already in loop? shift up a level
-          s->forLevel++;
-        }
-        s->forTop[s->forLevel] = s->i;
-        laterUtil::splitStringByChar(linebuff, ';');
-
-        s->forStart[s->forLevel] = Number(laterUtil::splits[1] ? laterUtil::splits[0] : 0, s->VARS); // for debugging, forIndex is really used
-        s->forEnd[s->forLevel] = Number(laterUtil::splits[1] ? laterUtil::splits[1] : laterUtil::splits[0], s->VARS);
-        s->forStep[s->forLevel] = laterUtil::splits[2] ? Number( laterUtil::splits[2], s->VARS) : 1;
-        s->forIndex[s->forLevel] = s->forStart[s->forLevel];
-        if (s->forEnd[s->forLevel] < s->forStart[s->forLevel]) { // hi-lo?
-          if (s->forStep[s->forLevel] > 0) s->forStep[s->forLevel] *= -1;
-        }//end if hi-low order?
-
-        continue;
-        break;
-      case LATER_next: // forLoop's Next
-        s->forIndex[s->forLevel] += s->forStep[s->forLevel];
-
-        if (s->forStep[s->forLevel] > 0) { // works
-
-          if (s->forIndex[s->forLevel] >= s->forEnd[s->forLevel]) { // done
-            s->forTop[s->forLevel] = -1;
-            // shift down a level if not on zero
-            if (s->forLevel) s->forLevel--;
-          } else { // keep going
-            s->i = l->exit;
-          }
-
-        } else { // counting down
-
-          if (s->forIndex[s->forLevel] <= s->forEnd[s->forLevel]) { //done
-            s->forTop[s->forLevel] = -1;
-            // shift down a level if not on zero
-            if (s->forLevel) s->forLevel--;
-          } else { // keep going
-            s->i = l->exit;
-          }
-
-        }//end if count up or down?
-
         continue;
         break;
 
@@ -3839,152 +3965,19 @@ void runScript() {
 
         continue;
         break;
-      case LATER_do: // do
-        if (linebuff[0] == 'w') {
-          if (!evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
-        }//end if while
 
-        if (linebuff[0] == 'u') { //blah
-          if (evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
-        }//end if until
-
+      case LATER_fi: // end if
         continue;
         break;
+
       case LATER_if: case LATER_iif: // If/Iff
         if (!evalConditionalExpression(linebuff, s)) s->i = l->exit;
         continue;
         break;
-      case LATER_switch: // sWitch
-        strcpy(s->switchTerm, linebuff);
-        s->switchTerm[strlen(linebuff)] = '\0';
-        s->switchExit = l->exit;
-        continue;
-        break;
-      case LATER_case: // case (Kse)
-        if (!s->switchTerm[0]) {
-          s->i = s->switchExit;
-        } else {
-          if (!strcmp(s->switchTerm , linebuff)) { // match? yes:
-            s->switchTerm[0] = '\0';
-          } else { // no match, go to next case statement to look for a match
-            s->i = l->exit;
-          }//end if case match?
-        }//end if expired switch's case?
-        continue;
-        break;
-
-      case LATER_default: // switch default
-        if (!s->switchTerm[0]) {
-          s->i = s->switchExit;
-        } else {
-          s->switchTerm[0] = '\0';
-        }
-        continue;
-        break;
-
       case LATER_end: //end switch might need to become LATER_end_switch, if other ends are needed
         s->switchTerm[0] = '\0';
         continue;
         break;
-      case LATER_sub: //sub routine
-        if (!s->subReturnLine) {
-          s->i = l->exit;
-          continue;
-        }
-        continue;
-        break;
-      case LATER_endsub: //sub end
-        if (s->subReturnLine) {
-          s->i = s->subReturnLine;
-          s->subReturnLine = 0;
-          s->subArgs[0] = 0;
-          s->subArgs[1] = 0;
-          s->subArgs[2] = 0;
-          s->subArgs[3] = 0;
-
-        }
-        continue;
-        break;
-
-      case LATER_gosub: //sub call
-
-        // look for arguments, populate as needed
-        k = strchr(linebuff, ' ');
-        if (k) {
-          while (isSpace(k[0])) k++;
-          laterUtil::splitStringByChar(k, ',');
-          for (int i = 0; i < laterUtil::split_count; i++)    s->subArgs[i] = Number(laterUtil::splits[i], s->VARS);
-        }//end if args?
-
-        s->subReturnLine = s->i;
-        s->i = l->exit;
-        continue;
-        break;
-
-      case LATER_call: //call call
-        // look for arguments, populate as needed
-        if (l->data) {
-          k = linebuff;
-          k += l->data;
-          while (isSpace(k[0])) k++;
-          laterUtil::splitStringByChar(k, ',');
-          int i = 0;
-          for (i = 0; i < laterUtil::split_count; i++)    s->subArgs[i] = Number(laterUtil::splits[i], s->VARS);
-          s->arity = i;
-        }//end if args?
-
-        s->subReturnValue = linebuff[1] - 65;
-        s->subReturnLine = s->i;
-        s->i = l->exit;
-        continue;
-        break;
-      case LATER_interval: //interval sub call
-
-        // find interval, compare to lastFire
-        k = linebuff;
-
-        if (k) {
-          tempInt = Number(k, s->VARS);
-          if (  (s->intervals[ l->data ] + tempInt) < millis()  ) { //ready?
-            s->intervals[ l->data ] = millis();
-            s->subReturnLine = s->i;
-            s->i = l->exit;
-          }//end if ready?
-        }//end if interval
-
-        continue;
-        break;
-
-      case LATER_return: //sub return
-        if (s->subReturnLine) {
-
-          tempInt = Number(lb, s->VARS);
-          if (s->subReturnValue < 99) s->VARS[s->subReturnValue] = tempInt;
-          s->i = s->subReturnLine;
-          s->subReturnLine = 0;
-          s->subArgs[0] = 0;
-          s->subArgs[1] = 0;
-          s->subArgs[2] = 0;
-          s->subArgs[3] = 0;
-          continue;
-        }
-        continue;
-        break;
-      case LATER_continue:
-        s->i = l->exit - 1;
-        continue;
-        break;
-
-      case LATER_loop:
-        s->i = l->exit;
-        continue;
-        break;
-
-      case LATER_break:
-        s->i = l->exit;
-        continue;
-        break;
-
 #ifdef __INC_FASTSPI_LED2_H
       case LATER_pixel: // paint rgb leds
         laterCMD::runSetPixel(lb, s);
@@ -4003,7 +3996,10 @@ void runScript() {
         continue;
         break;
       case LATER_solid: // paint all rgb leds
-
+        if (l->data == 1) {
+          FastLED.showColor(0);
+          continue;
+        }
         k = lb + 0;
 
         FastLED.showColor( LATER_PIXEL_TYPE(laterUtil::parseColor(k, s)) );
@@ -4030,7 +4026,11 @@ void runScript() {
         continue;
         break;
       case LATER_solid: // paint all rgb leds
-
+        if (l->data == 1) {
+          LATER_PIXEL_NAME.fill(0, LATER_PIXEL_NAME.numPixels());
+          LATER_PIXEL_NAME.show();
+          continue;
+        }
         k = lb + 0;
         LATER_PIXEL_NAME.fill( laterUtil::parseColor(k, s), 0, LATER_PIXEL_NAME.numPixels() );
         LATER_PIXEL_NAME.show();
@@ -4039,21 +4039,23 @@ void runScript() {
         break;
 
 #endif
-        //#ifdef ESP8266HTTPClient_H_
-#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
-      case LATER_ping: //  http request url
-        yield();
-        Later.httpResponseTextBuffer[0] = '\0';
-        s->status = HTTPRequest(linebuff);
-        yield();
-
-        Later.httpResponseText = Later.httpResponseTextBuffer;
-
-        //Later.httpResponseText = Later.httpResponseTextBuffer;
-
+      case LATER_sub: //sub routine
+        if (!s->subReturnLine) {
+          s->i = l->exit;
+          continue;
+        }
         continue;
         break;
-#endif
+
+      case LATER_digitalWrite:
+        laterCMD::runPortWrite(lb, s->VARS, true);
+        continue;
+        break;
+
+      case LATER_analogWrite:
+        laterCMD::runPortWrite(lb, s->VARS, false);
+        continue;
+        break;
 
       case LATER_print: case LATER_println:// print value
         laterUtil::replace(linebuff, "\\n", " \n");
@@ -4109,6 +4111,273 @@ void runScript() {
         continue;
         break;
 
+      case LATER_for: // forLoop
+        if (s->forTop[s->forLevel] != -1) { // already in loop? shift up a level
+          s->forLevel++;
+        }
+        s->forTop[s->forLevel] = s->i;
+        laterUtil::splitStringByChar(linebuff, ';');
+
+        s->forStart[s->forLevel] = Number(laterUtil::splits[1] ? laterUtil::splits[0] : 0, s->VARS); // for debugging, forIndex is really used
+        s->forEnd[s->forLevel] = Number(laterUtil::splits[1] ? laterUtil::splits[1] : laterUtil::splits[0], s->VARS);
+        s->forStep[s->forLevel] = laterUtil::splits[2] ? Number( laterUtil::splits[2], s->VARS) : 1;
+        s->forIndex[s->forLevel] = s->forStart[s->forLevel];
+        if (s->forEnd[s->forLevel] < s->forStart[s->forLevel]) { // hi-lo?
+          if (s->forStep[s->forLevel] > 0) s->forStep[s->forLevel] *= -1;
+        }//end if hi-low order?
+
+        continue;
+        break;
+
+      case LATER_next: // forLoop's Next
+        s->forIndex[s->forLevel] += s->forStep[s->forLevel];
+
+        if (s->forStep[s->forLevel] > 0) { // works
+
+          if (s->forIndex[s->forLevel] >= s->forEnd[s->forLevel]) { // done
+            s->forTop[s->forLevel] = -1;
+            // shift down a level if not on zero
+            if (s->forLevel) s->forLevel--;
+          } else { // keep going
+            s->i = l->exit;
+          }
+
+        } else { // counting down
+
+          if (s->forIndex[s->forLevel] <= s->forEnd[s->forLevel]) { //done
+            s->forTop[s->forLevel] = -1;
+            // shift down a level if not on zero
+            if (s->forLevel) s->forLevel--;
+          } else { // keep going
+            s->i = l->exit;
+          }
+
+        }//end if count up or down?
+
+        continue;
+        break;
+
+      case LATER_start:
+        if (lb[0] == '0' && lb[1] == '0') { // default 00
+          s->startLineNumber = s->i + 1; // next line is new top
+        } else {
+          s->startLineNumber = Number(lb, s->VARS); // top specified
+        }
+        continue;
+        break;
+
+      case LATER_gosub: //sub call
+
+        // look for arguments, populate as needed
+        k = strchr(linebuff, ' ');
+        if (k) {
+          while (isSpace(k[0])) k++;
+          laterUtil::splitStringByChar(k, ',');
+          for (int i = 0; i < laterUtil::split_count; i++)    s->subArgs[i] = Number(laterUtil::splits[i], s->VARS);
+        }//end if args?
+
+        s->subReturnLine = s->i;
+        s->i = l->exit;
+        continue;
+        break;
+
+      case LATER_timer: // print hi-res timestamp to
+        tempInt = micros();
+        if (!s->timer) {
+          s->timer = tempInt;
+        } else {
+
+          char buf[12];
+          uniPrint( "T+" );
+          uniPrint( ltoa( tempInt - s->timer, buf, 10 ) );
+          uniPrint(":\t");
+          uniPrintln(lb);
+          s->timer =  micros();
+        }
+        continue;
+        break;
+
+      case LATER_case: // case (Kse)
+        if (!s->switchTerm[0]) {
+          s->i = s->switchExit;
+        } else {
+          if (!strcmp(s->switchTerm , linebuff)) { // match? yes:
+            s->switchTerm[0] = '\0';
+          } else { // no match, go to next case statement to look for a match
+            s->i = l->exit;
+          }//end if case match?
+        }//end if expired switch's case?
+        continue;
+        break;
+
+      case LATER_option:
+        //bool debug; // print debug info to the console?
+        //bool perf; // print perf info to the console?
+        //bool strict; // disable legacy handlers and slower features?
+        if (strstr(lb, "debug")) s->options.debug = true;
+        if (strstr(lb, "perf")) s->options.perf = true;
+        if (strstr(lb, "strict")) s->options.strict = true;
+        if (strstr(lb, "persist")) s->options.persist = true;
+        if (strstr(lb, "socket")) s->options.socket = true;
+        if (strstr(lb, "noget")) s->options.noget = true;
+
+        if ((k = strstr(lb, "interval"))) {
+          // find next digits
+          v = strpbrk(k + 8, "0123456789"); // locate first digit(s) after "interval"
+          s->interval = Number(v, s->VARS);
+          s->options.persist = true;
+        }
+        continue;
+        break;
+      case LATER_interval: //interval sub call
+
+        // find interval, compare to lastFire
+        k = linebuff;
+
+        if (k) {
+          tempInt = Number(k, s->VARS);
+          if (  (s->intervals[ l->data ] + tempInt) < millis()  ) { //ready?
+            s->intervals[ l->data ] = millis();
+            s->subReturnLine = s->i;
+            s->i = l->exit;
+          }//end if ready?
+        }//end if interval
+
+        continue;
+        break;
+
+      case LATER_sleep: // sleep ms
+        if (strchr(lb, ',')) {
+          delayMicroseconds(Number(linebuff, s->VARS));
+        } else {
+          delay(Number(linebuff, s->VARS));
+        }
+
+        continue;
+        break;
+      /*
+            case LATER_sleepu: // sleep us
+              delayMicroseconds(Number(linebuff, s->VARS));
+              continue;
+              break;
+      */
+
+      case LATER_exit: // aka finish
+        s->exitLineNumber = s->i;
+        finishRun(s);
+        return;
+        break;
+      case LATER_pinMode: // setPinMode
+        laterCMD::runPinMode(lb);
+        continue;
+        break;
+
+      case LATER_log: // log value
+        processStringFormats(linebuff);
+        laterCMD::logMe(linebuff);
+        continue;
+        break;
+
+      case LATER_switch: // sWitch
+        strcpy(s->switchTerm, linebuff);
+        s->switchTerm[strlen(linebuff)] = '\0';
+        s->switchExit = l->exit;
+        continue;
+        break;
+
+#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
+      case LATER_ping: //  http request url
+        yield();
+        Later.httpResponseTextBuffer[0] = '\0';
+        s->status = HTTPRequest(linebuff);
+        yield();
+
+        Later.httpResponseText = Later.httpResponseTextBuffer;
+
+        //Later.httpResponseText = Later.httpResponseTextBuffer;
+
+        continue;
+        break;
+#endif
+      case LATER_do: // do
+        if (linebuff[0] == 'w') {
+          if (!evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
+        }//end if while
+
+        if (linebuff[0] == 'u') { //blah
+          if (evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
+        }//end if until
+
+        continue;
+        break;
+
+      case LATER_default: // switch default
+        if (!s->switchTerm[0]) {
+          s->i = s->switchExit;
+        } else {
+          s->switchTerm[0] = '\0';
+        }
+        continue;
+        break;
+      case LATER_endsub: //sub end
+        if (s->subReturnLine) {
+          s->i = s->subReturnLine;
+          s->subReturnLine = 0;
+          s->subArgs[0] = 0;
+          s->subArgs[1] = 0;
+          s->subArgs[2] = 0;
+          s->subArgs[3] = 0;
+
+        }
+        continue;
+        break;
+
+      case LATER_call: //call call
+        // look for arguments, populate as needed
+        if (l->data) {
+          k = linebuff;
+          k += l->data;
+          while (isSpace(k[0])) k++;
+          laterUtil::splitStringByChar(k, ',');
+          int i = 0;
+          for (i = 0; i < laterUtil::split_count; i++)    s->subArgs[i] = Number(laterUtil::splits[i], s->VARS);
+          s->arity = i;
+        }//end if args?
+
+        s->subReturnValue = linebuff[1] - 65;
+        s->subReturnLine = s->i;
+        s->i = l->exit;
+        continue;
+        break;
+      case LATER_return: //sub return
+        if (s->subReturnLine) {
+
+          tempInt = Number(lb, s->VARS);
+          if (s->subReturnValue < 99) s->VARS[s->subReturnValue] = tempInt;
+          s->i = s->subReturnLine;
+          s->subReturnLine = 0;
+          s->subArgs[0] = 0;
+          s->subArgs[1] = 0;
+          s->subArgs[2] = 0;
+          s->subArgs[3] = 0;
+          continue;
+        }
+        continue;
+        break;
+      case LATER_continue:
+        s->i = l->exit - 1;
+        continue;
+        break;
+
+      case LATER_loop:
+        s->i = l->exit;
+        continue;
+        break;
+
+      case LATER_break:
+        s->i = l->exit;
+        continue;
+        break;
       case LATER_flash: // persist list of variables to flash memory, if changed, or load vars
 
         if (1) {
@@ -4197,80 +4466,12 @@ void runScript() {
         uniPrintln(laterUtil::fileToBuff(linebuff));
         continue;
         break;
-      case LATER_log: // log value
-        processStringFormats(linebuff);
-        laterCMD::logMe(linebuff);
-        continue;
-        break;
+
       case LATER_clear: // clear log value
         setRunLog[0] = '\0';
         continue;
         break;
       case LATER_delete: // delete variable
-
-        continue;
-        break;
-      case LATER_sleep: // sleep ms
-        if (strchr(lb, ',')) {
-          delayMicroseconds(Number(linebuff, s->VARS));
-        } else {
-          delay(Number(linebuff, s->VARS));
-        }
-
-        continue;
-        break;
-      /*
-            case LATER_sleepu: // sleep us
-              delayMicroseconds(Number(linebuff, s->VARS));
-              continue;
-              break;
-      */
-      case LATER_pinMode: // setPinMode
-        laterCMD::runPinMode(lb);
-        continue;
-        break;
-      case LATER_digitalWrite:
-        laterCMD::runPortWrite(lb, s->VARS, true);
-        continue;
-        break;
-
-      case LATER_analogWrite:
-        laterCMD::runPortWrite(lb, s->VARS, false);
-        continue;
-        break;
-      case LATER_timer: // print hi-res timestamp to
-        tempInt = micros();
-        if (!s->timer) {
-          s->timer = tempInt;
-        } else {
-
-          char buf[12];
-          uniPrint( "T+" );
-          uniPrint( ltoa( tempInt - s->timer, buf, 10 ) );
-          uniPrint(":\t");
-          uniPrintln(lb);
-          s->timer =  micros();
-        }
-        continue;
-        break;
-      case LATER_option:
-        //bool debug; // print debug info to the console?
-        //bool perf; // print perf info to the console?
-        //bool strict; // disable legacy handlers and slower features?
-        if (strstr(lb, "debug")) s->options.debug = true;
-        if (strstr(lb, "perf")) s->options.perf = true;
-        if (strstr(lb, "strict")) s->options.strict = true;
-        if (strstr(lb, "persist")) s->options.persist = true;
-        if (strstr(lb, "socket")) s->options.socket = true;
-        if (strstr(lb, "noget")) s->options.noget = true;
-
-        if ((k = strstr(lb, "interval"))) {
-          // find next digits
-          v = strpbrk(k + 8, "0123456789"); // locate first digit(s) after "interval"
-          s->interval = Number(v, s->VARS);
-          s->options.persist = true;
-        }
-        // interval? might need own command to accepts number of millis
 
         continue;
         break;
@@ -4361,19 +4562,6 @@ void runScript() {
         Later.resume(lb);
         continue;
         break;
-      case LATER_start:
-        if (lb[0] == '0' && lb[1] == '0') { // default 00
-          s->startLineNumber = s->i + 1; // next line is new top
-        } else {
-          s->startLineNumber = Number(lb, s->VARS); // top specified
-        }
-        continue;
-
-      case LATER_exit:
-        s->exitLineNumber = s->i;
-        finishRun(s);
-        return;
-        break;
       case LATER_assert:
         laterCMD::runAssert(lb, l, s);
         continue;
@@ -4458,6 +4646,10 @@ void finishRun(LATER_ENVIRON * s) {
   } else {
     s->resumeMillis = 0;
   }
+#ifdef HIGH_RES_TIMING  
+  HR_PERF.report();
+#endif  
+  
 }//end finishRun()
 //
 
@@ -5657,7 +5849,9 @@ unsigned long  processTemplateExpressionsNumber(const char * line) {
   return 0;
 } // end processTemplateExpressionsNumber()
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accept line.single flag or bool here
-
+#ifdef HIGH_RES_TIMING
+  unsigned long st = micros();
+#endif
   char * ptrLeft = strchr(line, '{');
   if (!ptrLeft) return;
 
@@ -5675,6 +5869,11 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
 
     if (strstr(TEMPLATE_KEY_BUFF, "%RAM%")) { // was  nsLATER::laterUtil  ddns
       laterUtil::replace(line, TEMPLATE_KEY_BUFF, laterUtil::fileToBuff("%RAM%"));
+#ifdef HIGH_RES_TIMING
+      unsigned long et = micros();
+      HR_PERF.templates.total += et - st;
+      HR_PERF.templates.count++;
+#endif
       return;
     }//end if RAM?
 
@@ -5746,6 +5945,11 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
     laterUtil::replace(line, TEMPLATE_KEY_BUFF, "0"); // prevent re-process attempts on unknown keys
   }//end if val?
 
+#ifdef HIGH_RES_TIMING
+  unsigned long et = micros();
+  HR_PERF.templates.total += et - st;
+  HR_PERF.templates.count++;
+#endif
 
   // look for additional template expressions:
   ptrLeft = strchr(line, '{');
