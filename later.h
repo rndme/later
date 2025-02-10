@@ -166,7 +166,7 @@ typedef struct HIGH_RES_PERF_TIMING {
   unsigned long avg; // ()
 };
 
-void dumpSection(HIGH_RES_PERF_TIMING * sec, const char * label){
+void dumpSection(const HIGH_RES_PERF_TIMING * sec, const char * label){
   if(!sec->count) return;
   unsigned long avg = sec->total;
   avg = avg / sec->count; 
@@ -502,15 +502,15 @@ LATER_SAMPLER Sampler;
 #endif
 
 unsigned long randomReg();
-#line 559 "danscript.ino"
+#line 560 "danscript.ino"
 unsigned long clamp(int a);
-#line 668 "danscript.ino"
+#line 669 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 816 "commands.ino"
+#line 821 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 834 "commands.ino"
+#line 839 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 994 "commands.ino"
+#line 999 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -529,42 +529,42 @@ void saveConfig();
 #line 4 "core.ino"
 unsigned long Number( const char * str, const unsigned long * VARS );
 #line 21 "core.ino"
-char * getVarName(char * longName, int scriptIndex);
+char * getVarName(const char * longName, const int scriptIndex);
 #line 31 "core.ino"
 char getVarNameNumber(char * longName, int scriptIndex);
 #line 38 "core.ino"
 int loadScript(String filename);
-#line 481 "core.ino"
+#line 511 "core.ino"
 void removeDoubleLines(char * buff);
-#line 491 "core.ino"
+#line 521 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 507 "core.ino"
+#line 537 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 525 "core.ino"
+#line 555 "core.ino"
 void autoEqualsInsert(char * line);
-#line 558 "core.ino"
+#line 588 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 808 "core.ino"
+#line 838 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 840 "core.ino"
+#line 870 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 1030 "core.ino"
+#line 1060 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1263 "core.ino"
+#line 1266 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1359 "core.ino"
+#line 1362 "core.ino"
 void popHttpResponse();
-#line 1377 "core.ino"
+#line 1380 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1528 "core.ino"
+#line 1531 "core.ino"
 void processStringFormats(char* s);
-#line 1657 "core.ino"
+#line 1660 "core.ino"
 void handleEval();
-#line 1676 "core.ino"
+#line 1679 "core.ino"
 void handleDump();
-#line 1909 "core.ino"
+#line 1912 "core.ino"
 void runScript();
-#line 3223 "core.ino"
+#line 3227 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -618,9 +618,9 @@ void getDate(unsigned long epoc);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 247 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 374 "templates.ino"
+#line 402 "templates.ino"
 void handleCommandList();
-#line 559 "danscript.ino"
+#line 560 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -681,7 +681,7 @@ std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned
 //>> main public interface:
 class LaterClass {
   public:
-    bool debug = true;
+    bool debug = false;
     int scriptCount = LATER_INSTANCES;
     int currentScript = 0;
     int loadedScripts = 0;
@@ -1098,7 +1098,7 @@ char * copyUntilChar(char * str, char of) { // copyUntilChar("hello world", ' ')
 }//end copyUntilChar()
 char * trimRight(char * str) {
   for (int i = strlen(str) - 1 ; i > 0; i--) {
-    if (isspace (str[i]) ) {
+    if (isblank (str[i]) ) {
       str[i] = '\0';
     } else {
       break;
@@ -1127,11 +1127,16 @@ char * replace (char * str, const char * term, const char * rep) {
     strncpy(start, rep, replen);
     return str;
   }
+  
+  if ( replen < termlen ) {
+    strncpy(start, rep, replen);
+    strcpy(start + replen, start + termlen); // copy tail from orig into result
+    return str;
+  }
 
   char buff[LATER_LINE_BUFFER];
-  strcpy(buff, start + termlen);
+  strcpy(buff, start + termlen); // buffer unchanged content to the right of the replacment
 
-  // char * str2 = buff;
   strncpy(start, rep, replen ); // copy rep into result
   strcpy(start + replen, buff); // copy tail from orig into result
   return str;
@@ -1914,7 +1919,7 @@ unsigned long Number( const char * str, const unsigned long * VARS ) {
   }// end if var format?
   return 0; // failsafe
 }//end Number()
-char * getVarName(char * longName, int scriptIndex) {
+char * getVarName(const char * longName, const int scriptIndex) {
   std::string strKey = longName; // use string for simpler lifetime management
 
   if (!LATER_VAR_NAMES[scriptIndex].count(strKey)) LATER_VAR_NAMES[scriptIndex][strKey] = VAR_NAME_COUNT[scriptIndex]++;
@@ -1968,9 +1973,22 @@ int loadScript(String filename) { //dd666 make this a class method
     memcpy(inc, incbuf, inclen);
     inc = strstr(fileBuff, "#include"); // WORKS!
   }//wend include?
+  char * fil = strstr(fileBuff, "__FILENAME__");
+  while (fil) {
+    strncpy(fil, filename.c_str() + 1, 12);
+    unsigned int len = strlen(filename.c_str() + 1);;
+    if ( len < 12) memset(fil + 12, ' ', len - 12);
+    fil = strstr(fileBuff, "__FILENAME__");
+  }
 
-  while (strstr(fileBuff, "__FILE__")) laterUtil::replace(fileBuff, "__FILE__", filename.c_str());// swap out "macro"
-
+  char * ino = strstr(fileBuff, "__SKETCH_FILE__");
+  while (ino) {
+    const char * mySketchName = LATER_SKETCH;
+    strncpy(ino, mySketchName, 15);
+    unsigned int len = strlen(mySketchName);
+    if ( len < 15) memset(ino + 15, ' ', len - 15);
+    ino = strstr(fileBuff, "__SKETCH_FILE__");
+  }
   char * contentType = strstr(fileBuff, "#type=");
   while (contentType) {
     strncpy(SCRIPT->contentType, contentType + 6, 31);
@@ -2031,8 +2049,17 @@ int loadScript(String filename) { //dd666 make this a class method
     strncpy( line, lb, endpos);
     line[endpos] = '\0';
 
-    laterUtil::trimRight(line);
+    if (!endpos && !isPrintBlock) {
+      line[endpos] = ' ';
+      strcpy(line, ": ");
+    }
 
+    if (!endpos && isPrintBlock) {
+      line[endpos] = ' ';
+      line[endpos + 1] = '\0';
+    }
+
+    if (!isPrintBlock) laterUtil::trimRight(line);
     if (strstr(line, "iif")) {
       int colpos =  strcspn( line, ":");
       if (colpos > 0 && line[colpos - 1] == ' ' && line[colpos + 1] == ' ') {
@@ -2043,13 +2070,11 @@ int loadScript(String filename) { //dd666 make this a class method
       }
     }
     lb += endpos + 1; // should endpos be re-calced?
-
-    // trim front of line:
-    while (isblank(lb[0])) lb++;
-
     endpos = strcspn( lb, "\n");
     // do stuff with now-trimmed line, then copy it to clean, if needed
+    if (!isPrintBlock) while (isblank(line[0])) strcpy(line, line + 1);
 
+    // trim front of line:
     // remove comments -- needs to chill a bit for later, check if print, log, fetch, etc.
     int commentPos = laterUtil::indexOf(line, "//");
     if (commentPos > -1 ) {
@@ -2065,9 +2090,9 @@ int loadScript(String filename) { //dd666 make this a class method
 
     if (line[0] == '\'') line[0] = '\0'; // skip VB-style comment line, also used internally by multi-line comments to curtail buffer resizing
 
-    laterUtil::trimRight(line);
+    if (!isStaticPrintBlock) laterUtil::trimRight(line);
     lineLen = strlen(line);
-    if (lineLen) { // filter empty lines
+    if (lineLen || isStaticPrintBlock) { // filter empty lines
       // look for any @macro usages first thing
       char * macroPtr = strchr(line, '@');
       while (macroPtr) {
@@ -2211,7 +2236,7 @@ int loadScript(String filename) { //dd666 make this a class method
       }
 
       if (!isPrintBlock) autoEqualsInsert(line);
-      replaceVarNames(line, SCRIPT->index);
+      if (!isStaticPrintBlock) replaceVarNames(line, SCRIPT->index);
       lineLen = strlen(line);
 
       ///////////////////////////////
@@ -2263,8 +2288,8 @@ int loadScript(String filename) { //dd666 make this a class method
           if (strstr(line, "=+1")) lineData = 1;
           if (strstr(line, "=-1")) lineData = 2;
           if (strstr(line, "=+@")) lineData = 3;
-          if (strstr(line, "=-@")) lineData = 3;
-
+          if (strstr(line, "=-@")) lineData = 4;
+          if (strstr(line, "=0")) lineData = 5;
         }
 
       } else {
@@ -2900,28 +2925,6 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
     pos = strcspn (ptr , "+*-/%<>=!&?,:)|");
   }//wend pos
 
-  /*
-    if (strlen(ptr)) { // anything left? populate last elements
-      LATER_PRINTLN("evalMath: last chance needed");
-      nums[i] = Number(ptr, VARS); //atoi(ptr);
-      ops[i++] = ')';
-    }
-  */
-  /* // works, always? needs last chance?
-    while ( pos < strlen(ptr) ) {//put num/term into stack, slide string, try to grab next
-      nums[i] = Number(ptr, VARS); //atoi(ptr);
-      ops[i] = ptr[pos];
-      if (ops[i++] == ')') break;
-      ptr += pos + 1;
-      pos = strcspn (ptr, "+*-/%<>^!&?,");
-    }//wend pos
-
-    if (strlen(ptr)) { // anything left? populate last elements
-      LATER_PRINTLN("evalMath: last chance needed");
-      nums[i] = Number(ptr, VARS); //atoi(ptr);
-      ops[i++] = ')';
-    }
-  */
   unsigned long varCache = nums[0], tempInt;
 
   if (hasFunc) { // has function
@@ -3039,7 +3042,7 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
     while (ptr[0] == ' ') ptr++; // trim left
   }
   char * opPtr = strpbrk (ptr, "=!<>%&|");
-  if (opPtr[0] == '%'  && opPtr[1] == 0) { //
+  if (opPtr && opPtr[0] == '%'  && opPtr[1] == 0) { //
     if (ptr[0] == '@') {
       ifConditionTrue = VARS[ptr[1] - 65] > (randomReg() % 100);
     } else {
@@ -3748,6 +3751,7 @@ void runScript() {
             case 2: s->VARS[varSlot]--; continue; // decrement 1
             case 3: s->VARS[varSlot] += s->VARS[linebuff[6] - 65]; continue; // increment var
             case 4: s->VARS[varSlot] -= s->VARS[linebuff[6] - 65]; continue; // decrement var
+            case 5: s->VARS[varSlot] = 0; continue; // reset var
             default: break;
           }
 
@@ -4646,10 +4650,10 @@ void finishRun(LATER_ENVIRON * s) {
   } else {
     s->resumeMillis = 0;
   }
-#ifdef HIGH_RES_TIMING  
+#ifdef HIGH_RES_TIMING
   HR_PERF.report();
-#endif  
-  
+#endif
+
 }//end finishRun()
 //
 
@@ -5858,17 +5862,21 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
   char * ptrRight = strchr(line, '}');
   if (!ptrRight) return;
 
+  char * nam;
   bool storeCall = ptrLeft[1] == '&';
   bool varCall = ptrLeft[1] == '@';
   int len = (ptrRight - ptrLeft) + 1;
   unsigned long val = 0;
 
-  memcpy(TEMPLATE_KEY_BUFF, ptrLeft, len);
-  TEMPLATE_KEY_BUFF[len] = '\0';
+  char * TEMPLATE_KEY_BUFF = ptrLeft;
+  ptrRight[1] = '\0';
+
+  //TEMPLATE_KEY_BUFF[len] = '\0';
   if (TEMPLATE_KEY_BUFF[1] == '%') { //{%RAM%}
 
     if (strstr(TEMPLATE_KEY_BUFF, "%RAM%")) { // was  nsLATER::laterUtil  ddns
       laterUtil::replace(line, TEMPLATE_KEY_BUFF, laterUtil::fileToBuff("%RAM%"));
+      ptrRight[1] = '}';
 #ifdef HIGH_RES_TIMING
       unsigned long et = micros();
       HR_PERF.templates.total += et - st;
@@ -5880,6 +5888,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
 #ifdef NTP_DEFAULT_LOCAL_PORT
     if (strstr(TEMPLATE_KEY_BUFF, "%TIME%")) {
       laterUtil::replace(line, TEMPLATE_KEY_BUFF, timeClient.getFormattedTime().c_str());
+      ptrRight[1] = '}';
       processTemplateExpressions2(line, s);
       return;
     }//end if RAM?
@@ -5889,6 +5898,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
     if (strstr(TEMPLATE_KEY_BUFF, "%DATE%")) {
       String ds = String(DATES[0]) + "/" + String(DATES[1]) + "/" + String(DATES[2]);
       laterUtil::replace(line, TEMPLATE_KEY_BUFF, ds.c_str());
+      ptrRight[1] = '}';
       processTemplateExpressions2(line, s);
       return;
     }//end if DATE?
@@ -5899,6 +5909,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
       strncpy(mn, MONTHNAMES + offset, 3);
       mn[3] = '\0';
       laterUtil::replace(line, TEMPLATE_KEY_BUFF, mn  );
+      ptrRight[1] = '}';
       processTemplateExpressions2(line, s);
       return;
     }//end if MONTH?
@@ -5909,6 +5920,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
       strncpy(dn, DAYNAMES + offset, 3);
       dn[3] = '\0';
       laterUtil::replace(line, TEMPLATE_KEY_BUFF, dn  );
+      ptrRight[1] = '}';
       processTemplateExpressions2(line, s);
       return;
     }//end if DATE?
@@ -5927,24 +5939,39 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
   if (varCall) {
     val = s->VARS[ptrLeft[2] - 65];
   }//end if var call?
-
   if (val) {
-    //this needs to capture value, a ulong then push in sting if line.single flag is not set
+    bool varUsed = false;
+
     if (!varCall) { // vars will get literally embded instead of aliasing the var for no reason:
-      char * nam = getVarName(TEMPLATE_KEY_BUFF, s->index);
+
+      nam = getVarName(TEMPLATE_KEY_BUFF, s->index);
       s->VARS[nam[1] - 65] = val;
-      int varLen = strlen(nam);
-      memset ( TEMPLATE_BUFFER, ' ', 24);
-      strncpy(TEMPLATE_BUFFER, nam, varLen);
-      TEMPLATE_BUFFER[varLen] = '\0';
+      varUsed = true;
+      //if output needed. build interpolated replacement buffer
+      if ( ((s->lines[s->i].flags >> 4) & 0x01) == 1   ) {
+        int varLen = strlen(nam);
+        memset ( TEMPLATE_BUFFER, ' ', 24);
+        strncpy(TEMPLATE_BUFFER, nam, varLen);
+        TEMPLATE_BUFFER[varLen] = '\0';
+      }
+
     } else {
       itoa(val, TEMPLATE_BUFFER, 10);
     }
-    laterUtil::replace(line, TEMPLATE_KEY_BUFF, TEMPLATE_BUFFER);
+    if (varUsed &&  ((s->lines[s->i].flags >> 4) & 0x01) != 1  ) { //if not output and var used, inject var marker w/o resizing string
+      ptrLeft[0] = '@';
+      ptrLeft[1] = nam[1];
+      ptrLeft[2] = '_';
+      for (int i = 0; i < (len - 3); i++) ptrLeft[3 + i] = ' '; // fill rest of line with space
+    } else {
+      laterUtil::replace(line, TEMPLATE_KEY_BUFF, TEMPLATE_BUFFER);
+    }
+
   } else {
     laterUtil::replace(line, TEMPLATE_KEY_BUFF, "0"); // prevent re-process attempts on unknown keys
   }//end if val?
 
+  ptrRight[1] = '}';
 #ifdef HIGH_RES_TIMING
   unsigned long et = micros();
   HR_PERF.templates.total += et - st;
