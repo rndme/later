@@ -454,6 +454,40 @@ It's a decent idea to add a pause before running any files or commands, to allow
 ## autoexec.lnk
 A one-per-line text file list of bat files to run on boot names `/autoexec.lnk`. Unlike `/autoexec.bat`, this is just a simple list of file names, no commands, comments, whitespace, etc allowed. This feature doesn't use a temp script slot like `/autoexec.bat`, allowing one more program on ram-constrained devices. Thus, when `LATER_INSTANCES` is only 2, you can run two custom scripts on boot instead of one as you don't need to parse and run `/autoexec.bat` as one of those two just to `run /file.bat` and load custom scripts.
 
+## Print Blocks
+Print blocks cleanly produce multiple lines of output at once. Within the block, vars and template placeholders are rendered as they would be in a _println_ command. A special sub-set, _static print blocks_ emit raw un-processed text, with variable names and template placeholders remaining in code form to output.
+
+```js
+println print bock testing
+$a= 123
+
+<?
+this    
+  is a var $a.
+    static print block ran {runs} times.
+?>
+
+println done.
+```
+will produce the output:
+
+```
+print bock testing
+this
+  is a var 123
+    static print block ran 1 times.
+done.
+```
+
+While a _static_ print block, using the extra `=` on the opening tag (`<?=`), produces the following output:
+
+```
+print bock testing
+this    
+  is a var $a.
+    static print block ran {runs} times.
+done.
+```
 
 
 
