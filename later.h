@@ -101,8 +101,8 @@
 
 
 
-#ifndef DANOS_VARS_LENGTH
-#define DANOS_VARS_LENGTH 62
+#ifndef LATER_VARS_LENGTH
+#define LATER_VARS_LENGTH 62
 #endif
 
 
@@ -573,45 +573,43 @@ void saveConfig();
 unsigned long Number( const char * str, const unsigned long * VARS );
 #line 22 "core.ino"
 char * getVarName(const char* longName, const int scriptIndex);
-#line 49 "core.ino"
-char getConstantNumber(char* valueString, LATER_ENVIRON * s);
-#line 71 "core.ino"
+#line 62 "core.ino"
 char getVarNameNumber(char* longName, int scriptIndex);
-#line 83 "core.ino"
+#line 74 "core.ino"
 int loadScript(String filename);
-#line 624 "core.ino"
+#line 630 "core.ino"
 void removeDoubleLines(char * buff);
-#line 634 "core.ino"
+#line 640 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 650 "core.ino"
+#line 656 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 663 "core.ino"
+#line 669 "core.ino"
 void autoEqualsInsert(char * line);
-#line 696 "core.ino"
+#line 702 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 946 "core.ino"
+#line 952 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 978 "core.ino"
+#line 984 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 1168 "core.ino"
+#line 1174 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1407 "core.ino"
+#line 1413 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1503 "core.ino"
+#line 1509 "core.ino"
 void popHttpResponse();
-#line 1521 "core.ino"
+#line 1527 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1672 "core.ino"
+#line 1678 "core.ino"
 void processStringFormats(char* s);
-#line 1801 "core.ino"
+#line 1807 "core.ino"
 void handleEval();
-#line 1821 "core.ino"
+#line 1827 "core.ino"
 void outputPaddedNumber(unsigned long value, char * suffix, int width);
-#line 1851 "core.ino"
+#line 1857 "core.ino"
 void handleDump();
-#line 2109 "core.ino"
+#line 2115 "core.ino"
 void runScript();
-#line 3440 "core.ino"
+#line 3446 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -665,13 +663,13 @@ void getDate(unsigned long epoc);
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 247 "templates.ino"
 void embedTemplates(char * line, LATER_ENVIRON * s);
-#line 288 "templates.ino"
+#line 293 "templates.ino"
 void embedFunctions(char * line, LATER_ENVIRON * s);
-#line 390 "templates.ino"
+#line 426 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 581 "templates.ino"
+#line 617 "templates.ino"
 uint8_t parseByteFromChars(char * ptr);
-#line 594 "templates.ino"
+#line 630 "templates.ino"
 void handleCommandList();
 #line 596 "danscript.ino"
 unsigned long  clamp(int a) {
@@ -2034,24 +2032,17 @@ char* getVarName(const char* longName, const int scriptIndex) {
 #endif
   return buffer;
 }
-char getConstantNumber(char* valueString, LATER_ENVIRON * s) {
-
+char getConstantNumber(char* valueString, LATER_ENVIRON * s, unsigned long res = 0) {
   int slot = LATER_VARS_LENGTH - s->LITS_COUNT++;
-  unsigned long value = strtoul(valueString, NULL, 10);
+  unsigned long value = res ? res :  strtoul(valueString, NULL, 10);
   for (int i = slot; i < LATER_VARS_LENGTH; i++) {
     if (s->VARS[i] == value) {
       slot = i;
       break;
     }
   }
-
   s->VARS[slot] = value;
   return slot;
-
-  //  return search->second;
-  //} else {
-  //  return LATER_VAR_NAMES[scriptIndex][longName] = VAR_NAME_COUNT[scriptIndex]++;
-  //}
 }
 
 char getVarNameNumber(char* longName, int scriptIndex) {
@@ -2511,6 +2502,21 @@ int loadScript(String filename) { //dd666 make this a class method
       //////////  &RESPONSE usage ?  32s
       if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
 #endif
+
+      if (cmdChar == LATER_solid) {
+        unsigned long parsedColor =  laterUtil::parseColor(linePtr, getCurrent() );
+        unsigned long * VARS;
+
+        lineData = 0;
+        itoa(parsedColor, linePtr, 10);
+        char symb = getConstantNumber(linePtr, getCurrent());
+
+        linePtr[0] = '@';
+        linePtr[1] = symb;
+        linePtr[2] = '_';
+        linePtr[3] = '\0';
+        lineLen = strlen(linePtr);
+      }
 
       ////////// output ?  16s - interpolate var and %templates% in code line itself?
 
@@ -6189,7 +6195,9 @@ void embedTemplates(char * line, LATER_ENVIRON * s) {
 
 }// end embedTemplates()
 void embedFunctions(char * line, LATER_ENVIRON * s) {
+  // if all literals, replace function call with actual result
 
+  bool isFunc = true;
   char * ptrDblSpace = strstr(line, "  ");
   if (ptrDblSpace) {
     while (ptrDblSpace) {
@@ -6202,9 +6210,8 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
   char * ptrParts = strchr(line, '(');
   const char * MATCH_CHARS = ")+*-/%<>=!&?:|";
   ptrParts --;
-
-
   if (!isupper(ptrParts[0])) { //not a function call, but math expression, inject . before each operator
+    isFunc = false;
     ptrParts += 2;
     int pos = strcspn (ptrParts , MATCH_CHARS);
     while (pos) {//put num/term into stack, slide string, try to grab next
@@ -6219,55 +6226,83 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
       pos = strcspn (ptrParts , MATCH_CHARS);
     }//wend pos
 
-  }//end if math?
+  }//end if math or function?
   char * lp = line;
-  char name[32];
+  char nameBuffer[32];
 
   while (!isupper(lp[0])) lp++;
   char * ptrRight = strchr(lp, '(');
   if (!ptrRight) return; //not a function call
+  // found function call, parse it to var-ize, cache it locally, and shortcut the function name to the local copy:
 
+  // build name of function in stand-alone buff
   int nameLen = ptrRight - lp;
-  strncpy(name, lp, nameLen);
-  name[nameLen] = '\0';
+  strncpy(nameBuffer, lp, nameLen);
+  nameBuffer[nameLen] = '\0';
 
-  auto callback = FUNCS[name];
-  if (!callback) return;
+  auto callback = FUNCS[nameBuffer];
+  if (!callback) return; // could not find, nothing left to do
 
+  // fn found, cache:
   unsigned int index = s->FUNC_COUNT++;
+  s->FUNCS[index] = callback; // cache locally
 
-  s->FUNCS[index] = callback;
-
-  // now replace text of function handle embed with shortcut:
+  // now replace text of fn handle embed with shortcut:
   memset(lp, ' ', nameLen);
   lp += nameLen - 2;
   lp[0] = '#';
   lp[1] = index + 65;
-
-  return;
-
   // pre-pop literals in function calls:
+  unsigned int terms[3] = {0, 0, 0};
+  int termCount = 0;
 
   char * ptr = strchr(line, '(') + 1;
 
-  while (ptr[0]) {
+  while (ptr && ptr[0]) {
     if (ptr[0] == '\0') break;
 
     while (ptr[0] == ' ') ptr++;
+
     while (ptr[0] && !isdigit(ptr[0])) ptr++;
-    if (ptr && ptr[0] && isdigit(ptr[1]) && isdigit(ptr[2])) { // foun 2+digits of literals
-      char symb = getConstantNumber(ptr, s) + 65;
-      ptr[0] = '@';
-      ptr[1] = symb;
-      ptr[2] = '_';
+    if (!ptr || ptr[0] == '\0') break;
+
+    //chomp number and count up:
+    int termLen = 0;
+    int i = 0;
+    for (; i < 6; i++) {
+      if (!isdigit(ptr[i])) {
+        i--;
+        terms[termCount++] = strtoul(ptr, NULL, 10);
+        ptr += i;
+        break;
+      }
     }
 
-    if (ptr[0] == '\0') break;
     ptr++;
   }//wend;
+  if (termCount == 3) { // all literals, inline function calling results:
+    unsigned long rez = callback(terms[0], terms[1], terms[2]);
+    // replace whol darn thing with shortcut var
 
 
-}// end embedFunctions()
+    char symb = getConstantNumber(ptr, s, rez) + 65;
+    ptr = strchr(line, '=') + 1;
+    memset(ptr, ' ', strlen(ptr));
+    ptr[0] = '@';
+    ptr[1] = symb;
+    ptr[2] = '_';
+    return;
+
+  }//end if 3 arg function found?
+
+  //run the de-literization routine here for non-literal 3-args function calls
+  if (ptr && ptr[0] && isdigit(ptr[1]) && isdigit(ptr[2])) { // foun 2+digits of literals
+    char symb = getConstantNumber(ptr, s) + 65;
+    ptr[0] = '@';
+    ptr[1] = symb;
+    ptr[2] = '_';
+  }
+}// end embedFunctions()///////////////////////////////////////////
 unsigned int lineTemplateCount = 0;
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accept line.single flag or bool here
 #ifdef HIGH_RES_TIMING
