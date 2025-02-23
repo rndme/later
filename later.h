@@ -102,7 +102,7 @@
 
 
 #ifndef LATER_VARS_LENGTH
-#define LATER_VARS_LENGTH 62
+#define LATER_VARS_LENGTH 95
 #endif
 
 
@@ -128,6 +128,9 @@ namespace nsLATER {
 #include <Arduino.h>
 #line 1 "danscript.ino"
 //@TAKE
+
+#define DUMP(lab, val) { Serial.println(lab + String(val)); }
+
 #include <map>
 
 struct cmp_str { // converts pointers into stirng values to find terms in map and let map balance red/black tree of K:V pairs
@@ -545,9 +548,9 @@ LATER_SAMPLER Sampler;
 #endif
 
 unsigned long randomReg();
-#line 596 "danscript.ino"
+#line 597 "danscript.ino"
 unsigned long clamp(int a);
-#line 706 "danscript.ino"
+#line 711 "danscript.ino"
 LATER_ENVIRON* getCurrent();
 #line 833 "commands.ino"
 template <class text>void uniPrintln(text content);
@@ -573,43 +576,47 @@ void saveConfig();
 unsigned long Number( const char * str, const unsigned long * VARS );
 #line 22 "core.ino"
 char * getVarName(const char* longName, const int scriptIndex);
-#line 62 "core.ino"
+#line 66 "core.ino"
 char getVarNameNumber(char* longName, int scriptIndex);
-#line 74 "core.ino"
+#line 78 "core.ino"
 int loadScript(String filename);
-#line 630 "core.ino"
+#line 686 "core.ino"
 void removeDoubleLines(char * buff);
-#line 640 "core.ino"
+#line 696 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 656 "core.ino"
+#line 712 "core.ino"
+void replaceEndingLiterals(char * line, LATER_ENVIRON * s);
+#line 741 "core.ino"
+void replaceStartingLiterals(char * line, LATER_ENVIRON * s);
+#line 751 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 669 "core.ino"
+#line 764 "core.ino"
 void autoEqualsInsert(char * line);
-#line 702 "core.ino"
+#line 797 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 952 "core.ino"
+#line 1047 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 984 "core.ino"
+#line 1079 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 1174 "core.ino"
+#line 1269 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1413 "core.ino"
+#line 1515 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1509 "core.ino"
+#line 1611 "core.ino"
 void popHttpResponse();
-#line 1527 "core.ino"
+#line 1629 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1678 "core.ino"
+#line 1780 "core.ino"
 void processStringFormats(char* s);
-#line 1807 "core.ino"
+#line 1909 "core.ino"
 void handleEval();
-#line 1827 "core.ino"
+#line 1929 "core.ino"
 void outputPaddedNumber(unsigned long value, char * suffix, int width);
-#line 1857 "core.ino"
+#line 1959 "core.ino"
 void handleDump();
-#line 2115 "core.ino"
+#line 2290 "core.ino"
 void runScript();
-#line 3446 "core.ino"
+#line 3622 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -661,17 +668,17 @@ int HTTPRequest(char * url);
 void getDate(unsigned long epoc);
 #line 215 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 247 "templates.ino"
+#line 246 "templates.ino"
 void embedTemplates(char * line, LATER_ENVIRON * s);
-#line 293 "templates.ino"
+#line 286 "templates.ino"
 void embedFunctions(char * line, LATER_ENVIRON * s);
-#line 426 "templates.ino"
+#line 443 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 617 "templates.ino"
+#line 636 "templates.ino"
 uint8_t parseByteFromChars(char * ptr);
-#line 630 "templates.ino"
+#line 649 "templates.ino"
 void handleCommandList();
-#line 596 "danscript.ino"
+#line 597 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -682,6 +689,10 @@ std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned
   RAWFUNC("MAX", max(a, b)),
   RAWFUNC("SQRT", sqrt(a)),
   RAWFUNC("CBRT", cbrt(a)),
+  RAWFUNC("SIN", sin(a)),
+  RAWFUNC("TAN", tan(a)),
+  RAWFUNC("COS", cos(a)),
+  RAWFUNC("ABS", abs(a)),
   RAWFUNC("GPIO", digitalRead(a)),
   RAWFUNC("ADC", analogRead(a)),
   RAWFUNC("MED", a > b ? ((a < c) ? a : (b < c ? c : b)) : ((b < c) ? b : (c < a ? a : c))),
@@ -2010,7 +2021,7 @@ char* getVarName(const char* longName, const int scriptIndex) {
   unsigned long st = micros();
 #endif
 
-  static char buffer[4] = "@~_";
+  static char buffer[3] = "@~";
   // moved to find instead of count, which should be a bit faster
   auto search = LATER_VAR_NAMES[scriptIndex].find({longName});
 
@@ -2020,6 +2031,9 @@ char* getVarName(const char* longName, const int scriptIndex) {
     if ( VAR_NAME_COUNT[scriptIndex] >= LATER_VARS_LENGTH) {
       VAR_NAME_COUNT[scriptIndex] = LATER_VARS_LENGTH;
     } else {
+      if (VAR_NAME_COUNT[scriptIndex] > 25 && VAR_NAME_COUNT[scriptIndex] < 31) {
+        VAR_NAME_COUNT[scriptIndex] = 32;
+      }
       buffer[1] = (LATER_VAR_NAMES[scriptIndex][ {longName}] = VAR_NAME_COUNT[scriptIndex]++ ) + 65;
     }
 
@@ -2037,6 +2051,7 @@ char getConstantNumber(char* valueString, LATER_ENVIRON * s, unsigned long res =
   unsigned long value = res ? res :  strtoul(valueString, NULL, 10);
   for (int i = slot; i < LATER_VARS_LENGTH; i++) {
     if (s->VARS[i] == value) {
+      s->LITS_COUNT--;
       slot = i;
       break;
     }
@@ -2165,14 +2180,17 @@ int loadScript(String filename) { //dd666 make this a class method
   char temp[12];
   bool isPrintBlock = 0;
   bool isStaticPrintBlock = 0;
+  bool isConstant = false;
   unsigned long lineData = 0;
-
   // build up lines:
   while (strlen(lb) > 1) {
 #ifdef LATER_LINE_PROFILING
     unsigned long profileStart = micros();
 #endif
     lineData = 0;
+    isConstant = 0;
+    char consts[17] = "0000000000000000";
+
     // copy program code into line buffer so we can mess it up
     strncpy( line, lb, endpos);
     line[endpos] = '\0';
@@ -2371,9 +2389,20 @@ int loadScript(String filename) { //dd666 make this a class method
       if (!isPrintBlock) autoEqualsInsert(line);
       if (!isStaticPrintBlock) {
         rangePtr = strchr(line, '$');
-        if (rangePtr) replaceVarNames(rangePtr, SCRIPT->index);
+        if (rangePtr) {
+          rangePtr--;
+          if (rangePtr[0] == '=' && isupper(rangePtr[2])) isConstant = true;
+          rangePtr++;
+          replaceVarNames(rangePtr, SCRIPT->index);
+
+          if (isConstant && strstr(line, "var=@")) {
+            SCRIPT->VARS[rangePtr[1] - 65] = 420420420;
+          }
+        }
         // convert templates
+#ifndef LATER_DISABLE_OPTIMIZATIONS
         embedTemplates(line, SCRIPT);
+#endif
       }
       lineLen = strlen(line);
 
@@ -2413,6 +2442,29 @@ int loadScript(String filename) { //dd666 make this a class method
       char * tempPtr = strchr(linePtr, '{'); // look for opening template expression
       if (tempPtr && tempPtr[1] != ' ' && strchr(tempPtr + 1, '}') && !isStaticPrintBlock) flag += 1; // also has later close template delim
       //////////  $vars ? 2s
+
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+
+      if (cmdChar == LATER_if || cmdChar == LATER_do || cmdChar == LATER_iif ||  cmdChar == LATER_freeze ||
+          cmdChar == LATER_sleep ||  cmdChar == LATER_analogWrite ||  cmdChar == LATER_var  ) {
+        char sig = linePtr[lineLen - 1];
+        if (isdigit(sig) && isDigit(linePtr[lineLen - 2])) {
+
+          replaceEndingLiterals(linePtr,  SCRIPT);
+          lineLen = strlen(linePtr);
+        }
+      }
+
+      if (cmdChar == LATER_interval  ) {
+        char sig = linePtr[0];
+        if (isdigit(sig)) {
+
+          replaceStartingLiterals(linePtr,  SCRIPT);
+          lineLen = strlen(linePtr);
+        }
+      }
+#endif
+
       // look for var usage, minding var commands themselves
       if (cmdChar == LATER_var || cmdChar == LATER_static) { // look only after first equal for this
 
@@ -2437,10 +2489,12 @@ int loadScript(String filename) { //dd666 make this a class method
         */
         // try to move this somewhere it runs for more than just vars, but not if output...
 
+#ifndef LATER_DISABLE_OPTIMIZATIONS
         if (strchr(linePtr, '(')) {
           embedFunctions(strchr(linePtr, '='), SCRIPT);
           lineLen = strlen(linePtr);
         }
+#endif
 
         // clean up all spaces they are not needed.
         char * ptrSpace = strstr(eqPtr, " ");
@@ -2457,28 +2511,28 @@ int loadScript(String filename) { //dd666 make this a class method
           laterUtil::replace(line, "*=", "=*");
           laterUtil::replace(line, "/=", "=/");
 
+#ifndef LATER_DISABLE_OPTIMIZATIONS
           if (strstr(line, "=+1")) lineData = 1;
           if (strstr(line, "=-1")) lineData = 2;
           if (strstr(line, "=+@") || strstr(line, "=+{#")) lineData = 3;
           if (strstr(line, "=-@") || strstr(line, "=-{#")) lineData = 4;
           if (strstr(line, "=/2")) lineData = 8;
           if (strstr(line, "=*2")) lineData = 9;
-
+#endif
+          // remove space to the left of =
+          int eqPos = laterUtil::indexOf(linePtr, "=");
+          if (eqPos > 3) {
+            strcpy(linePtr + 3, strchr(linePtr, '='));
+            lineLen = strlen(linePtr);
+          }
         }
 
-        if (strstr(line, "_=@") || strstr(line, "={#") ) lineData = 5;
-        if (strstr(line, "=0")) lineData = 6;
+        if (strstr(linePtr, "_=@") || strstr(linePtr, "={#") ) lineData = 5;
+        if (strstr(linePtr, "=0")) lineData = 6;
         if (strchr(strchr(linePtr, '='), '@')  && !lineData ) flag += 2;// vars after assign
 
       } else {
         if (strchr(linePtr, '@')) flag += 2;// vars
-      }
-
-      // remove space to the left of =
-      int eqPos = laterUtil::indexOf(linePtr, "=");
-      if (eqPos > 3) {
-        strcpy(linePtr + 3, strchr(linePtr, '='));
-        lineLen = strlen(linePtr);
       }
 
       if (cmdChar == LATER_option) {
@@ -2502,23 +2556,26 @@ int loadScript(String filename) { //dd666 make this a class method
       //////////  &RESPONSE usage ?  32s
       if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
 #endif
-
-      if (cmdChar == LATER_solid) {
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+      if (0 && cmdChar == LATER_solid) {
         unsigned long parsedColor =  laterUtil::parseColor(linePtr, getCurrent() );
         unsigned long * VARS;
 
         lineData = 0;
         itoa(parsedColor, linePtr, 10);
-        char symb = getConstantNumber(linePtr, getCurrent());
+        char symb = getConstantNumber(linePtr, getCurrent()) + 65;
 
         linePtr[0] = '@';
         linePtr[1] = symb;
-        linePtr[2] = '_';
-        linePtr[3] = '\0';
+        //  linePtr[2] = '_';
+        linePtr[2] = '\0';
         lineLen = strlen(linePtr);
       }
+#endif
 
       ////////// output ?  16s - interpolate var and %templates% in code line itself?
+
+      if (isConstant) flag += 64;
 
       if (cmdChar == LATER_log || cmdChar == LATER_switch || cmdChar == LATER_print || cmdChar == LATER_println || cmdChar == LATER_ping || cmdChar == LATER_timer || cmdChar == LATER_assert || cmdChar == LATER_run || Later.addons[cmdChar]   ) {
         flag += 16;
@@ -2587,7 +2644,39 @@ void removeMultiLineComments(char * buff) { // remove multi line comments by tur
     }//end if closing comment?
   }//end if multi-line comment?
 }
-void replaceVarNames(char * line, int scriptIndex) { // turns $fancyName into @a_, @b_, etc...
+void replaceEndingLiterals(char * line, LATER_ENVIRON * s) {
+
+  //
+  unsigned int len = strlen(line);
+  char * digitStart = line + (len - 1);
+  while (isDigit(digitStart[0]) ) {
+    digitStart--;
+  }
+
+  digitStart++;
+  len = strlen(digitStart);
+
+  if (len > 2) {
+    char symb = getConstantNumber(digitStart, s) + 65;
+    memset(digitStart, ' ', len );
+    digitStart[0] = '@';
+    digitStart[1] = symb;
+    //digitStart[2] = '_';
+  }
+
+  // check if literal here, if so, also replace value with var symbol
+  // find assigned value,
+}
+
+void replaceStartingLiterals(char * line, LATER_ENVIRON * s) {
+
+
+  // check if literal here, if so, also replace value with var symbol
+  // find assigned value,
+
+}
+
+void replaceVarNames(char * line, int scriptIndex) { // turns $fancyName into @a, @b, etc...
   char * varPos = line[0] == '$' ? line : strchr(line, '$');
   static char varname[32];
   while (varPos) {
@@ -2595,7 +2684,7 @@ void replaceVarNames(char * line, int scriptIndex) { // turns $fancyName into @a
     strncpy(varname, varPos, len);
     varname[len] = '\0';
     laterUtil::replace (varPos, varname, getVarName(varname, scriptIndex));
-    varPos = strchr(varPos, '$');
+    varPos = strchr(varPos, '$'); // keep looking for more
   }//wend var declaration?
 }//end replaceVarNames()
 void autoEqualsInsert (char * line) { // inserts '=' into any line not having one after the command (first "word" in line)
@@ -2866,8 +2955,8 @@ void processVariableExpressions(char * line, unsigned long * VARS) {// composite
 
   while (atPtr) {
     long varSlot = atPtr[1] - 65;
-    strncpy(varname, atPtr, 3);
-    varname[3] = '\0';
+    strncpy(varname, atPtr, 2);
+    varname[2] = '\0';
     val = VARS[varSlot];
 
     laterUtil::replace (atPtr, varname, ltoa(val, buff, 10 )  );
@@ -3071,10 +3160,12 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
   int prefixLen = (ptr - leftPadPtr);
   if ( prefixLen > 2 ) { // && isupper(s[prefixLen - 2])  // prefix content long enough to be a command?
     ptrCmd = laterUtil::copyUntilChar(leftPadPtr, '(');
+#ifndef LATER_DISABLE_OPTIMIZATIONS
     if (ptrCmd[0] == '#') { //function shortcut?
       funcLocalSlot = ptrCmd[1];
       hasFunc = true;
     } else { // function name
+#endif
       for (unsigned int i = 0, mx = strlen(ptrCmd); i < mx; i++) {
         if (!isupper(ptrCmd[0])) { // && (ptrCmd[i] != '.') ) {
           ptrCmd++;
@@ -3082,8 +3173,9 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
         }// endif upper?
       }//next i
       hasFunc = strlen(ptrCmd) > 2;
+#ifndef LATER_DISABLE_OPTIMIZATIONS
     }//end if shortcut function pointer?
-
+#endif
   } //end if any prefix content?
   if (DMA > -1) { // can't use DMA if in an array, since presumably that array wants dma as well.
     char * inArr = strchr(leftPadPtr, ']');
@@ -3162,8 +3254,12 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
     Serial.println("nums.2\t:"+String( nums[2]));
   */
   if (hasFunc) { // has function
-    varCache = 666;
-    auto cb = funcLocalSlot ? ( script->FUNCS[funcLocalSlot - 65] ) : FUNCS[ptrCmd];
+    varCache = 666; // make parse errors stick out with mark of the beast
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+    auto cb = funcLocalSlot ? script->FUNCS[funcLocalSlot - 65] : FUNCS[ptrCmd];
+#else
+    auto cb = FUNCS[ptrCmd];
+#endif
 
     if (cb) {
       switch (arity) {
@@ -3171,6 +3267,8 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
         case 2: varCache = cb( nums[0], nums[1], -1 ); break;
         default:  varCache = cb( nums[0], nums[1], nums[2] ); break;
       } //end switch arity
+    } else {
+      varCache = 404;
     }//end if cb?
   } else { // calc
 
@@ -3254,8 +3352,6 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
   // outputTerm[repLen] = '\0'; // needed?
   laterUtil::replace(s, placeholder, ltoa( varCache, outputTerm, 10 ) );
   if (strchr(s, ')') ) evalMath(s, script,  DMA);
-
-  Serial.println("embed\t:" + String(s) + "|");
 
 #ifdef HIGH_RES_TIMING
   unsigned long et = micros();
@@ -3686,7 +3782,7 @@ void handleDump() {
   char respbuff[20];
   char * lp;
   char dbg[88];
-  char flagList[] = "HOAEVT";
+  char flagList[] = "CHOAEVT";
 
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
 
@@ -3709,9 +3805,9 @@ void handleDump() {
   bool bonus = true;
 
 #ifdef LATER_LINE_PROFILING
-  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    HOAEVT OP data  runs    ptime    mean  parse  code\n");
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP data  runs    ptime    mean  parse  code\n");
 #else
-  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    HOAEVT OP dat code\n");
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP dat code\n");
 #endif
 
   for (int i = 0, mx = s->lineCount; i < mx; i++) {
@@ -3727,8 +3823,8 @@ void handleDump() {
     LATER_SERVER_NAME.sendContent(" \t[");
     itoa(l->flags + 256, respbuff, 2);
     lp = respbuff;
-    lp += 3;  // print out any active flags with abbr in the slot, else empty space:
-    for (int f = 0; f < 6; f++)  lp[f] = (lp[f] == '1') ? flagList[f] : ' ';
+    lp += 2;  // print out any active flags with abbr in the slot, else empty space:
+    for (int f = 0; f < 7; f++)  lp[f] = (lp[f] == '1') ? flagList[f] : ' ';
 
     LATER_SERVER_NAME.sendContent(lp);
     LATER_SERVER_NAME.sendContent("] ");
@@ -3744,7 +3840,6 @@ void handleDump() {
 
     // cut in profile info here:
 #ifdef LATER_LINE_PROFILING
-    // µ used to work?!?!
     outputPaddedNumber(l->profile.count, "xkm", 6);
     outputPaddedNumber(l->profile.total, "ums", 8);
     unsigned long tot = l->profile.total;
@@ -3759,25 +3854,93 @@ void handleDump() {
   }//next line
 
 #ifdef LATER_LINE_PROFILING
-  LATER_SERVER_NAME.sendContent(" # ex    HOAEVT OP data  runs    ptime    mean  parse  code\n");
+  LATER_SERVER_NAME.sendContent(" # ex    CHOAEVT OP data  runs    ptime    mean  parse  code\n");
 #else
-  LATER_SERVER_NAME.sendContent(" # ex    HOAEVT OP dat code\n");
+  LATER_SERVER_NAME.sendContent(" # ex    CHOAEVT OP dat code\n");
 #endif
 
   LATER_SERVER_NAME.sendContent("\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
 
-  for (auto const & x : LATER_VAR_NAMES[s->index])   {
-    LATER_SERVER_NAME.sendContent(itoa(x.second, linebuff, 10));
+  // turn this into range based indexer:
+  /*
+    for (auto const & x : LATER_VAR_NAMES[s->index])   {
+      LATER_SERVER_NAME.sendContent(itoa(x.second, linebuff, 10));
+      LATER_SERVER_NAME.sendContent( ".\t@");
+
+      linebuff[0] = (char) (x.second + 65);
+      linebuff[1] = '\0';
+      LATER_SERVER_NAME.sendContent(linebuff);
+      LATER_SERVER_NAME.sendContent("_\t");
+      LATER_SERVER_NAME.sendContent(itoa(s->VARS[x.second], linebuff, 10));
+      LATER_SERVER_NAME.sendContent("\t");
+      LATER_SERVER_NAME.sendContent(x.first.c_str());
+      LATER_SERVER_NAME.sendContent("\n");
+    }
+  */
+
+  //\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
+  for (int i = i;  i < LATER_VARS_LENGTH; i++) {
+
+    //auto name = LATER_VAR_NAMES[s->index][i];
+
+    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
     LATER_SERVER_NAME.sendContent( ".\t@");
 
-    linebuff[0] = (char) (x.second + 65);
+    //}else{
+    linebuff[0] = (char) (i + 65);
+    //}
     linebuff[1] = '\0';
+
+    /*
+      if(i>55){
+      strcpy(linebuff, "&#");
+      itoa(i, linebuff+2, 10);
+      strcat(linebuff, ";");
+      }
+    */
+
     LATER_SERVER_NAME.sendContent(linebuff);
-    LATER_SERVER_NAME.sendContent("_\t");
-    LATER_SERVER_NAME.sendContent(itoa(s->VARS[x.second], linebuff, 10));
     LATER_SERVER_NAME.sendContent("\t");
-    LATER_SERVER_NAME.sendContent(x.first.c_str());
+
+    LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    LATER_SERVER_NAME.sendContent("\t");
+    bool foundVarName = false;
+    for (auto const & x : LATER_VAR_NAMES[s->index])   {
+      if (x.second == i) {
+        if (foundVarName)LATER_SERVER_NAME.sendContent(", ");
+        foundVarName = true;
+        LATER_SERVER_NAME.sendContent(x.first.c_str());
+      }
+    }
+
+    //}else{
+    if (!foundVarName) {
+      LATER_SERVER_NAME.sendContent("#");
+      LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    }
+    //}
+
     LATER_SERVER_NAME.sendContent("\n");
+
+    /*
+      //#
+      xLATER_SERVER_NAME.sendContent(itoa(x.second, linebuff, 10));
+      xLATER_SERVER_NAME.sendContent( ".\t@");
+
+      //sym
+      xlinebuff[0] = (char) (x.second + 65);
+      xlinebuff[1] = '\0';
+      xLATER_SERVER_NAME.sendContent(linebuff);
+      xLATER_SERVER_NAME.sendContent("_\t");
+
+      //val
+      xLATER_SERVER_NAME.sendContent(itoa(s->VARS[x.second], linebuff, 10));
+      xLATER_SERVER_NAME.sendContent("\t");
+
+      // var / expr
+      LATER_SERVER_NAME.sendContent(x.first.c_str());
+      LATER_SERVER_NAME.sendContent("\n");
+    */
   }
 
   LATER_SERVER_NAME.sendContent("\n-------- SYSTEM LOG -----------\n");
@@ -3846,7 +4009,7 @@ void runScript() {
       //#ifdef ESP8266HTTPClient_H_
 #if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
       // if ajax response operation, do that:
-      if ( l->flags > 31  ) {
+      if (((l->flags >> 5) & 0x01) == 1) {
         if (l->cmd == LATER_var || l->cmd == LATER_static || l->cmd == LATER_store || l->cmd == LATER_global ) { // assign ret to a vary:
           processResponseEmbeds(strchr(linebuff, '=') + 1, s);
         } else { // template result into line:
@@ -3863,19 +4026,15 @@ void runScript() {
 
       //evaluate paren expressions into numbers
       if ( ((l->flags >> 2) & 0x01) == 1) {
-        if (l->cmd == LATER_var || l->cmd == LATER_static || l->cmd == LATER_store || l->cmd == LATER_global) { // assignment mode, skip past name= and use dma if possible:
-          usedDMA = evalMath(strchr(linebuff, '=') + 1, s, linebuff[1] - 65);
-        } else {
-          evalMath(linebuff, s, -1);
-        } // end if var or other cmd?
+        // } else {
+        evalMath(linebuff, s, -1); // replace usedDMA with  var dma: @A
+        // } // end if var or other cmd?
       }//end if parens flag?
       // detect arrays and process:
       if ( ((l->flags >> 3) & 0x01) == 1) {
-        if (l->cmd == LATER_var || l->cmd == LATER_static || l->cmd == LATER_store || l->cmd == LATER_global ) {
-          usedDMA = processArray(strchr(linebuff, '=') + 1, s->VARS, linebuff[1] - 65);
-        } else {
-          processArray(linebuff, s->VARS, -1);
-        } // end if var or other cmd?
+        //  } else {
+        processArray(linebuff, s->VARS, -1); // replace usedDMA with  var dma: @A
+        // } // end if var or other cmd?
       }//end if array?
 
     }//end if flags?
@@ -4041,19 +4200,23 @@ void runScript() {
         }//end if static/define?
 
         if (usedDMA) continue;
-
+        varSlot = linebuff[1] - 65;
+        if (l->flags > 63 && s->VARS[varSlot] != 420420420) {
+          l->cmd = LATER_noop;
+          continue;
+        }
         // split on equal, get name and value
         v = strchr(linebuff, '=') + 1;
-        varSlot = linebuff[1] - 65;
 
+#ifndef LATER_DISABLE_OPTIMIZATIONS
         if (l->data) { // look for logical perf-improving shortcuts found in parsing
 
           switch (l->data) {
             case 1: s->VARS[varSlot]++; continue; // increment 1
             case 2: s->VARS[varSlot]--; continue; // decrement 1
-            case 3: s->VARS[varSlot] += s->VARS[linebuff[6] - 65]; continue; // increment var
-            case 4: s->VARS[varSlot] -= s->VARS[linebuff[6] - 65]; continue; // decrement var
-            case 5: s->VARS[varSlot] = s->VARS[linebuff[5] - 65]; continue; // copy var
+            case 3: s->VARS[varSlot] += s->VARS[linebuff[5] - 65]; continue; // increment var
+            case 4: s->VARS[varSlot] -= s->VARS[linebuff[5] - 65]; continue; // decrement var
+            case 5: s->VARS[varSlot] = s->VARS[linebuff[4] - 65]; continue; // copy var
             case 6: s->VARS[varSlot] = 0; continue; // reset var
             case 7: l->data = 0; continue; // do nothing (uses implied DMA, var set out of loop)
             case 8: s->VARS[varSlot] = s->VARS[varSlot] >> 1; continue; // fast bitshift divide
@@ -4061,11 +4224,8 @@ void runScript() {
 
             default: break;
           }
-
-          //@A_=+@C_
-
         }//end if data shortcuts?
-
+#endif
         while (v[0] == ' ') v++; // trim lef, right of compare operator char
         if (isdigit(v[0])) {
           varCache = Number(v, s->VARS); // atol(v);
@@ -6158,10 +6318,10 @@ unsigned long  processTemplateExpressionsNumber(const char * line) {
   }
   return 0;
 } // end processTemplateExpressionsNumber()
-// turn {runs} into {#A}-shortcut template, seen locally
+#ifndef LATER_DISABLE_OPTIMIZATIONS
 void embedTemplates(char * line, LATER_ENVIRON * s) {
 
-  char name[32];
+  char nameBuffer[32];
 
   char * ptrLeft = strchr(line, '{');
   if (!ptrLeft) return;
@@ -6178,15 +6338,18 @@ void embedTemplates(char * line, LATER_ENVIRON * s) {
   ptrRight++;
   unsigned int nameLength = ptrRight - ptrLeft;
 
-  strncpy(name, ptrLeft, nameLength);
-  name[nameLength] = '\0';
+  strncpy(nameBuffer, ptrLeft, nameLength);
+  nameBuffer[nameLength] = '\0';
 
-  auto callback = TEMPLATES2[name];
+  auto callback = TEMPLATES2[nameBuffer];
   unsigned int index;
   if (callback) {
     index = s->TEMP_COUNT++;
     s->TEMPS[index] = callback;
     // now replace text of template embed with shortcut:
+    if (nameLength == 3) { //resize the string to hold 4-char symbnol:
+      laterUtil::replace(ptrLeft, "}", " }");
+    }
     memset(ptrLeft + 1, ' ', nameLength - 2);
     ptrLeft[1] = '#';
     ptrLeft[2] = index + 65;
@@ -6232,77 +6395,109 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
 
   while (!isupper(lp[0])) lp++;
   char * ptrRight = strchr(lp, '(');
-  if (!ptrRight) return; //not a function call
-  // found function call, parse it to var-ize, cache it locally, and shortcut the function name to the local copy:
+  int nameLen = 0;
 
-  // build name of function in stand-alone buff
-  int nameLen = ptrRight - lp;
-  strncpy(nameBuffer, lp, nameLen);
-  nameBuffer[nameLen] = '\0';
+  if (!ptrRight) {
+    memset(nameBuffer, ' ', 8);
+    //return; //not a function call
+  } else {
+    // found function call, parse it to var-ize, cache it locally, and shortcut the function name to the local copy:
+
+    // build name of function in stand-alone buff
+    nameLen = ptrRight - lp;
+    strncpy(nameBuffer, lp, nameLen);
+    nameBuffer[nameLen] = '\0';
+  }
+
+  char * ptr;
 
   auto callback = FUNCS[nameBuffer];
-  if (!callback) return; // could not find, nothing left to do
+  if (callback) {
 
-  // fn found, cache:
-  unsigned int index = s->FUNC_COUNT++;
-  s->FUNCS[index] = callback; // cache locally
+    // fn found, cache:
+    unsigned int index = s->FUNC_COUNT++;
+    s->FUNCS[index] = callback; // cache locally
 
-  // now replace text of fn handle embed with shortcut:
-  memset(lp, ' ', nameLen);
-  lp += nameLen - 2;
-  lp[0] = '#';
-  lp[1] = index + 65;
-  // pre-pop literals in function calls:
-  unsigned int terms[3] = {0, 0, 0};
-  int termCount = 0;
+    // now replace text of fn handle embed with shortcut:
+    memset(lp, ' ', nameLen);
+    lp += nameLen - 2;
+    lp[0] = '#';
+    lp[1] = index + 65;
+    // pre-pop literals in function calls:
+    unsigned int terms[3] = {0, 0, 0};
+    int termCount = 0;
 
-  char * ptr = strchr(line, '(') + 1;
+    ptr = strchr(line, '(') + 1;
+
+    while (ptr && ptr[0]) {
+      if (ptr[0] == '\0') break;
+
+      while (ptr[0] == ' ') ptr++;
+
+      while (ptr[0] && !isdigit(ptr[0])) ptr++;
+      if (!ptr || ptr[0] == '\0') break;
+
+      //chomp number and count up:
+      int termLen = 0;
+      int i = 0;
+      for (; i < 6; i++) {
+        if (!isdigit(ptr[i])) {
+          i--;
+          if (ptr[0] != '@') terms[termCount++] = strtoul(ptr, NULL, 10);
+          ptr += i;
+          break;
+        }
+      }
+
+      ptr++;
+    }//wend;
+
+    if (termCount == 3) { // all literals, inline function calling results:
+      unsigned long rez = callback(terms[0], terms[1], terms[2]);
+      // replace whol darn thing with shortcut var
+      char symb = getConstantNumber(ptr, s, rez) + 65;
+      ptr = strchr(line, '=') + 1;
+      memset(ptr, ' ', strlen(ptr));
+      ptr[0] = '@';
+      ptr[1] = symb;
+      //ptr[2] = '_';
+      return;
+    }//end if 3 arg function found?
+
+  }//end if callback?
+
+  ptr = strchr(line, '(') + 1;
 
   while (ptr && ptr[0]) {
     if (ptr[0] == '\0') break;
-
-    while (ptr[0] == ' ') ptr++;
-
-    while (ptr[0] && !isdigit(ptr[0])) ptr++;
-    if (!ptr || ptr[0] == '\0') break;
-
-    //chomp number and count up:
-    int termLen = 0;
-    int i = 0;
-    for (; i < 6; i++) {
-      if (!isdigit(ptr[i])) {
-        i--;
-        terms[termCount++] = strtoul(ptr, NULL, 10);
-        ptr += i;
-        break;
-      }
+    //the de-literization routine for semi-literal function args and expressions
+    char * startPos = ptr;
+    while (isdigit(ptr[0])) ptr++;
+    int span = ptr - startPos;
+    if (span > 2) {
+      char symb = getConstantNumber(startPos, s) + 65;
+      memset(startPos, ' ', span);
+      startPos[0] = '@';
+      startPos[1] = symb;
+      //startPos[2] = '_';
     }
 
+    /*
+        if ( ptr[0] &&  isdigit(ptr[0]) && isdigit(ptr[1]) && isdigit(ptr[2]) ) { // foun 2+digits of literals
+        char symb = getConstantNumber(ptr, s) + 65;
+        ptr[0] = '@';
+        ptr[1] = symb;
+        //ptr[2] = '_';
+
+        ptr+=3;
+        }
+    */
     ptr++;
-  }//wend;
-  if (termCount == 3) { // all literals, inline function calling results:
-    unsigned long rez = callback(terms[0], terms[1], terms[2]);
-    // replace whol darn thing with shortcut var
+    while (ptr[0] == ' ') ptr++;
+  }//wend
+}// end embedFunctions()
 
-
-    char symb = getConstantNumber(ptr, s, rez) + 65;
-    ptr = strchr(line, '=') + 1;
-    memset(ptr, ' ', strlen(ptr));
-    ptr[0] = '@';
-    ptr[1] = symb;
-    ptr[2] = '_';
-    return;
-
-  }//end if 3 arg function found?
-
-  //run the de-literization routine here for non-literal 3-args function calls
-  if (ptr && ptr[0] && isdigit(ptr[1]) && isdigit(ptr[2])) { // foun 2+digits of literals
-    char symb = getConstantNumber(ptr, s) + 65;
-    ptr[0] = '@';
-    ptr[1] = symb;
-    ptr[2] = '_';
-  }
-}// end embedFunctions()///////////////////////////////////////////
+#endif
 unsigned int lineTemplateCount = 0;
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accept line.single flag or bool here
 #ifdef HIGH_RES_TIMING
@@ -6322,6 +6517,8 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
   unsigned long val = 0;
 
   ptrRight[1] = '\0';
+
+#ifndef LATER_DISABLE_OPTIMIZATIONS
   if (ptrLeft[1] == '#') {
 
     //@E_={#B }
@@ -6336,15 +6533,19 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
     ptrRight[1] = rightSideCap;
     ptrLeft[0] = '@';
     ptrLeft[1] = lineTemplateCount++ + 65; //line[1];
-    ptrLeft[2] = '_';
+    //ptrLeft[2] = '_';
+    strcpy(ptrLeft+2, ptrRight+1);
+    
     // s->lines[s->i].data = 5;
-    lineTemplateCount++;
+    //lineTemplateCount++;
     if (strrchr ( ptrLeft + 1, '{' )) {
-      processTemplateExpressions2(ptrLeft + 2, s);
+      processTemplateExpressions2(ptrLeft + 1, s);
     }
     lineTemplateCount = 0;
     return;
   }
+#endif
+
   bool storeCall = ptrLeft[1] == '&';
   bool varCall = ptrLeft[1] == '@';
   int len = (ptrRight - ptrLeft) + 1;
@@ -6438,8 +6639,8 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
       ptrRight[1] = rightSideCap;
       ptrLeft[0] = '@';
       ptrLeft[1] = nam[1];
-      ptrLeft[2] = '_';
-      for (int i = 0; i < (len - 3); i++) ptrLeft[3 + i] = ' '; // fill rest of line with space
+     // ptrLeft[2] = '_';
+      for (int i = 0; i < (len - 2); i++) ptrLeft[2 + i] = ' '; // fill rest of line with space
     } else {
       strcpy(TEMPLATE_KEY_BUFF, TEMPLATE_KEY_BUFF2);
       ptrRight[1] = rightSideCap;
