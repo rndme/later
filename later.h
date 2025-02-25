@@ -3,7 +3,7 @@
 
 #include "FS.h"
 
-//#include  <algorithm>
+//#include <algorithm>
 
 #ifdef LATER_UART_PORT
 #define LATER_PORT LATER_UART_PORT
@@ -105,13 +105,13 @@
 #define LATER_VARS_LENGTH 95
 #endif
 
+#ifndef LATER_FUNCTION_CACHE_LENGTH
+#define LATER_FUNCTION_CACHE_LENGTH 10
+#endif
 
-
-
-
-
-
-
+#ifndef LATER_TEMPLATE_CACHE_LENGTH
+#define LATER_TEMPLATE_CACHE_LENGTH 28
+#endif
 
 
 
@@ -141,8 +141,15 @@ struct cmp_str { // converts pointers into stirng values to find terms in map an
 #ifdef WEBSERVER_H
 #define ESP8266WEBSERVER_H
 #endif
-char TEMPLATE_BUFFER[48];
+
+// reusable buffers:
+char TEMPLATE_BUFFER[64];
 char TEMPLATE_KEY_BUFF[24];
+char INCLUDE_BUFFER[1024];
+char TEMP_BUFFER[128];
+char FILENAME_BUFFER[32];
+char FILE_BUFF[2048];
+char LINE_BUFF[LATER_LINE_BUFFER];
 //>> var names can consit of the following letters and numbers:
 const char VARCHARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$1234567890.";
 const char VARLIST[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"; // -65 to get slot 0-64, 8 slots in middle aren't used for 57 or so slots
@@ -158,6 +165,10 @@ unsigned long VAR_NAME_COUNT[LATER_INSTANCES];
 
 std::map<std::string, char *> DEFINES[LATER_INSTANCES];
 char setRunLog[LATER_LOG_SIZE + 16] = "";
+
+
+std::map <const char *, unsigned long, cmp_str> CONSTANTS[LATER_INSTANCES];
+
 //>> public types, used to make callbacks for commands+function, run backups or mods, etc
 #ifdef HIGH_RES_TIMING
 
@@ -294,8 +305,8 @@ typedef struct LATER_ENVIRON {
   unsigned long intervals[8] = {0, 0, 0, 0,   0, 0, 0, 0}; // ms timer snapshots for repeating sections ; interval command
   byte intervalCount = 0; // how many intervals are active?
   unsigned long VARS[LATER_VARS_LENGTH];// holds variable values
-  noArgFunc TEMPS[32]; // local template function cache
-  threeArgFunc FUNCS[8];
+  noArgFunc TEMPS[ LATER_TEMPLATE_CACHE_LENGTH]; // local template function cache
+  threeArgFunc FUNCS[LATER_FUNCTION_CACHE_LENGTH];// local function cache
   unsigned int TEMP_COUNT = 0; // how many templates are cached?
   unsigned int FUNC_COUNT = 0; // how many functions are cached?
   unsigned int LITS_COUNT = 2; // how many literals are var-cached?
@@ -380,9 +391,13 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 #define LATER_suspend '2'
 #define LATER_type 'p'
 #define LATER_unload 'q'
-//for the template engine:
+const char COMMANDS_ENDING_WITH_LITERALS[] = {LATER_if, LATER_do, LATER_iif, LATER_freeze, LATER_sleep, LATER_goto, LATER_rotate, LATER_switch, LATER_case, LATER_suspend, LATER_analogWrite, LATER_var, 0};
+const char COMMANDS_STARTING_WITH_LITERALS[] = { LATER_interval, LATER_digitalWrite, LATER_analogWrite, LATER_for, LATER_sleep, 0};
+const char COMMANDS_NEEDING_OUTPUT[] = { LATER_log, LATER_switch, LATER_print, LATER_println, LATER_ping, LATER_timer, LATER_assert, LATER_run, 0};
+const char COMMANDS_NEEDING_WHITESPACE[] = {LATER_gosub, LATER_call, LATER_interval, LATER_flash, LATER_option, LATER_json, 0};
+
 // container for user-defined program variables
-std::map<const char *,  char, cmp_str> LATER_CMDS = {
+std::map<const char *,  char, cmp_str> LATER_CMDS = { // 300 bytes for all commands
   {"_", 'l'},
   {"__", 'l'},
   {"analogWrite", 'w'},
@@ -548,15 +563,15 @@ LATER_SAMPLER Sampler;
 #endif
 
 unsigned long randomReg();
-#line 597 "danscript.ino"
+#line 611 "danscript.ino"
 unsigned long clamp(int a);
-#line 711 "danscript.ino"
+#line 725 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 833 "commands.ino"
+#line 839 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 851 "commands.ino"
+#line 857 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 1011 "commands.ino"
+#line 1017 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -572,51 +587,45 @@ void handleConfig();
 void loadConfig();
 #line 180 "config.ino"
 void saveConfig();
-#line 4 "core.ino"
+#line 6 "core.ino"
 unsigned long Number( const char * str, const unsigned long * VARS );
-#line 22 "core.ino"
+#line 24 "core.ino"
 char * getVarName(const char* longName, const int scriptIndex);
-#line 66 "core.ino"
+#line 68 "core.ino"
 char getVarNameNumber(char* longName, int scriptIndex);
-#line 78 "core.ino"
-int loadScript(String filename);
-#line 686 "core.ino"
+#line 80 "core.ino"
 void removeDoubleLines(char * buff);
-#line 696 "core.ino"
+#line 90 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 712 "core.ino"
+#line 106 "core.ino"
 void replaceEndingLiterals(char * line, LATER_ENVIRON * s);
-#line 741 "core.ino"
+#line 127 "core.ino"
 void replaceStartingLiterals(char * line, LATER_ENVIRON * s);
-#line 751 "core.ino"
+#line 137 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 764 "core.ino"
+#line 150 "core.ino"
 void autoEqualsInsert(char * line);
-#line 797 "core.ino"
+#line 183 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 1047 "core.ino"
+#line 433 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 1079 "core.ino"
+#line 465 "core.ino"
 bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 1269 "core.ino"
+#line 655 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 1515 "core.ino"
+#line 884 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1611 "core.ino"
+#line 980 "core.ino"
 void popHttpResponse();
-#line 1629 "core.ino"
+#line 998 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1780 "core.ino"
+#line 1149 "core.ino"
 void processStringFormats(char* s);
-#line 1909 "core.ino"
+#line 1278 "core.ino"
 void handleEval();
-#line 1929 "core.ino"
+#line 1298 "core.ino"
 void outputPaddedNumber(unsigned long value, char * suffix, int width);
-#line 1959 "core.ino"
-void handleDump();
-#line 2290 "core.ino"
-void runScript();
-#line 3622 "core.ino"
+#line 1332 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -632,17 +641,17 @@ void handleResume();
 void handleSuspend();
 #line 291 "http.ino"
 void bindServerMethods();
-#line 399 "http.ino"
+#line 403 "http.ino"
 void handleLS();
-#line 478 "http.ino"
+#line 480 "http.ino"
 void handleEditor();
-#line 509 "http.ino"
+#line 511 "http.ino"
 String getContentType(String filename);
-#line 531 "http.ino"
+#line 533 "http.ino"
 bool handleFileRead(String path);
-#line 604 "http.ino"
+#line 606 "http.ino"
 void handleFileUpload();
-#line 644 "http.ino"
+#line 646 "http.ino"
 void handleFileList();
 #line 751 "http.ino"
 void handleUnload();
@@ -655,30 +664,60 @@ void handleCommandList2();
 #line 1067 "http.ino"
 void handleStore();
 #line 1106 "http.ino"
-void addJSON(char * buff, const char * key, unsigned long value);
+void addJSON(char *buff, const char *key, unsigned long value);
 #line 1114 "http.ino"
-void addJSON(char * buff, const char * key, const char * value);
+void addJSON(char *buff, const char *key, const char *value);
 #line 1123 "http.ino"
-void backtrack(char * buff);
+void backtrack(char *buff);
 #line 1127 "http.ino"
 void handleScripts();
+#line 1 "loader.ino"
+int loadScript(const char * scriptFileName);
+#line 328 "loader.ino"
+void replaceIncludes(char * fileBuff);
+#line 363 "loader.ino"
+void replaceSpecialMacros(char * fileBuff, const char * scriptFileName);
+#line 385 "loader.ino"
+void sniffContentType( char * fileBuff, LATER_ENVIRON * SCRIPT );
+#line 398 "loader.ino"
+void populateDefines(char * fileBuff, int scriptIndex);
+#line 423 "loader.ino"
+int convertIIFs(char * line, char * lb, int endpos);
+#line 444 "loader.ino"
+void removeSingleLineComments(char * line, char * cmd);
+#line 467 "loader.ino"
+void harvestMacros(char * line, int scriptIndex);
+#line 519 "loader.ino"
+void cleanupVarDeclarations(char * line);
+#line 541 "loader.ino"
+void expandRangeOperators(char * line, LATER_ENVIRON * SCRIPT);
+#line 591 "loader.ino"
+void replaceEndCommands(char * line);
+#line 606 "loader.ino"
+bool embedVariables(char * line, bool isConstant, LATER_ENVIRON * SCRIPT);
+#line 620 "loader.ino"
+int parseVarCommands(char * line, char * linePtr, int lineData, LATER_ENVIRON * s);
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
+#line 2 "runner.ino"
+void runScript();
 #line 16 "templates.ino"
 void getDate(unsigned long epoc);
 #line 215 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
 #line 246 "templates.ino"
 void embedTemplates(char * line, LATER_ENVIRON * s);
-#line 286 "templates.ino"
+#line 289 "templates.ino"
 void embedFunctions(char * line, LATER_ENVIRON * s);
-#line 443 "templates.ino"
+#line 459 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 636 "templates.ino"
+#line 674 "templates.ino"
 uint8_t parseByteFromChars(char * ptr);
-#line 649 "templates.ino"
+#line 687 "templates.ino"
 void handleCommandList();
-#line 597 "danscript.ino"
+#line 748 "templates.ino"
+void handleDump();
+#line 611 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -819,25 +858,24 @@ void LaterClass::setup() {
   if (SPIFFS.exists("/autoexec.lnk")) {
     if (debug) LATER_PRINTLN("Later - Autoexec.lnk will run");
 
-    char buff[128];
-    char * files = buff;
+    char TEMP_BUFFER[128];
+    char * files = TEMP_BUFFER;
     memset(files, '\0', 128);
 
     File file = SPIFFS.open("/autoexec.lnk", "r");
     file.readBytes(files, 128);
     file.close();
-    char fileName[42];
+    //char fileName[42];
     char * pch;
     char * eol;
 
     pch = strtok (files, "\n");
     while (pch != NULL) {
-      strcpy(fileName, pch);
-      eol = strchr(fileName, '\n');
+      strcpy(FILENAME_BUFFER, pch);
+      eol = strchr(FILENAME_BUFFER, '\n');
       if (eol) eol[0] = '\0';
-      if (strlen(fileName) > 3 && fileName[0] == '/' && strstr(fileName, ".bat") ) {
-        if (debug) LATER_PRINTLN("autoexec.lnk file: " + String(fileName));
-        run(fileName);
+      if (strlen(FILENAME_BUFFER) > 3 && FILENAME_BUFFER[0] == '/' && strstr(FILENAME_BUFFER, ".bat") ) {
+        run(FILENAME_BUFFER);
       }
       pch = strtok (NULL, "\n");
     }
@@ -1042,7 +1080,8 @@ void LaterClass::unload(const char * fileName) {
 
   // reset all VARs to zero
   for (int i = 0; i < LATER_VARS_LENGTH; i++) s->VARS[i] = 0;
- 
+
+  CONSTANTS[s->index].clear();
   LATER_VAR_NAMES[s->index].clear();
   VAR_NAME_COUNT[s->index] = 3;
   if (debug) LATER_PRINTLN("Later - unloaded " + String(fileName));
@@ -1107,7 +1146,8 @@ bool LaterClass::addCommand(const char * commandName, bool(*callBack)(char *, LA
     return 0;
   }
 
-  char possibleNames[93];//char possibleNames[92];
+  char * possibleNames = TEMP_BUFFER;
+  //char possibleNames[ 9 3];//char possibleNames[ 9 2];
   strcpy(possibleNames, CMDCHARS); //strncpy(possibleNames, CMDCHARS, 90); //strncpy(possibleNames, CMDCHARS, 91);
   possibleNames[91] = '\0';//possibleNames[91] = '\0';
 
@@ -1192,6 +1232,15 @@ char * trimRight(char * str) noexcept {
     }
   return str;
 }//end trimRight()
+
+char * trimLeft(char * str, bool aggressive = false) noexcept {
+  if (!aggressive) {
+    while (str[0] == ' ') str++;
+  } else {
+    while (isspace(str[0])) str++;
+  }
+  return str;
+}//end trimLeft()
 bool startsWith(const char * hay, const char * needle)  noexcept {
   return ! memcmp ( hay, needle, strlen(needle));
 }
@@ -1251,13 +1300,12 @@ String formatBytes(size_t bytes) {
   }
 }
 char * fileToBuff(String fileName) {
-  static char buff[2048];
-  char * p = buff;
+  char * p = FILE_BUFF;
 
   if (fileName.startsWith("%RAM%")) {
     return p;
   }
-  memset ( buff, '\0', 2048);
+  memset ( FILE_BUFF, '\0', 2048);
 
   if (!fileName.startsWith("/")) fileName = "/" + fileName;
   File file = SPIFFS.open(fileName, "r");
@@ -1270,12 +1318,11 @@ char * fileToBuff(String fileName) {
     }
     file.close();
   }
-  return buff;
+  return FILE_BUFF;
 }//end fileToBuff()
 char * fileToBuffInclude(String fileName) {
-  static char buff[1024];
-  char * p = buff;
-  memset ( buff, '\0', 1024);
+  char * p = INCLUDE_BUFFER;
+  memset ( INCLUDE_BUFFER, '\0', 1024);
 
   if (!fileName.startsWith("/")) fileName = "/" + fileName;
   File file = SPIFFS.open(fileName, "r");
@@ -1288,7 +1335,7 @@ char * fileToBuffInclude(String fileName) {
     }
     file.close();
   }
-  return buff;
+  return INCLUDE_BUFFER;
 }//end fileToBuff()
 bool buffToFile(String  fileName,  char * value, bool append) {
   //something is evil here dd666
@@ -1305,7 +1352,7 @@ bool buffToFile(String  fileName,  char * value, bool append) {
 uint32_t parseColor(char * ptr, LATER_ENVIRON * s) {
   int colorLength, commaPos;
   uint32_t color;
-  while (isspace(ptr[0])) ptr++; // trim left, maybe move to compilation stage, as optomization
+  while (isblank(ptr[0])) ptr++; // trim left, maybe move to compilation stage, as optomization
   colorLength = strlen(ptr);
 
 
@@ -1336,7 +1383,7 @@ uint32_t parseColor(char * ptr, LATER_ENVIRON * s) {
 uint32_t parseColor(char * ptr, LATER_ENVIRON * s) {
   int colorLength, commaPos;
   LATER_PIXEL_TYPE color;
-  while (isspace(ptr[0])) ptr++; // trim left, maybe move to compilation stage, as optomization
+  while (isblank(ptr[0])) ptr++; // trim left, maybe move to compilation stage, as optomization
   colorLength = strlen(ptr);
   uint32_t buff;
   commaPos = laterUtil::indexOf(ptr, ",");
@@ -1409,8 +1456,10 @@ void runCGI(char * lb, LATER_ENVIRON * s) {
   char * buff = laterUtil::fileToBuff(String(lb));
   char * p = buff;
   int len = 0;
-  char linebuff[LATER_LINE_BUFFER];
-
+  //char linebuff[LATER_LINE_BUFFER];
+  //char linebuff[LATER_LINE_BUFFER];
+  char * linebuff = LINE_BUFF;
+  memset(linebuff, 0, 16);
   strcat(buff, "\n");
 
   while (1) {
@@ -1454,7 +1503,10 @@ void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
 
   if (!rez) {
     char * lp;
-    char linebuff[LATER_LINE_BUFFER];
+    //char linebuff[LATER_LINE_BUFFER];
+    char * linebuff = LINE_BUFF;
+    memset(linebuff, '\0', 16);
+    
     lp = s->program + l->start;
     strncpy(linebuff, lp, l->len);
     linebuff[l->len] = '\0';
@@ -2072,556 +2124,6 @@ char getVarNameNumber(char* longName, int scriptIndex) {
   }
 }
 
-int loadScript(String filename) { //dd666 make this a class method
-  unsigned long st = micros();
-  if (filename[0] != '/') filename = "/" + filename;
-  char * fileBuff = laterUtil::fileToBuff(filename);
-  while ( isspace(fileBuff[0])) fileBuff++; // trim left
-
-  int slot = 0;
-  for (; slot < LATER_INSTANCES; slot++) {
-    if (SCRIPTS[slot].lineCount == 0) break;
-  }
-  LATER_ENVIRON * SCRIPT = &SCRIPTS[slot];
-  SCRIPT->loadedAt = millis();
-  SCRIPT->i = 0;
-  strcpy(SCRIPT->fileName, filename.c_str());
-
-  char * inc = strstr(fileBuff, "#include");
-  while (inc) {
-    char incLine[24];
-    strncpy(incLine, inc, 23);
-
-    size_t fnpos = strcspn(incLine, " =\"" );
-    char * fnPtr = incLine + fnpos + 1;
-
-    fnpos = strcspn(fnPtr, " \"\n" );
-    fnPtr[fnpos] = '\0';
-    char * incbuf = laterUtil::fileToBuffInclude(fnPtr);
-
-    unsigned long inclen = strlen(incbuf);
-    unsigned long tailpos = (inc - fileBuff) + strlen(incLine); // where include line orig ends
-
-    memmove(
-      fileBuff + tailpos + inclen - strlen(incLine) ,
-      fileBuff + tailpos,
-      2048 - (tailpos + inclen)
-    );
-
-    // now sandwich in the new include contents:
-    memcpy(inc, incbuf, inclen);
-    inc = strstr(fileBuff, "#include"); // WORKS!
-  }//wend include?
-  char * fil = strstr(fileBuff, "__FILENAME__");
-  while (fil) {
-    strncpy(fil, filename.c_str() + 1, 12);
-    unsigned int len = strlen(filename.c_str() + 1);;
-    if ( len < 12) memset(fil + 12, ' ', len - 12);
-    fil = strstr(fileBuff, "__FILENAME__");
-  }
-
-  char * ino = strstr(fileBuff, "__SKETCH_FILE__");
-  while (ino) {
-    const char * mySketchName = LATER_SKETCH;
-    strncpy(ino, mySketchName, 15);
-    unsigned int len = strlen(mySketchName);
-    if ( len < 15) memset(ino + 15, ' ', len - 15);
-    ino = strstr(fileBuff, "__SKETCH_FILE__");
-  }
-  char * contentType = strstr(fileBuff, "#type=");
-  while (contentType) {
-    strncpy(SCRIPT->contentType, contentType + 6, 31);
-    size_t ctend = strcspn(SCRIPT->contentType, "\n ;\t");
-    SCRIPT->contentType[ctend] = '\0';
-    contentType[0] = '\'';
-    contentType = strstr(fileBuff, "#type=");
-  }//wend contentType
-
-  //#define TABLE_SIZE 100
-  char * dec = strstr(fileBuff, "#define=");
-  if (dec) DEFINES[slot].clear();
-  while (dec) {
-    // wipe out define call in program text:
-    dec[0] = '/';
-    dec[1] = '/';
-
-    dec = dec + 8; // skip over "define="...
-
-    size_t defpos = strcspn(dec, " ");
-    char * defValp = dec + defpos + 1;
-
-    char decName[16];
-    strncpy(decName, dec, defpos);
-    decName[defpos] = '\0';
-
-    DEFINES[slot][decName] = defValp;
-    dec = strstr(fileBuff, "#define="); // grab next one (if any)
-  }//wend define
-  char clean[LATER_PROGRAM_SIZE];
-  char * outptr = clean;
-  char * cleanptr = clean;
-
-  removeDoubleLines(fileBuff);
-  removeMultiLineComments(fileBuff);
-
-  //    Parse program into lines
-  char * lb = fileBuff; //strstr(buff, "\n");
-  char line[LATER_LINE_BUFFER];
-  //char lineCopy[LATER_LINE_BUFFER];
-  char cmd[16];
-  char macro[16];
-  char macroRep[64];
-  char * iifPtr;
-  char * cmtPtr;
-  int lineCount = 0;
-  int endpos = strcspn( fileBuff, "\n");
-  int lineLen = 0;
-  char rangeBuffer[64];
-  char temp[12];
-  bool isPrintBlock = 0;
-  bool isStaticPrintBlock = 0;
-  bool isConstant = false;
-  unsigned long lineData = 0;
-  // build up lines:
-  while (strlen(lb) > 1) {
-#ifdef LATER_LINE_PROFILING
-    unsigned long profileStart = micros();
-#endif
-    lineData = 0;
-    isConstant = 0;
-    char consts[17] = "0000000000000000";
-
-    // copy program code into line buffer so we can mess it up
-    strncpy( line, lb, endpos);
-    line[endpos] = '\0';
-
-    if (!endpos && !isPrintBlock) {
-      line[endpos] = ' ';
-      strcpy(line, ": ");
-    }
-
-    if (!endpos && isPrintBlock) {
-      line[endpos] = ' ';
-      line[endpos + 1] = '\0';
-    }
-
-    if (!isPrintBlock) laterUtil::trimRight(line);
-    iifPtr = strstr(line, "iif");
-    cmtPtr = strstr(line, "//");
-    if (iifPtr && (!cmtPtr || (cmtPtr > iifPtr)) ) {
-
-      int colpos =  strcspn( line, ":");
-      if (colpos > 0 && line[colpos - 1] == ' ' && line[colpos + 1] == ' ') {
-        endpos = colpos;
-        line[colpos] = '\0';
-        lb[colpos] = '\n';
-        laterUtil::trimRight(line);
-      }
-    }
-    lb += endpos + 1; // should endpos be re-calced?
-    endpos = strcspn( lb, "\n");
-    // do stuff with now-trimmed line, then copy it to clean, if needed
-    if (!isPrintBlock) {
-      int pos = 0;
-      while (isblank(line[pos++])) {  };
-      strcpy(line, line + (pos - 1));
-    }
-    // remove comments -- needs to chill a bit for later, check if print, log, fetch, etc.
-    int commentPos = laterUtil::indexOf(line, "//");
-    if (commentPos > -1 ) {
-      if (commentPos == 0) {
-        line[0] = '\0';
-      } else {
-        int cmdLen = strcspn(line, " =");
-        strncpy(cmd, line, cmdLen);
-        cmd[cmdLen] = '\0';
-        if (!strstr(",_,log,print,println,fetch,ping,timer,", cmd)) line[commentPos] = '\0'; // zap line at comment unless used by command
-      }//end if not whole line comment?
-    }//end if has comment?
-
-    if (line[0] == '\'') line[0] = '\0'; // skip VB-style comment line, also used internally by multi-line comments to curtail buffer resizing
-
-    if (!isStaticPrintBlock) laterUtil::trimRight(line);
-    lineLen = strlen(line);
-    if (lineLen || isStaticPrintBlock) { // filter empty lines
-      // look for any @macro usages first thing
-      char * macroPtr = strchr(line, '@');
-      while (macroPtr) {
-        macroPtr[0] = '?'; // stop same re-find
-        size_t macroNameLen = 1;
-        for (macroNameLen = 1; macroNameLen < 16; macroNameLen++) {
-          if (!isalnum(macroPtr[macroNameLen])) break;
-        }
-
-        strncpy(macro, macroPtr, macroNameLen);
-        macro[macroNameLen] = '\0';
-
-        char * macroBuffPtr = macro + 1;
-        char buffKey2 [ 32 ] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        char * macroRepPtr = DEFINES[slot][macroBuffPtr];
-        // check GET params for match if no pre-defined macro exists under the name:
-        if (!macroRepPtr || !strlen(macroRepPtr)) {
-          if (LATER_SERVER_NAME.hasArg(macroBuffPtr)) {
-            strcpy(buffKey2, LATER_SERVER_NAME.arg(macroBuffPtr).c_str());
-            macroRepPtr = buffKey2;
-          }
-        }
-
-        if (macroRepPtr) {
-          size_t macroRepLen = strcspn(macroRepPtr, "\n");
-          if (macroRepLen < 1) macroRepLen = strlen(macroRepPtr);
-
-          // cleanup optional semi delimiter on macro names:
-          if (macroPtr[macroNameLen] == ';') {
-            macro[macroNameLen] = ';';
-            macro[macroNameLen + 1] = '\0';
-          }
-          strncpy(macroRep, macroRepPtr, macroRepLen);
-          macroRep[macroRepLen] = '\0';
-          laterUtil::trimRight(macroRep);
-          laterUtil::replace(line, macro, macroRep);
-        }//end if
-
-        macroPtr = strchr(line, '@');
-      }//end if macro?
-
-      // inject var= into plain var declarations; $x=1 into var=$x=1
-      if (line[0] == '$') {
-        if ( strchr(line, '{') && strchr(line, ':') && line[lineLen - 1] == '}') {
-          laterUtil::replace(line, "$", "define=$");
-        } else {
-          laterUtil::replace(line, "$", "var=$");
-          laterUtil::replace(line, "++", "=+1");
-          laterUtil::replace(line, "--", "=-1");
-        }
-
-        laterUtil::replace(line, " =", "=");
-        laterUtil::replace(line, "= ", "=");
-        lineLen = strlen(line);
-      }//end if plain syntax var declaration line?
-
-      // turn lables into noops
-      if (line[0] == ':') laterUtil::replace(line, ":", "noop=:");
-
-      //replace range operators with csv ints within the range bounds
-      char * rangePtr = strstr(line, "..");
-      while (rangePtr) {
-        //rangePtr[0]=' ';
-        //rangePtr[1]=' ';
-
-        // find first, last number
-        int endCap = Number(rangePtr + 2, SCRIPT->VARS);
-
-        // track backwards to find base range start:
-        for (int i = 0; i < 10; i++) {
-          rangePtr--;
-          if (!isdigit(rangePtr[0])) {
-            rangePtr++;
-            break;
-          }
-        }
-        int startCap = Number(rangePtr, SCRIPT->VARS) + 1;
-        rangeBuffer[0] = ',';
-        memset(rangeBuffer + 1, 0, 48);
-
-        if ( endCap == startCap) endCap++;
-
-        if ( endCap > startCap) {
-          for (int i = startCap; i < endCap; i++) {
-            itoa(i, temp, 10);
-            strcat(rangeBuffer, temp);
-            strcat(rangeBuffer, ",");
-          }
-        } else {
-          for (int i = startCap - 2; i > endCap ; i--) {
-            itoa(i, temp, 10);
-            strcat(rangeBuffer, temp);
-            strcat(rangeBuffer, ",");
-          }
-        }
-
-        laterUtil::replace(line, "..", rangeBuffer);
-        rangePtr = strstr(line, "..");
-
-      }//wend range symbols
-
-      if (line[0] == '&' && line[1] == 'R' ) { //&& startsWith(line, "&RESPONSE->")) {
-        laterUtil::replace(line, "&RESPONSE->", "res=&RESPONSE->");
-        lineLen = strlen(line);
-      }//end if plain syntax var declaration line?
-
-      // } to end subs
-      if (line[0] == '}') {
-        laterUtil::replace(line, "}", "endsub=}");
-        lineLen = strlen(line);
-      }//end if close sub brace?
-
-      // allow void calls to optionally have an empty parens:
-      laterUtil::replace(line, "()", "");
-
-      // handle ends:
-      if (laterUtil::startsWith(line, "end")) {
-        laterUtil::replace(line, "end sub", "endsub=}");
-        laterUtil::replace(line, "end if", "fi=end if");
-        laterUtil::replace(line, "end do", "loop=loop");
-        laterUtil::replace(line, "end switch", "end=end switch");
-      }//end if end
-
-      if (line[0] == '<' && line[1] == '?') {
-        isPrintBlock = 1;
-        if (line[2] == '=') {
-          line[2] = ' ';
-          isStaticPrintBlock = 1;
-        }
-        line[0] = '_';
-        line[1] = '=';
-        continue;
-      }
-
-      if (line[0] == '?' && line[1] == '>') {
-        isPrintBlock = 0;
-        line[0] = '_';
-        line[1] = '=';
-        isStaticPrintBlock = 0;
-        continue;
-      }
-
-      if (!isPrintBlock) autoEqualsInsert(line);
-      if (!isStaticPrintBlock) {
-        rangePtr = strchr(line, '$');
-        if (rangePtr) {
-          rangePtr--;
-          if (rangePtr[0] == '=' && isupper(rangePtr[2])) isConstant = true;
-          rangePtr++;
-          replaceVarNames(rangePtr, SCRIPT->index);
-
-          if (isConstant && strstr(line, "var=@")) {
-            SCRIPT->VARS[rangePtr[1] - 65] = 420420420;
-          }
-        }
-        // convert templates
-#ifndef LATER_DISABLE_OPTIMIZATIONS
-        embedTemplates(line, SCRIPT);
-#endif
-      }
-      lineLen = strlen(line);
-
-      ///////////////////////////////
-      // deduce command:
-
-      int cmdPos = laterUtil::indexOf(line, "=");
-      if (cmdPos < 0)cmdPos = 0;
-      strncpy(cmd, line, cmdPos);
-      cmd[cmdPos] = '\0';
-      char cmdChar = LATER_CMDS[cmd];
-
-      // cleanup value after command:
-      char * linePtr = line;
-      linePtr += cmdPos + 1;
-      if (!isPrintBlock) {
-        while (linePtr[0] == ' ')linePtr++;
-
-        if (linePtr[0] == '=') {
-          linePtr++;
-          while (linePtr[0] == ' ')linePtr++;
-        }
-
-      } else {
-        linePtr = line;
-        cmdChar = LATER_println;
-      }
-      lineLen = strlen(linePtr);
-
-      ///////////////////////////////////////
-      // FLAGS: set byte flag based on the value
-      // b2         b1      b1
-      // hasParens, hasVar, hasTemplate
-      byte flag = 0;
-
-      //////////  %templates% ? LSB
-      char * tempPtr = strchr(linePtr, '{'); // look for opening template expression
-      if (tempPtr && tempPtr[1] != ' ' && strchr(tempPtr + 1, '}') && !isStaticPrintBlock) flag += 1; // also has later close template delim
-      //////////  $vars ? 2s
-
-#ifndef LATER_DISABLE_OPTIMIZATIONS
-
-      if (cmdChar == LATER_if || cmdChar == LATER_do || cmdChar == LATER_iif ||  cmdChar == LATER_freeze ||
-          cmdChar == LATER_sleep ||  cmdChar == LATER_analogWrite ||  cmdChar == LATER_var  ) {
-        char sig = linePtr[lineLen - 1];
-        if (isdigit(sig) && isDigit(linePtr[lineLen - 2])) {
-
-          replaceEndingLiterals(linePtr,  SCRIPT);
-          lineLen = strlen(linePtr);
-        }
-      }
-
-      if (cmdChar == LATER_interval  ) {
-        char sig = linePtr[0];
-        if (isdigit(sig)) {
-
-          replaceStartingLiterals(linePtr,  SCRIPT);
-          lineLen = strlen(linePtr);
-        }
-      }
-#endif
-
-      // look for var usage, minding var commands themselves
-      if (cmdChar == LATER_var || cmdChar == LATER_static) { // look only after first equal for this
-
-        // remove space to the right of =
-        char * eqPtr = strchr(linePtr, '=');
-        char * assignText = eqPtr + 1;
-        if (assignText[0] == ' ') {
-          while (assignText[0] == ' ') assignText += 1; // = trimLeft(assignText);
-          strcpy(eqPtr + 1, assignText);
-          lineLen = strlen(linePtr);
-        }
-        /*
-                // clean up all multiple spaces, they are not needed. clean all space? is it ever needed?
-                char * ptrDblSpace = strstr(linePtr, "  ");
-                if (ptrDblSpace) {
-                  while (ptrDblSpace) {
-                    strcpy(ptrDblSpace, ptrDblSpace + 1);
-                    ptrDblSpace = strstr(linePtr, "  ");
-                  }
-                  lineLen = strlen(linePtr);
-                }
-        */
-        // try to move this somewhere it runs for more than just vars, but not if output...
-
-#ifndef LATER_DISABLE_OPTIMIZATIONS
-        if (strchr(linePtr, '(')) {
-          embedFunctions(strchr(linePtr, '='), SCRIPT);
-          lineLen = strlen(linePtr);
-        }
-#endif
-
-        // clean up all spaces they are not needed.
-        char * ptrSpace = strstr(eqPtr, " ");
-        if (ptrSpace) {
-          while (ptrSpace) {
-            strcpy(ptrSpace, ptrSpace + 1);
-            ptrSpace = strstr(eqPtr, " ");
-          }
-          lineLen = strlen(linePtr);
-        }
-        if (strpbrk (line, "*/-+")) {
-          laterUtil::replace(line, "+=", "=+");
-          laterUtil::replace(line, "-=", "=-");
-          laterUtil::replace(line, "*=", "=*");
-          laterUtil::replace(line, "/=", "=/");
-
-#ifndef LATER_DISABLE_OPTIMIZATIONS
-          if (strstr(line, "=+1")) lineData = 1;
-          if (strstr(line, "=-1")) lineData = 2;
-          if (strstr(line, "=+@") || strstr(line, "=+{#")) lineData = 3;
-          if (strstr(line, "=-@") || strstr(line, "=-{#")) lineData = 4;
-          if (strstr(line, "=/2")) lineData = 8;
-          if (strstr(line, "=*2")) lineData = 9;
-#endif
-          // remove space to the left of =
-          int eqPos = laterUtil::indexOf(linePtr, "=");
-          if (eqPos > 3) {
-            strcpy(linePtr + 3, strchr(linePtr, '='));
-            lineLen = strlen(linePtr);
-          }
-        }
-
-        if (strstr(linePtr, "_=@") || strstr(linePtr, "={#") ) lineData = 5;
-        if (strstr(linePtr, "=0")) lineData = 6;
-        if (strchr(strchr(linePtr, '='), '@')  && !lineData ) flag += 2;// vars after assign
-
-      } else {
-        if (strchr(linePtr, '@')) flag += 2;// vars
-      }
-
-      if (cmdChar == LATER_option) {
-        if (strstr(linePtr, "noget!") )SCRIPT->options.noget = true;
-      }
-      if (cmdChar == LATER_solid) {
-        if (strstr(linePtr, "0,0,0")) lineData = 1;
-        if (strstr(linePtr, "#000")) lineData = 1;
-      }
-
-      if (strchr(linePtr, '(') && strchr(linePtr, ')') && !isStaticPrintBlock ) flag += 4;
-      //////////  [x,y][arrays] ?  8s
-      if (strstr(linePtr, "][") && !isStaticPrintBlock ) flag += 8;
-
-#ifdef ESP8266HTTPClient_H_
-      //////////  &RESPONSE usage ?  32s
-      if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
-#endif
-
-#ifdef HTTPClient_H_
-      //////////  &RESPONSE usage ?  32s
-      if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
-#endif
-#ifndef LATER_DISABLE_OPTIMIZATIONS
-      if (0 && cmdChar == LATER_solid) {
-        unsigned long parsedColor =  laterUtil::parseColor(linePtr, getCurrent() );
-        unsigned long * VARS;
-
-        lineData = 0;
-        itoa(parsedColor, linePtr, 10);
-        char symb = getConstantNumber(linePtr, getCurrent()) + 65;
-
-        linePtr[0] = '@';
-        linePtr[1] = symb;
-        //  linePtr[2] = '_';
-        linePtr[2] = '\0';
-        lineLen = strlen(linePtr);
-      }
-#endif
-
-      ////////// output ?  16s - interpolate var and %templates% in code line itself?
-
-      if (isConstant) flag += 64;
-
-      if (cmdChar == LATER_log || cmdChar == LATER_switch || cmdChar == LATER_print || cmdChar == LATER_println || cmdChar == LATER_ping || cmdChar == LATER_timer || cmdChar == LATER_assert || cmdChar == LATER_run || Later.addons[cmdChar]   ) {
-        flag += 16;
-      } else { // don't need whitespace in any other command, right. asume and let's try iy
-        // collapse whitespace here
-
-        if ( (!isPrintBlock) && strchr(line, ' ') && (cmdChar != LATER_gosub) && (cmdChar != LATER_call) && (cmdChar != LATER_interval) && (cmdChar != LATER_flash) && (cmdChar != LATER_option) && (cmdChar != LATER_var) && (!strstr(linePtr, "][")) &&  (!Later.addons[cmdChar])  ) {
-
-          while (strchr(linePtr, ' ')) laterUtil::replace(linePtr, " ", "");
-          lineLen = strlen(linePtr);
-        }
-      }//end if non-output command?
-      // populate script line object with accumulated data:
-      LATER_LINE * sLine = &SCRIPT->lines[lineCount];
-      sLine->len = lineLen; // how many chars is line?
-      sLine->start = (outptr - cleanptr); // first line byte in clean buffer
-      sLine->stop  = (outptr - cleanptr) + lineLen;// last line byte in clean buffer
-      sLine->cmd = cmdChar;
-      sLine->data = lineData;
-      sLine->flags = flag;
-
-      // copy to clean:
-      strncpy (outptr, linePtr, lineLen );
-      outptr[lineLen] = '\n';
-      outptr += lineLen + 1;
-#ifdef LATER_LINE_PROFILING
-      sLine->profile.parse = micros() - profileStart;
-#endif
-      if (lineCount++ > LATER_LINE_LIMIT) break; // failsafe here, remove for prod?
-    }//end if line not empty?
-  } // wend endpos > 0
-
-  outptr[0] = '\0';
-
-  // move clean buffer to script object
-  strcpy(SCRIPT->program, clean);
-
-  // populate SCRIPT object with parsed program meta and data:
-  SCRIPT->lineCount = lineCount ;
-  SCRIPT->forTop[0] = -1;
-  SCRIPT->runs = 0;
-
-  buildExitPoints(SCRIPT);
-  SCRIPT->parseTime = micros() - st;
-  return 1;
-}//end loadScript()
 void removeDoubleLines(char * buff) {
   // replace double lines with single, repeat if needed
   char * start = strstr(buff, "\n\n");
@@ -2645,28 +2147,25 @@ void removeMultiLineComments(char * buff) { // remove multi line comments by tur
   }//end if multi-line comment?
 }
 void replaceEndingLiterals(char * line, LATER_ENVIRON * s) {
-
-  //
   unsigned int len = strlen(line);
-  char * digitStart = line + (len - 1);
-  while (isDigit(digitStart[0]) ) {
-    digitStart--;
-  }
+  char sig = line[len - 1];
+  if (isdigit(sig) && isDigit(   line[len - 2]  )) { // at least  2 digits, proceed
 
-  digitStart++;
-  len = strlen(digitStart);
+    char * digitStart = line + (len - 1);
+    while (isDigit(digitStart[0]) ) digitStart--;
+    digitStart++;
+    len = strlen(digitStart);
 
-  if (len > 2) {
-    char symb = getConstantNumber(digitStart, s) + 65;
-    memset(digitStart, ' ', len );
-    digitStart[0] = '@';
-    digitStart[1] = symb;
-    //digitStart[2] = '_';
-  }
+    if (len > 2) {
+      char symb = getConstantNumber(digitStart, s) + 65;
+      memset(digitStart, ' ', len );
+      digitStart[0] = '@';
+      digitStart[1] = symb;
+    }
 
-  // check if literal here, if so, also replace value with var symbol
-  // find assigned value,
-}
+  }//end if sig match?
+
+}// end replaceEndingLiterals()
 
 void replaceStartingLiterals(char * line, LATER_ENVIRON * s) {
 
@@ -2674,7 +2173,7 @@ void replaceStartingLiterals(char * line, LATER_ENVIRON * s) {
   // check if literal here, if so, also replace value with var symbol
   // find assigned value,
 
-}
+}//end replaceStartingLiterals()
 
 void replaceVarNames(char * line, int scriptIndex) { // turns $fancyName into @a, @b, etc...
   char * varPos = line[0] == '$' ? line : strchr(line, '$');
@@ -3143,13 +2642,15 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
   return false;
 }//end processArray()
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
-  unsigned long st = micros();
-
   char * ptr = strchr(s, '(');
   if (!ptr) return 0;
+#ifdef HIGH_RES_TIMING
+  unsigned long st = micros();
+#endif
 
   char * ptrOrig = ptr + 0;
   ptr++; // skip past open paren
+
   unsigned long * VARS = script->VARS;
   bool hasFunc = 0;
   char * ptrCmd = ptr;
@@ -3158,14 +2659,19 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
   char * leftPadPtr = s;
   while (leftPadPtr[0] == ' ')leftPadPtr++;
   int prefixLen = (ptr - leftPadPtr);
+
   if ( prefixLen > 2 ) { // && isupper(s[prefixLen - 2])  // prefix content long enough to be a command?
     ptrCmd = laterUtil::copyUntilChar(leftPadPtr, '(');
+
+    if (ptrCmd[0] == '@') ptrCmd += 3;
 #ifndef LATER_DISABLE_OPTIMIZATIONS
     if (ptrCmd[0] == '#') { //function shortcut?
       funcLocalSlot = ptrCmd[1];
       hasFunc = true;
     } else { // function name
 #endif
+
+      if (ptrCmd[0] == '@') ptrCmd += 2;
       for (unsigned int i = 0, mx = strlen(ptrCmd); i < mx; i++) {
         if (!isupper(ptrCmd[0])) { // && (ptrCmd[i] != '.') ) {
           ptrCmd++;
@@ -3182,24 +2688,13 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
     if (inArr && inArr[1] == '[') DMA = -1;
   }
 
-  //////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////
-  unsigned long at = micros();
-
   while (ptr[0] == ' ') ptr++; // trim left
   char * rp = strchr(ptr, ')');
   if (!rp) return 0;
 
   char OVERRIDE = 0;
   char ops[8]; // list of match operators to use
-
   const char * MATCH_CHARS = hasFunc ? ",)" : (strchr(ptr, '.') ? "." : ")+*-/%<>=!&?:|");
-
-  //MATCH_CHARS[0] = '.'; // use dot shortcuts?
-  //MATCH_CHARS[1] = '\0';
-  //}
-
   static unsigned long nums[8] = {0, 0, 0, 0, 0, 0, 0, 0}; // numbers to be mathed upon
   unsigned int i = 0,
                len = rp - ptr, //strlen(ptr),
@@ -3214,7 +2709,6 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
     }
   }
 
-  unsigned long xt = micros();////////////////////////////////////////////////////////////////////////////////////////
   unsigned long arity = 1;//         ","
 
   while (pos) {//put num/term into stack, slide string, try to grab next
@@ -3235,24 +2729,24 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
   }//wend pos
 
   unsigned long varCache = nums[0], tempInt;
-  //////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////
-  unsigned long bt = micros();
   /*
-    Serial.println("varCache\t:"+String( varCache));
-    Serial.println("prefixLen\t:"+String( prefixLen));
-    Serial.println("hasFunc\t:"+String( hasFunc));
-    Serial.println("i\t:"+String( i));
-    Serial.println("arity\t:"+String( arity));
+    Serial.println("varCache\t:" + String( varCache));
+    Serial.println("prefixLen\t:" + String( prefixLen));
+    Serial.println("hasFunc\t:" + String( hasFunc));
+    Serial.println("i\t:" + String( i));
+    Serial.println("arity\t:" + String( arity));
 
-    Serial.println("ptrCmd\t:"+String( ptrCmd));
-    Serial.println("hasFunc\t:"+String( hasFunc));
-    Serial.println("funcLocalSlot\t:"+String( funcLocalSlot ));
-    Serial.println("nums.0\t:"+String( nums[0]));
-    Serial.println("nums.1\t:"+String( nums[1]));
-    Serial.println("nums.2\t:"+String( nums[2]));
+    Serial.println("ptrCmd\t:" + String( ptrCmd));
+    Serial.println("leftPadPtr\t:" + String( leftPadPtr));
+
+    Serial.println("hasFunc\t:" + String( hasFunc));
+    Serial.println("funcLocalSlot\t:" + String( funcLocalSlot ));
+    Serial.println("nums.0\t:" + String( nums[0]));
+    Serial.println("nums.1\t:" + String( nums[1]));
+    Serial.println("nums.2\t:" + String( nums[2]));
+
   */
+
   if (hasFunc) { // has function
     varCache = 666; // make parse errors stick out with mark of the beast
 #ifndef LATER_DISABLE_OPTIMIZATIONS
@@ -3271,7 +2765,6 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
       varCache = 404;
     }//end if cb?
   } else { // calc
-
 
     for (unsigned int ii = 1; ii < i; ii++) {
       tempInt = nums[ii];
@@ -3773,189 +3266,1566 @@ void outputPaddedNumber(unsigned long value, char * suffix, int width) {
   pad[2] = '\0';
   LATER_SERVER_NAME.sendContent(pad);
 } // end outputPaddedNumber()
-void handleDump() {
 
-  LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
-  if (!s) s = getCurrent();
-  LATER_LINE * l;
-  char linebuff[LATER_LINE_BUFFER];
-  char respbuff[20];
-  char * lp;
-  char dbg[88];
-  char flagList[] = "CHOAEVT";
+#endif
+void finishRun(LATER_ENVIRON * s) {
+  s->runTime = micros() -  s->startedAt;
+  s->duration += s->runTime;
+  s->resumeLineNumber = s->startLineNumber;
+  s->storeDirty = 0;
+  s->calledFromWeb = 0;
+  if (s->interval > 0) {
+    s->resumeMillis = (s->interval - 1) + (millis() - ( s->runTime / 1000));
+  } else {
+    s->resumeMillis = 0;
+  }
+#ifdef HIGH_RES_TIMING
+  HR_PERF.report();
+#endif
+
+}//end finishRun()
+//
+
+#line 1 "docs.ino"
+//@TAKE
+
+#line 1 "http.ino"
+
+File fsUploadFile;
+byte mac[6];  // the bytes of the station MAC address
+const char *const RST_REASONS[] = {
+  "REASON_DEFAULT_RST",
+  "REASON_WDT_RST",
+  "REASON_EXCEPTION_RST",
+  "REASON_SOFT_WDT_RST",
+  "REASON_SOFT_RESTART",
+  "REASON_DEEP_SLEEP_AWAKE",
+  "REASON_EXT_SYS_RST"
+};
+const char *const FLASH_SIZE_MAP_NAMES[] = {
+  "FLASH_SIZE_4M_MAP_256_256",
+  "FLASH_SIZE_2M",
+  "FLASH_SIZE_8M_MAP_512_512",
+  "FLASH_SIZE_16M_MAP_512_512",
+  "FLASH_SIZE_32M_MAP_512_512",
+  "FLASH_SIZE_16M_MAP_1024_1024",
+  "FLASH_SIZE_32M_MAP_1024_1024"
+};
+////////////////////////////////////////////
+#ifdef ESP8266WEBSERVER_H
+std::map<std::string, std::string> PATHS;
+std::map<std::string, std::string> BLURBS;
+
+void handleGenericHttpRun(String fn) {
+  const char *empty = "";
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+
+  LATER_ENVIRON *s = Later.load((char *)fn.c_str());  //dd666, move this somewhere better:
+  if (!s) {
+    LATER_SERVER_NAME.send(504, LATER_PLAIN, "504 - refused to load");
+    LATER_SERVER_NAME.sendContent("");
+    return;
+  }
+
+  if (!s->options.noget) {
+    // load vars from url into script enviroment:
+    String key, value, banned = ",$name,$content-type";
+    for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
+      key = "$" + LATER_SERVER_NAME.argName(i);
+      value = LATER_SERVER_NAME.arg(i);
+      if (banned.indexOf(',' + key + ',') > -1) continue;
+      char slot = getVarNameNumber((char *)key.c_str(), s->index);
+      s->VARS[(int)slot] = value.toInt();
+    }
+  }
+  LATER_SERVER_NAME.send(200, (const char *)s->contentType, empty);  // start response
+  s->calledFromWeb = 1;
+  Later.run((char *)fn.c_str());         // execute em!
+  LATER_SERVER_NAME.sendContent(empty);  // finish response
+  /*
+      if (LATER_SERVER_NAME.hasArg("persist")) return;
+    if (s->options.persist) return;
+
+    if (  !strchr(fnp, '~') ) {
+      Later.unload(fnp);
+    } else {
+      s->options.persist = true;
+    }
+  */
+}  //end handleGenericHttpRun();
+
+void handleAPI() {  // break in here and look for default.bat or index.bat
+  String fn = "/index.bat";
+  if (SPIFFS.exists(fn) && !LATER_SERVER_NAME.hasArg("default")) {
+    handleGenericHttpRun(fn);
+    return;
+  }  //end if bat file found?
+
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+
+  char TAGLINE[25] = "Later";
+
+#ifdef LATER_PROJECT
+  strcpy(TAGLINE, LATER_PROJECT);
+#endif
+  LATER_SERVER_NAME.send(200, "text/html", F("<html><body><title>"));
+
+  LATER_SERVER_NAME.sendContent(TAGLINE);
+
+  LATER_SERVER_NAME.sendContent(F("</title><style>*{font: 26px monospace;background:#222; color: #ccc; }a{text-decoration:none;color:#77a;}li>a:first-child:visited{color: #aaf;font-weight:bold;}li{list-style:none;padding-bottom: 0.5em;}small{font-size: 80%;white-space:pre; color:#777;}li>a:first-child{width: 7em;display: inline-block;}li:first-child small,li:first-child a{color:#fff}aside{font-size: 20px;opacity:0.8;}h1{font-size: 32px;}</style><h1>"));
+
+  LATER_SERVER_NAME.sendContent(TAGLINE);
+
+  LATER_SERVER_NAME.sendContent(F("</h1><big><big><ul><li>\n<a href=#>Endpoint </a> <small> Kind  Type  Params/Description</small></b>\n<li><a href=/autoexec.bat>/autoexec.bat</a> <small> API TXT View startup script</small>\n<li><a href=/config/>/config</a> <small> UI  HTML  Config options interface</small>\n"));
+  delay(5);
+
+  char line[64];
+  //char blurb[160];
+  for (const auto &x : PATHS) {
+
+    Serial.print(x.first.c_str());
+    Serial.print(" - ");
+
+    int len = strlen(BLURBS[x.first.c_str()].c_str()) - 1;
+    strncpy(TEMP_BUFFER, BLURBS[x.first.c_str()].c_str(), len);
+    TEMP_BUFFER[len] = '\0';
+    if (strlen(TEMP_BUFFER) < 5) strcpy(TEMP_BUFFER, "missin");
+    //TEMP_BUFFER = "teeee";
+
+
+    delay(1);
+
+    LATER_SERVER_NAME.sendContent(sprintf(line, "<li><a href=%s>%s</a> ", x.first.c_str(), x.first.c_str()) ? line : line);
+    LATER_SERVER_NAME.sendContent(" <small> ");
+    LATER_SERVER_NAME.sendContent(TEMP_BUFFER + 1);
+    LATER_SERVER_NAME.sendContent("</small>\n");
+  }
+  delay(5);
+
+  LATER_SERVER_NAME.sendContent("\n<li><a href=/update>/update</a> <small> UI HTML  OTA update interface</small>\n");
+
+  LATER_SERVER_NAME.sendContent("<br><br><aside>Built on ");
+  LATER_SERVER_NAME.sendContent(__DATE__);
+  LATER_SERVER_NAME.sendContent(" for ");
+
+#ifdef ARDUINO_BOARD
+  LATER_SERVER_NAME.sendContent(ARDUINO_BOARD);
+#else
+  LATER_SERVER_NAME.sendContent("Unknown Board");
+#endif
+  LATER_SERVER_NAME.sendContent(" w/ ");
+
+#ifdef ESP8266
+  itoa(ESP.getFlashChipRealSize() / 1024, line, 10);
+#else
+  itoa(ESP.getFlashChipSize() / 1024, line, 10);
+#endif
+
+  LATER_SERVER_NAME.sendContent(line);
+  LATER_SERVER_NAME.sendContent("k flash ");
+
+  LATER_SERVER_NAME.sendContent(" as ");
+#ifdef LATER_PROJECT
+  LATER_SERVER_NAME.sendContent(LATER_SKETCH);  //manual name
+#else
+#ifdef ESP8266
+  LATER_SERVER_NAME.sendContent(WiFi.hostname());  //esp32
+#else
+  LATER_SERVER_NAME.sendContent(WiFi.getHostname());  //esp32
+#endif
+#endif
+
+  LATER_SERVER_NAME.sendContent("<br>");
+  LATER_SERVER_NAME.sendContent(WiFi.macAddress());
+
+  LATER_SERVER_NAME.sendContent(" at ");
+  LATER_SERVER_NAME.sendContent(WiFi.localIP().toString());
+  LATER_SERVER_NAME.sendContent("</aside>");
+  LATER_SERVER_NAME.sendContent(F(" <form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body></html>"));
+  LATER_SERVER_NAME.sendContent("");
+}
+
+void handleDelete() {
+  String fn = LATER_SERVER_NAME.arg("name");
+
+  if (!LATER_SERVER_NAME.hasArg("name")) {
+    LATER_SERVER_NAME.send(404, "text/json", F("false"));
+    return;
+  }
+
+  if (fn[0] != '/') fn = "/" + fn;  // optionalize preceding slash
+
+  if (SPIFFS.exists(fn)) {
+    SPIFFS.remove(fn);
+    LATER_SERVER_NAME.send(200, "text/json", F("true"));
+    return;
+  }  //end if bat file found?
+
+  // should not make it this far, file not found:
+  LATER_SERVER_NAME.send(402, "text/json", F("false"));
+}
+
+void (*resetFunc)(void) = 0;  //declare reset function at address 0
+
+void handleReboot() {
+  String message = F("<body><h1>Rebooting. Allowing 7 seconds.</h1> <progress></progress> <script> setTimeout(function(){ location.href= localStorage.dest || '/';  },7300);</script></body> ");
+  LATER_SERVER_NAME.send(200, "text/html", message);
+  LATER_SERVER_NAME.close();
+  delay(250);
+  yield();
+  resetFunc();
+}
+void handleResume() {
+
+  char resp[10] = "false";
+  bool status = false;
+  const char *fn = LATER_SERVER_NAME.arg("name").c_str();
+  status = Later.resume(fn);
+  if (status) strcpy(resp, "true");
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/plain", resp);
+}
+void handleSuspend() {
+
+  char resp[10] = "false";
+  bool status = false;
+
+  unsigned int ms = LATER_SERVER_NAME.arg("ms").toInt();
+  const char *fn = LATER_SERVER_NAME.arg("name").c_str();
+  if (fn[0] == '/') status = Later.suspend(fn, ms);
+  if (status) strcpy(resp, "true");
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/plain", resp);
+}
+#ifdef ESP32
+const char *serverIndex =
+  "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
+  "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
+  "<input type='file' name='update'>"
+  "<input type='submit' value='Update'>"
+  "</form>"
+  "<div id='prg'>progress: 0%</div>"
+  "<script>"
+  "$('form').submit(function(e){"
+  "e.preventDefault();"
+  "var form = $('#upload_form')[0];"
+  "var data = new FormData(form);"
+  " $.ajax({"
+  "url: '/update',"
+  "type: 'POST',"
+  "data: data,"
+  "contentType: false,"
+  "processData:false,"
+  "xhr: function() {"
+  "var xhr = new window.XMLHttpRequest();"
+  "xhr.upload.addEventListener('progress', function(evt) {"
+  "if (evt.lengthComputable) {"
+  "var per = evt.loaded / evt.total;"
+  "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
+  "}"
+  "}, false);"
+  "return xhr;"
+  "},"
+  "success:function(d, s) {"
+  "console.log('success!')"
+  "},"
+  "error: function (a, b, c) {"
+  "}"
+  "});"
+  "});"
+  "</script>";
+
+#endif
+void bindServerMethods() {
+#ifdef ESP32
+  LATER_SERVER_NAME.on("/update", HTTP_GET, []() {
+    LATER_SERVER_NAME.sendHeader("Connection", "close");
+    LATER_SERVER_NAME.send(200, "text/html", serverIndex);
+  });
+  /*handling uploading firmware file */
+  LATER_SERVER_NAME.on(
+  "/update", HTTP_POST, []() {
+    LATER_SERVER_NAME.sendHeader("Connection", "close");
+    LATER_SERVER_NAME.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+    ESP.restart();
+  },
+  []() {
+    HTTPUpload &upload = LATER_SERVER_NAME.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+      Serial.printf("Update: %s\n", upload.filename.c_str());
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {  //start with max available size
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      /* flashing firmware to ESP*/
+      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_END) {
+      if (Update.end(true)) {  //true to set the size to the current progress
+        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+      } else {
+        Update.printError(Serial);
+      }
+    }
+  });
+
+#endif
+  LATER_SERVER_NAME.on("/", handleAPI);  // this style of sub won't be listed
+  // subscript public GET endpoints:
+  //@TAKE
+
+  // subscribe public GET endpoints:
+  SUB_PATH(run, handleRun, "API  TXT @name Runs a script by filename");
+  //@TAKE
+  SUB_PATH(scripts, handleScripts, "API  JSON  Details of running scripts");
+  SUB_PATH(log, handleLog, "API  TXT View logged messages. See <a target=_blank href=https://github.com/rndme/later/blob/master/docs/api.md#log>docs</a> for GET options. ");
+  SUB_PATH(dir, handleFileList, "API JSON  Lists stored files w/ details");
+
+  SUB_PATH(resume, handleResume, "API JSON  @name Resumes a suspended script file by name. ");
+  SUB_PATH(suspend, handleSuspend, "API JSON  @name @ms Suspends and unloads a script file by name. ");
+
+  SUB_PATH(ls, handleLS, "UI HTML  File manager interface - allows deletes and uploads");
+  SUB_PATH(delete, handleDelete, "API  JSON  @name Deletes a script by filename");
+  SUB_PATH(reboot, handleReboot, "API  HTML  Reboots the ESP");
+  SUB_PATH(editor, handleEditor, "UI HTML  Script editor interface");
+
+
+  SUB_PATH(store, handleStore, "API TSV Stored vars. See <a target=_blank href=https://github.com/rndme/later/blob/master/docs/api.md#store>docs</a> for GET options. ");
+  SUB_PATH(unload, handleUnload, "API  JSON  @name Unloads a running Script by filename");
+  SUB_PATH(test, handleDump, "API  TXT @name Get debug information of a running script by script filename");
+
+  SUB_PATH(eval, handleEval, "API  TXT @name Runs a Script by filename");
+  SUB_PATH(help, handleCommandList, "API TXT List available commands and functions and templates");
+
+  LATER_SERVER_NAME.on(
+  "/upload", HTTP_POST, []() {
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, "ok");
+  },
+  handleFileUpload);
+  LATER_SERVER_NAME.onNotFound([]() {
+    String fn = LATER_SERVER_NAME.uri() + ".bat";
+    if (SPIFFS.exists(fn)) {
+      handleGenericHttpRun(fn);
+      return;
+    }  //end if bat file found?
+    if (!handleFileRead(LATER_SERVER_NAME.uri()))
+      LATER_SERVER_NAME.send(404, LATER_PLAIN, "FileNotFound: " + LATER_SERVER_NAME.uri());
+  });
+}  //end bindServerMethods()
+#ifdef ESP8266
+
+#else
+
+#endif
+void handleLS() {  // replace with non-string non-crap:
+
+  String path = LATER_SERVER_NAME.arg("dir");
+  if (path == "") path = "/";
+#ifdef ESP8266
+  Dir dir = SPIFFS.openDir(path);
+#else
+  File dir = SPIFFS.open(path);
+#endif
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/html", "");
+
+  LATER_SERVER_NAME.sendContent(F("<html><head><title>"));
+  LATER_SERVER_NAME.sendContent(path);
+  LATER_SERVER_NAME.sendContent(F("</title><style>@import 'https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cyborg/bootstrap.min.css';\n  a,b,small { display: inline-block; min-width: 11em;}"));
+  LATER_SERVER_NAME.sendContent(F(" ol li { margin-top: 0.25em; font-size: 125%; }</style></title></head><body class=container> <h1>"));
+  LATER_SERVER_NAME.sendContent(path);
+  LATER_SERVER_NAME.sendContent(F("</h1> <ol id=list></ol><script>["));
+
+  File entry;
+
+#ifdef ESP8266
+  while (dir.next()) {
+    entry = dir.openFile("r");
+#else
+  entry = dir.openNextFile();
+  while (entry) {
+#endif
+
+    if (strlen(entry.name()) > 2) {
+      bool isDir = false;
+      LATER_SERVER_NAME.sendContent(",\n{\"type\":\"");
+      LATER_SERVER_NAME.sendContent((isDir) ? "dir" : "file");
+      LATER_SERVER_NAME.sendContent("\",\"name\":\"");
+#ifdef ESP8266
+      LATER_SERVER_NAME.sendContent(entry.name() + 1);
+#else
+      LATER_SERVER_NAME.sendContent(entry.name());  // Ignore '/' prefix
+#endif
+#ifdef ESP8266
+      LATER_SERVER_NAME.sendContent("\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.fileSize()));
+#endif
+#ifdef ESP32
+      LATER_SERVER_NAME.sendContent("\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.size()));
+#endif
+
+      LATER_SERVER_NAME.sendContent("\",\"mime\":\"");
+      LATER_SERVER_NAME.sendContent(getContentType(entry.name()));
+      LATER_SERVER_NAME.sendContent("\"}");
+      entry.close();
+
+    }  //end if name long?
+
+#ifdef ESP32
+    entry = dir.openNextFile();
+#endif
+  }
+
+  LATER_SERVER_NAME.sendContent(F("].filter(Boolean).map(function(a){list.appendChild(document.createElement('li')).innerHTML='<input type=button onclick=\"doDel(nextElementSibling.href)\" value=X > '+a.name.link('/'+a.name)+' '+'run'.link('/run/?name='+encodeURIComponent(a.name))+'  ' +'edit'.link('/editor/#'+a.name)+' ' + a.size.bold()+' ' + a.mime.small(); });function doDel(fn){if(!confirm('ERASING FILE: '+fn+'\\n\\nThis CANNOT be undone !!!'))return; var path = '/' + fn.split('/').pop(); fetch('/delete/?name='+encodeURIComponent(path)).then(function(){location.reload();});return false;}</script>"));
+  LATER_SERVER_NAME.sendContent(F("<hr><form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload Embeded File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body>"));
+  LATER_SERVER_NAME.sendContent("");
+}
+//25968 > 26268 > 26772
+void handleEditor() {
+
+
+  // move this to a multipart response, print most of it, then print define path to script, then print html page closer/footer.
+
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/html", "");
+
+  LATER_SERVER_NAME.sendContent(F("<!doctype html><html><head>\n    <meta charset=\"ISO-8859-1\">    <title>later editor</title>\n<link rel=icon href=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAAcSURBVDhPY/hr+fc/JXjUgFEDQHjUgGFgwN//AJBjMi73juieAAAAAElFTkSuQmCC> \n<link rel=stylesheet type=text/css href='//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css' />\n<style>\tbody {background:#000;color:#888;padding-top:5px; } #files{ width: 7em; }  #val {overflow: scroll;width: 99%; height: 85vh; font: 24px monospace; } div#stats {position: fixed;top: 1em;right: 3em;width: 40%;background: #111;padding: 1em;overflow: auto;height: 90vh;border: 1px solid #888;font: 20px monospace;}\n</style>\n</head>\n<body class=container-fixed><a href='/docs/'>Home</a>\n   <select id=files onchange='loadme(value)'>\n  <option value=\"\">Load File...<option>\n  </select>  &nbsp; \n <label>Filename: \n  <input type=text id=inpname size=32>\n</label>\n    &nbsp;   &nbsp; \n   <input type=button class='btn btn-success btn-sm' value=Save id=btnsave onclick='saveIt(inpname.value, val.value)'>\n&nbsp;   &nbsp; \n   <input type=button class='btn btn-warning btn-sm' value=Run id=btnrun onclick='runme(inpname.value)'> \n&nbsp;   &nbsp; \n   <input type=button class='btn btn-info btn-sm' value=Test id=btntest onclick='test()'> \n&nbsp;   &nbsp; <label> auto-test <input type=checkbox id=chkauto></label>\n\n&nbsp;   &nbsp;\n&nbsp;   &nbsp; <label> URL Params <input type=input id=inpqs value=\"&reload=true\" size=24></label>\n\n   <input type=button class='btn btn-xs btn-info pull-right btn-sm' value=\"?\" id=btnhelp onclick='showHelp()'> \n\n<br> \n<div id=edwrap>\n<textarea id=val rows=40 cols=90></textarea></div>\n\n<div id=stats></div>\n<form method='POST' action='/update' target=_blank enctype='multipart/form-data' onsubmit='setTimeout(function(){file11.value=null}, 25000)' >\n                  <input id=file11 type='file' accept='application/*' name='update'>\n                  <input type='submit' value='Update'>\n               </form>\n\n\n<script>\nvar url = '/';\n\nfunction saveIt(name, value) {\n\tif(!name) return alert('filename blank, try again');\n\tvar dbs = document.body.style,\n\t\tfile = new File([value], name, {\n\t\t\ttype: \"text/plain\",\n\t\t}),\n\t\tform = new FormData();\n\tdbs.opacity = 0.5;\n\tform.append('file', file, name);\n\tfetch(url + 'upload', {\n\t\tbody: form,\n\t\tmethod: 'POST',\n\t\tmode: 'cors'\n\t}).then(x => {\n\t\tdbs.opacity = 1;\n\t\tdir();\n\t\tlocation.hash = name;\n\t\tdocument.title=\"@\"+name;\n\t});\n}\n\nfunction dir() {\n\tfetch(url + 'dir').then(x => x.json()).then(x => {\n\t\tfiles.options.length = 1;\n\t\tx.sort(function(a,b){return a.name>b.name?1:-1;}).map(function(a, i) {\n\t\t\tfiles.appendChild(new Option(a.name + \" : \" + a.size, a.name));\n\t\t});\n\t})\n}\n\n \nfunction test() {\n\tfetch(url + 'test').then(x => x.text()).then(x=>{\n\t\t stats.innerText= x;\t\n\t});\n}\n\n\nfunction loadme(file) {\n        var dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + file).then(x => x.text()).then(x => {\n\t\tval.value = x;\n\t\tinpname.value = file;\n\t\tval.focus();\n\t\tdbs.opacity = 1;\n\t\tlocation.hash = file;\n\t\tdocument.title=\"@\"+file;\n\t});\n\n}\nvar cache;\nfunction showHelp(){\n  var done = x=>{\n   var s = x.split(/<\\/?pre/i)[1].slice(1).trim();\n   cache = x;\n   stats.innerText = s;\n  };\n  if(cache) return done(cache);\n  fetch(\"/docs/\").then(x=>x.text()).then(done);\n}\n\nfunction runme(file) {\n\tif(!file) return alert(\"no file chosen\");\n\tvar dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + \"run?name=\" + encodeURIComponent(file) + inpqs.value ).then(x => x.text()).then(x => {\n\t\tval.focus();stats.title=x;\n\t\tdbs.opacity = 1;\n\t\tif(chkauto.checked) setTimeout(test, 500);\n\t});\n}\nif(location.hash) loadme(location.hash.slice(1));\nsetTimeout(dir, 140);\n</script>"));
+
+  LATER_SERVER_NAME.sendContent("<script src=");
+  LATER_SERVER_NAME.sendContent(LATER_EDITOR_URL);
+  LATER_SERVER_NAME.sendContent("></script>");
+  LATER_SERVER_NAME.sendContent("\n</body>\n</html>");
+  LATER_SERVER_NAME.sendContent("");
+}  //end handle editor
+String getContentType(String filename) {
+  if (LATER_SERVER_NAME.hasArg("download")) return "application/octet-stream";
+  else if (filename.endsWith(".html")) return "text/html";
+  else if (filename.endsWith(".css")) return "text/css";
+  else if (filename.endsWith(".js")) return "application/javascript";
+  else if (filename.endsWith(".png")) return "image/png";
+  else if (filename.endsWith(".gif")) return "image/gif";
+  else if (filename.endsWith(".jpg")) return "image/jpeg";
+  else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".mp3")) return "audio/mp3";
+  else if (filename.endsWith(".json")) return "application/json";
+  return LATER_PLAIN;
+}
+
+bool handleFileRead(String path) {
+  if (path.endsWith("/")) path += "index.htm";
+  String contentType = getContentType(path);
+  String pathWithGz = path + ".gz";
+  if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {
+    if (SPIFFS.exists(pathWithGz))
+      path += ".gz";
+    File file = SPIFFS.open(path, "r");
+    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+    LATER_SERVER_NAME.streamFile(file, contentType);
+    file.close();
+    return true;
+  }
+  return false;
+}
+/*
+
+  void handleStatus() {
+  String message = "{\n\n";
+  message.reserve(512);
+
+  const rst_info * resetInfo = system_get_rst_info();
+
+  #ifndef NO_WIFI
+  FSInfo fso_info;
+  SPIFFS.info(fso_info);
+
+  message += " \"timestamp\":\t\"" + String(millis()) + "." + String(micros()) + "\",\n";
+  message += " \"systime\":\t" + String(system_get_time()) + ",\n";
+  message += " \"cycles\":\t" + String(  ESP.getCycleCount()) + ",\n";
+
+  message += " \"rssi\":\t" + String(  WiFi.RSSI() ) + ",\n";
+
+  message += " \"analog\":\t" + String(analogRead(A0)) + ",\n";
+  message += " \"reset\":\t\"" + String(RST_REASONS[resetInfo->reason]) + "\",\n";
+  message += " \"chipid\":\t\"" + String(system_get_chip_id(), HEX) + "\",\n";
+  message += " \"dev_mac\":\t\"" + String(mac[0], HEX) + ":" + String(mac[1], HEX) + ":" + String(mac[2], HEX) + ":" + String(mac[3], HEX) + ":" + String(mac[4], HEX) + ":" + String(mac[5], HEX) + "\",\n";
+  message += " \"dev_ip\":\t\"" + String( WiFi.localIP().toString()) + "\",\n";
+  message += " \"req_uri\":\t\"" + String(LATER_SERVER_NAME.uri()) + "\",\n";
+  message += " \"built\":\t\"" + String( __DATE__) + " " + String(__TIME__) + "\",\n";
+  message += " \"flash\":\t\"" + String(FLASH_SIZE_MAP_NAMES[system_get_flash_size_map()]) + "\",\n";
+
+  message += " \"flash_phy\":\t" + String(  ESP.getFlashChipRealSize()) + ",\n";
+  message += " \"flash_ide\":\t" + String(  ESP.getFlashChipSize()) + ",\n";
+  message += " \"flash_usd\":\t" + String(  fso_info.usedBytes ) + ",\n";
+  message += " \"flash_tot\":\t" + String(  fso_info.totalBytes ) + ",\n";
+
+  message += " \"board\":\t\"" + String(ARDUINO_BOARD) + "\",\n";
+  message += " \"cpumhz\":\t" + String(system_get_cpu_freq()) + ",\n";
+  message += " \"memkb\":\t" + String(system_get_free_heap_size()) + "\n";
+  message += "\n}";
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "application/json", message);
+  #endif
+  }
+*/
+void handleFileUpload() {
+  static String filename;
+
+
+  HTTPUpload &upload = LATER_SERVER_NAME.upload();
+  if (upload.status == UPLOAD_FILE_START) {
+    filename = upload.filename;
+    if (!filename.startsWith("/")) filename = "/" + filename;
+#ifdef DEBUG_WEBSERVER
+    Serial.printf("handleFileUpload Name: %s\n", filename.c_str());
+#endif  // DEBUG_WEBSERVER
+    fsUploadFile = SPIFFS.open(filename, "w");
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (fsUploadFile)
+      fsUploadFile.write(upload.buf, upload.currentSize);
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (fsUploadFile) {
+      fsUploadFile.close();
+      if ((!LATER_SERVER_NAME.hasArg("reload")) && Later.getByName((char *)filename.c_str())) Later.unload((char *)filename.c_str());
+      if ((LATER_SERVER_NAME.hasArg("reload")) && Later.getByName((char *)filename.c_str())) Later.run((char *)filename.c_str());
+
+      // handleSetFileLastFileName = ""; // bust any batch file caches
+      LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+      LATER_SERVER_NAME.send(200, "text/html", F("<html><title>Done Uploading...</title><h1>Done</h1><script>location.replace('/ls');</script></html>"));
+    }
+#ifdef DEBUG_WEBSERVER
+    Serial.printf(F("handleFileUpload Size: %u\n"), upload.totalSize);
+#endif  // DEBUG_WEBSERVER
+  }
+}  //end handleFileUpload()
+void handleFileList() {
+
+  String path = LATER_SERVER_NAME.arg("dir");
+  if (path == "") path = "/";
+
+#ifdef ESP8266
+  Dir dir = SPIFFS.openDir(path);
+#else
+  File dir = SPIFFS.open(path);
+#endif
+
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/json", "[{}");
+
+  File entry;
+
+#ifdef ESP8266
+  while (dir.next()) {
+    entry = dir.openFile("r");
+#else
+  entry = dir.openNextFile();
+  while (entry) {
+#endif
+
+    if (strlen(entry.name()) > 2) {
+
+      bool isDir = false;
+      LATER_SERVER_NAME.sendContent(",\n{\"type\":\"");
+      LATER_SERVER_NAME.sendContent((isDir) ? "dir" : "file");
+      LATER_SERVER_NAME.sendContent("\",\"name\":\"");
+#ifdef ESP8266
+      LATER_SERVER_NAME.sendContent(entry.name() + 1);
+#else
+      LATER_SERVER_NAME.sendContent(entry.name());  // Ignore '/' prefix
+#endif
+#ifdef ESP8266
+      LATER_SERVER_NAME.sendContent("\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.fileSize()));
+#endif
+#ifdef ESP32
+      LATER_SERVER_NAME.sendContent("\",\"size\":\"");
+      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(entry.size()));
+#endif
+      LATER_SERVER_NAME.sendContent("\",\"mime\":\"");
+      LATER_SERVER_NAME.sendContent(getContentType(entry.name()));
+      LATER_SERVER_NAME.sendContent("\"}");
+      entry.close();
+    }
+
+#ifdef ESP32
+    entry = dir.openNextFile();
+#endif
+  }
+
+  LATER_SERVER_NAME.sendContent("]");
+  LATER_SERVER_NAME.sendContent("");
+  /*
+
+    String path = LATER_SERVER_NAME.arg("dir");
+
+    Dir dir = SPIFFS.openDir(path);
+    path = String();
+    String output = "[";
+    while (dir.next()) {
+      File entry = dir.openFile("r");
+      if (true)//entry.name()!="secret.json") // Do not show secrets
+      {
+        if (output != "[")
+          output += ',';
+        bool isDir = false;
+        output += "\n{\"type\":\"";
+        output += (isDir) ? "dir" : "file";
+        output += "\",\"name\":\"";
+        output += String(entry.name()).substring(1);
+        output += "\",\"size\":\"" + laterUtil::formatBytes(dir.fileSize()) + "\",";
+
+        output += "\"mime\":\"" + getContentType(entry.name()) + "";
+
+        output += "\"}";
+      }
+      entry.close();
+    }
+
+    output += "\n]";
+    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+    LATER_SERVER_NAME.send(200, "text/json", output);
+
+  */
+}  //end handFileList()
+void handleUnload() {
+  char fnb[32] = { '/' };
+  char *fnp = fnb + 1;
+  memset(fnp, '\0', 31);
+  strcpy(fnp, LATER_SERVER_NAME.arg("name").c_str());
+  if (fnp[0] == '*') {
+    for (int i = 0, mx = Later.loadedScripts; i < mx; i++) {
+      fnp = SCRIPTS[i].fileName;
+      Later.unload(fnp);
+    }
+
+  } else {
+    if (fnp[0] != '/') fnp = fnb;
+    Later.unload(fnp);
+  }
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/json", "true");
+}
+void handleRun() {
+
+  char fnb[44] = { '/' };
+  char *fnp = fnb + 1;
+  memset(fnp, '\0', 43);
+  strcpy(fnp, LATER_SERVER_NAME.arg("name").c_str());
+  if (fnp[0] != '/') fnp = fnb;
+
+  if (SPIFFS.exists(fnp)) {
+    handleGenericHttpRun(fnp);
+    /*
+        LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+        LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+
+        LATER_ENVIRON * s = Later.load(fnp);
+        if (!s) {
+          LATER_SERVER_NAME.send ( 503, LATER_PLAIN, "503 - refused to load");
+          LATER_SERVER_NAME.sendContent("");
+          return;
+        }
+
+        // load vars from url into script enviroment:
+        String key, value, banned = ",$reload,$name,$content-type";
+        for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
+          key =  "$" + LATER_SERVER_NAME.argName(i);
+          value = LATER_SERVER_NAME.arg(i);
+          if (!isdigit(value[0])) continue;
+          if (banned.indexOf(',' + key + ',') > -1) continue;
+          char slot = getVarNameNumber((char*)key.c_str(), s->index);
+          s->VARS[(int)slot] = value.toInt();
+        }
+        if (LATER_SERVER_NAME.hasArg("content-type")) {
+          LATER_SERVER_NAME.send ( 200, LATER_SERVER_NAME.arg("content-type"), "");
+        } else {
+          LATER_SERVER_NAME.send ( 200,  s->contentType, "");
+        }
+
+        s->calledFromWeb = 1;
+        Later.run(fnp);
+        LATER_SERVER_NAME.sendContent("");
+        if (LATER_SERVER_NAME.hasArg("persist")) return;
+        if (s->options.persist) return;
+
+        if (  !strchr(fnp, '~') ) {
+          Later.unload(fnp);
+        } else {
+          s->options.persist = true;
+        }
+
+    */
+
+    //LATER_INSTANCES
+    return;
+  }  //end if bat file found?
+
+  LATER_SERVER_NAME.send(404, LATER_PLAIN, "404 - batch not found");
+
+}  //end handleRun()
+void handleLog() {
 
   LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
 
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "\n");
+  if (LATER_SERVER_NAME.hasArg("tail")) {
+    int count = LATER_SERVER_NAME.arg("tail").toInt();
 
-  sprintf(dbg, "%ld lines in %db from ", s->lineCount, strlen(s->program) );
-  LATER_SERVER_NAME.sendContent(dbg);
-  LATER_SERVER_NAME.sendContent(s->fileName);
-
-  sprintf(dbg, "\nRAM:%d  runs:%lu  subRet:%u resumeLine:%u\n", ESP.getFreeHeap(), s->runs, s->subReturnLine,  s->resumeLineNumber);
-  LATER_SERVER_NAME.sendContent(dbg);
-
-  unsigned long avg = s->runTime;
-  if (s->runs) avg = s->duration / s->runs;
-  sprintf(dbg, "Line:%ld run:%ld parse:%ld avg:%ld",
-          s->i, s->runTime, s->parseTime, avg);
-  LATER_SERVER_NAME.sendContent(dbg);
-  //String bonus = " ";
-  bool bonus = true;
-
-#ifdef LATER_LINE_PROFILING
-  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP data  runs    ptime    mean  parse  code\n");
-#else
-  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP dat code\n");
-#endif
-
-  for (int i = 0, mx = s->lineCount; i < mx; i++) {
-    l = &s->lines[i];
-    lp = s->program + l->start;
-    strncpy(linebuff, lp, l->len);
-    linebuff[l->len] = '\0';
-    if (i > 9) bonus = false;
-    if (bonus) LATER_SERVER_NAME.sendContent(" ");
-    LATER_SERVER_NAME.sendContent(itoa(i, respbuff, 10));
-    LATER_SERVER_NAME.sendContent("->");
-    LATER_SERVER_NAME.sendContent(itoa(l->exit, respbuff, 10));
-    LATER_SERVER_NAME.sendContent(" \t[");
-    itoa(l->flags + 256, respbuff, 2);
-    lp = respbuff;
-    lp += 2;  // print out any active flags with abbr in the slot, else empty space:
-    for (int f = 0; f < 7; f++)  lp[f] = (lp[f] == '1') ? flagList[f] : ' ';
-
-    LATER_SERVER_NAME.sendContent(lp);
-    LATER_SERVER_NAME.sendContent("] ");
-    respbuff[0] = l->cmd ? l->cmd : '?';
-    respbuff[1] = '\0';
-    LATER_SERVER_NAME.sendContent(respbuff);
-    LATER_SERVER_NAME.sendContent(" ");
-
-    itoa(l->data, respbuff, 16);
-    if (l->data < 16)  LATER_SERVER_NAME.sendContent("0");
-    LATER_SERVER_NAME.sendContent(respbuff);
-    LATER_SERVER_NAME.sendContent("  ");
-
-    // cut in profile info here:
-#ifdef LATER_LINE_PROFILING
-    outputPaddedNumber(l->profile.count, "xkm", 6);
-    outputPaddedNumber(l->profile.total, "ums", 8);
-    unsigned long tot = l->profile.total;
-    if (l->profile.count) tot = l->profile.total / l->profile.count;
-    outputPaddedNumber(tot, "ums", 7);
-    outputPaddedNumber(l->profile.parse, "ums", 6);
-    LATER_SERVER_NAME.sendContent(" ");
-#endif
-
-    LATER_SERVER_NAME.sendContent(linebuff);
-    LATER_SERVER_NAME.sendContent("\n");
-  }//next line
-
-#ifdef LATER_LINE_PROFILING
-  LATER_SERVER_NAME.sendContent(" # ex    CHOAEVT OP data  runs    ptime    mean  parse  code\n");
-#else
-  LATER_SERVER_NAME.sendContent(" # ex    CHOAEVT OP dat code\n");
-#endif
-
-  LATER_SERVER_NAME.sendContent("\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
-
-  // turn this into range based indexer:
-  /*
-    for (auto const & x : LATER_VAR_NAMES[s->index])   {
-      LATER_SERVER_NAME.sendContent(itoa(x.second, linebuff, 10));
-      LATER_SERVER_NAME.sendContent( ".\t@");
-
-      linebuff[0] = (char) (x.second + 65);
-      linebuff[1] = '\0';
-      LATER_SERVER_NAME.sendContent(linebuff);
-      LATER_SERVER_NAME.sendContent("_\t");
-      LATER_SERVER_NAME.sendContent(itoa(s->VARS[x.second], linebuff, 10));
-      LATER_SERVER_NAME.sendContent("\t");
-      LATER_SERVER_NAME.sendContent(x.first.c_str());
-      LATER_SERVER_NAME.sendContent("\n");
+    if (count < 1) {  // passed in url w/o value or zero, grab just the last line:
+      LATER_SERVER_NAME.send(200, LATER_PLAIN, strrchr(setRunLog, '\n') + 1);
+      return;
     }
-  */
 
-  //\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
-  for (int i = i;  i < LATER_VARS_LENGTH; i++) {
+    // grab tails chars specified by tail arg:
+    int pos = strlen(setRunLog) - count;
+    if (pos < 0) pos = 0;
+    char *ret = setRunLog + pos;
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, ret);
+    return;
+  }  //end if tail arg?
+  //////////////////////////////////////////////////////////////
+  // processed results  - chunked line-by-line results:
+  if (LATER_SERVER_NAME.args() > 0) {
+    LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);  //Enable Chunked Transfer
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, LATER_LOG_HEADER);  //Send first part WITH header
 
-    //auto name = LATER_VAR_NAMES[s->index][i];
+    int pos = strcspn(setRunLog + 1, "\n");
 
-    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
-    LATER_SERVER_NAME.sendContent( ".\t@");
+    // take, skip, larger, smaller, after, before, filter, exclude, count
 
-    //}else{
-    linebuff[0] = (char) (i + 65);
-    //}
-    linebuff[1] = '\0';
+    char *rest = setRunLog;
+    char line[64];
+    char termBuffer[24];
+    char excludeBuffer[24];
 
-    /*
-      if(i>55){
-      strcpy(linebuff, "&#");
-      itoa(i, linebuff+2, 10);
-      strcat(linebuff, ";");
+    bool is_filter = LATER_SERVER_NAME.hasArg("filter");
+
+    bool is_after = LATER_SERVER_NAME.hasArg("after");
+    bool is_before = LATER_SERVER_NAME.hasArg("before");
+    bool is_larger = LATER_SERVER_NAME.hasArg("larger");
+    bool is_smaller = LATER_SERVER_NAME.hasArg("smaller");
+    bool is_exclude = LATER_SERVER_NAME.hasArg("exclude");
+    bool is_take = LATER_SERVER_NAME.hasArg("take");
+    bool is_skip = LATER_SERVER_NAME.hasArg("skip");
+    bool is_count = LATER_SERVER_NAME.hasArg("count");
+    unsigned long afterTime = strtoul(LATER_SERVER_NAME.arg("after").c_str(), NULL, 0);
+    unsigned long beforeTime = strtoul(LATER_SERVER_NAME.arg("before").c_str(), NULL, 0);
+
+    unsigned int largerThan = LATER_SERVER_NAME.arg("larger").toInt();
+    unsigned int smallerThan = LATER_SERVER_NAME.arg("smaller").toInt();
+
+    int takeLeft = LATER_SERVER_NAME.arg("take").toInt();
+    int skipLeft = LATER_SERVER_NAME.arg("skip").toInt();
+    int countOfResults = 0;
+    unsigned long lineTime;
+    char lineTimeString[16];
+
+    if (is_filter) strcpy(termBuffer, LATER_SERVER_NAME.arg("filter").c_str());
+    if (is_exclude) strcpy(excludeBuffer, LATER_SERVER_NAME.arg("exclude").c_str());
+
+    bool is_wanted;
+
+    int logLeft = strlen(rest);
+
+    while ((logLeft - pos) > 1) {
+      // copy line from string to buffer:
+      strncpy(line, rest + 1, pos);
+      line[pos] = '\n';
+      line[pos + 1] = '\0';
+
+      // now filter by making sure line contains term
+
+      is_wanted = 1;
+      if (is_filter && is_wanted) is_wanted = strstr(line, termBuffer);
+      if (is_exclude && is_wanted) is_wanted = !strstr(line, excludeBuffer);
+
+      if (is_larger && is_wanted) is_wanted = strlen(line) > largerThan;
+      if (is_smaller && is_wanted) is_wanted = strlen(line) < smallerThan;
+      if (is_after && is_wanted) {
+        // parse a time from log line
+        int delimPos = strcspn(line, "\t: ");
+        strncpy(lineTimeString, line, delimPos);
+        lineTime = strtoul(lineTimeString, NULL, 0);
+        is_wanted = (lineTime > afterTime);
       }
-    */
-
-    LATER_SERVER_NAME.sendContent(linebuff);
-    LATER_SERVER_NAME.sendContent("\t");
-
-    LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
-    LATER_SERVER_NAME.sendContent("\t");
-    bool foundVarName = false;
-    for (auto const & x : LATER_VAR_NAMES[s->index])   {
-      if (x.second == i) {
-        if (foundVarName)LATER_SERVER_NAME.sendContent(", ");
-        foundVarName = true;
-        LATER_SERVER_NAME.sendContent(x.first.c_str());
+      if (is_before && is_wanted) {
+        // parse a time from log line
+        int delimPos = strcspn(line, "\t: ");
+        strncpy(lineTimeString, line, delimPos);
+        lineTime = strtoul(lineTimeString, NULL, 0);
+        is_wanted = (lineTime < beforeTime);
       }
+      if (is_skip && is_wanted) is_wanted = skipLeft-- < 1;
+      if (is_take && is_wanted) {
+        is_wanted = takeLeft-- > 0;
+        if (takeLeft < 0) break;  // early bail optomize if no more results wanted
+      }                           //end if take?
+      // based on the guantlet above, do we still want the line in the results?
+      if (is_wanted) {
+        if (is_count) {
+          countOfResults++;
+        } else {
+          LATER_SERVER_NAME.sendContent(line);
+        }
+      }
+      // find next line, if any
+      if (rest[0]) {
+        rest = strchr(rest + 1, '\n');
+        pos = strcspn(rest + 1, "\n");
+      } else {
+        rest[0] = '\0';
+        break;
+      }
+
+      logLeft = strlen(rest);
+
+    }  // wend rest
+    if (is_count) {
+      LATER_SERVER_NAME.sendContent(String(countOfResults));
     }
 
-    //}else{
-    if (!foundVarName) {
-      LATER_SERVER_NAME.sendContent("#");
-      LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
-    }
-    //}
+    LATER_SERVER_NAME.sendContent(F(""));  // this tells web client that transfer is done
+    LATER_SERVER_NAME.client().stop();
+    //Tell browser no more content is coming
+    return;
+  }  //end if params?
+  //////////////////////////////////////////////////////////////
+  // END processed results
+  // serve whole log:
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);  //Enable Chunked Transfer
+  LATER_SERVER_NAME.send(200, LATER_PLAIN, LATER_LOG_HEADER);
+  LATER_SERVER_NAME.sendContent(strchr(setRunLog, '\n') + 1);
+  LATER_SERVER_NAME.sendContent(F(""));
 
+}  //end handleLog()
+// before log api
+
+// after log api:
+void handleCommandList2() {
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);                                                  //Enable Chunked Transfer
+  LATER_SERVER_NAME.send(200, LATER_PLAIN, "COMMAND LISTING (duplicate keys are aliases)\n\nKey\tCommand\n");  //Send first part WITH header
+
+  char c[2] = { 0, 0 };
+  for (auto const &x : LATER_CMDS) {
+    c[0] = x.second;
+    if (!c[0]) continue;
+    LATER_SERVER_NAME.sendContent(c);
+    LATER_SERVER_NAME.sendContent("\t");
+    LATER_SERVER_NAME.sendContent(x.first);
     LATER_SERVER_NAME.sendContent("\n");
+  }
+  LATER_SERVER_NAME.sendContent("");
+}  //end handleCommandList()
+// a 100-line or fewer key:value store with smart api for managing it. file backed peristent storage.
 
-    /*
-      //#
-      xLATER_SERVER_NAME.sendContent(itoa(x.second, linebuff, 10));
-      xLATER_SERVER_NAME.sendContent( ".\t@");
+void handleStore() {
 
-      //sym
-      xlinebuff[0] = (char) (x.second + 65);
-      xlinebuff[1] = '\0';
-      xLATER_SERVER_NAME.sendContent(linebuff);
-      xLATER_SERVER_NAME.sendContent("_\t");
-
-      //val
-      xLATER_SERVER_NAME.sendContent(itoa(s->VARS[x.second], linebuff, 10));
-      xLATER_SERVER_NAME.sendContent("\t");
-
-      // var / expr
-      LATER_SERVER_NAME.sendContent(x.first.c_str());
-      LATER_SERVER_NAME.sendContent("\n");
-    */
+  if (LATER_SERVER_NAME.hasArg("value")) {
+    if (LATER_SERVER_NAME.hasArg("ram")) {
+      LATER_STORE.update(LATER_SERVER_NAME.arg("key").c_str(), LATER_SERVER_NAME.arg("value").toInt());
+    } else {
+      LATER_STORE.set(LATER_SERVER_NAME.arg("key").c_str(), LATER_SERVER_NAME.arg("value").toInt());
+    }
+    getCurrent()->storeDirty = 1;
+  } else if (LATER_SERVER_NAME.hasArg("key")) {
+    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+    LATER_SERVER_NAME.send(200, LATER_PLAIN, String(LATER_STORE.get(LATER_SERVER_NAME.arg("key").c_str())));
+    return;
   }
 
-  LATER_SERVER_NAME.sendContent("\n-------- SYSTEM LOG -----------\n");
-  LATER_SERVER_NAME.sendContent(setRunLog);
-  LATER_SERVER_NAME.sendContent("\n-------- END PROGRAM DEBUG -----------\n");
-  LATER_SERVER_NAME.sendContent("");//ends and closes response
-} // end handle dump()
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, LATER_PLAIN, "key  \ttimestamp\tver\tvalue\n");
+  for (int i = 0; i < LATER_STORE.length; i++) {
+    LATER_SERVER_NAME.sendContent(LATER_STORE.stringify(i));
+    LATER_SERVER_NAME.sendContent("\n");
+  }  //next
+
+  LATER_SERVER_NAME.sendContent("");
+
+  // serve whole log:
+
+}  // handleStore()
+int INDENT_LEVEL = 0;
+
+void addJSON(char *buff, const char *key, unsigned long value) {
+  char liner[52] = { '\t', '\t', '\t', '\t', '\t', '\t' };
+  char *line = liner;
+  line += INDENT_LEVEL;
+  sprintf(line, "\"%s\": %lu,\n", key, value);
+  strcat(buff, liner);
+}
+
+void addJSON(char *buff, const char *key, const char *value) {
+  char liner[52] = { '\t', '\t', '\t', '\t', '\t', '\t' };
+  char *line = liner;
+  line += INDENT_LEVEL;
+
+  sprintf(line, "\"%s\": \"%s\",\n", key, value);
+  strcat(buff, liner);
+}
+
+void backtrack(char *buff) {
+  buff[strlen(buff) - 2] = '\0';
+}
+
+void handleScripts() {
+
+  int mx = Later.scriptCount;
+  //char out[2048] = {'{', '\n'};
+  char *out = FILE_BUFF;
+  out[0] = '{';
+  out[1] = '\n';
+  memset(out + 2, '\0', 2045);
+
+  INDENT_LEVEL = 1;
+
+  addJSON(out, "count", Later.loadedScripts);
+  addJSON(out, "current", Later.currentScript);
+  addJSON(out, "ms", millis());
+  addJSON(out, "ram", ESP.getFreeHeap());
+  addJSON(out, "bootram", Later.bootRam);
+  strcat(out, "\t\"scripts\":[  \n");  // start scripts:
+  INDENT_LEVEL = 2;
+  // iterate scripts:
+  for (int i = 0; i < mx; i++) {
+    if (!SCRIPTS[i].lineCount) continue;
+    unsigned long runTime = (millis() - SCRIPTS[i].loadedAt) * (unsigned long)1000;
+    strcat(out, "\t{\n");
+
+    addJSON(out, "fileName", SCRIPTS[i].fileName);
+    addJSON(out, "index", SCRIPTS[i].index);
+    addJSON(out, "frozen", SCRIPTS[i].resumeLineNumber ? 1 : 0);
+    addJSON(out, "interval", SCRIPTS[i].interval);
+    addJSON(out, "persist", SCRIPTS[i].options.persist);
+
+    addJSON(out, "line", SCRIPTS[i].i);
+    addJSON(out, "lines", SCRIPTS[i].lineCount);
+    addJSON(out, "exit", SCRIPTS[i].exitLineNumber);
+    addJSON(out, "chars", strlen(SCRIPTS[i].program));
+    addJSON(out, "vars", LATER_VAR_NAMES[i].size());
+    addJSON(out, "reads", SCRIPTS[i].reads);
+    addJSON(out, "writes", SCRIPTS[i].writes);
+
+    addJSON(out, "parseTime", SCRIPTS[i].parseTime);
+    addJSON(out, "runTime", SCRIPTS[i].runTime);
+
+    if (SCRIPTS[i].runs) addJSON(out, "avgTime", SCRIPTS[i].duration / SCRIPTS[i].runs);
+    addJSON(out, "cpuTime", SCRIPTS[i].duration);
+    addJSON(out, "cpuUtil", (SCRIPTS[i].duration * 100) / runTime);
+    addJSON(out, "lifeTime", runTime);
+    addJSON(out, "runs", SCRIPTS[i].runs);
+    backtrack(out);
+    strcat(out, "\n\t},\n");
+  }
+
+  INDENT_LEVEL = 0;
+
+  if (mx) backtrack(out);
+
+  strcat(out, "\n\t\t]\n}");  //end scripts
+
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.send(200, "text/json", out);
+}
 #endif
+
+#line 1 "loader.ino"
+int loadScript(const char * scriptFileName) { //dd666 make this a class method
+  unsigned long st = micros();
+
+  char * fileBuff = laterUtil::fileToBuff(scriptFileName);
+  char clean[LATER_PROGRAM_SIZE];
+  char * outptr = clean;
+  char * cleanptr = clean;
+  char * lb = fileBuff; //strstr(buff, "\n");
+
+  // stuff for lines:
+  char * line = LINE_BUFF; //[LATER_LINE_BUFFER];
+  memset(line, '\0', 16);
+  char cmd[16];
+  char consts[17] = "0000000000000000";
+
+  //char * macroRep = TEMPLATE_BUFFER;
+
+  int lineCount = 0;
+  int endpos = strcspn( fileBuff, "\n");
+  int lineLen = 0;
+  bool isPrintBlock = 0;
+  bool isStaticPrintBlock = 0;
+  bool isConstant = false;
+  unsigned long lineData = 0;
+  int scriptIndex = 0;
+  // find empty slot index:
+  for (; scriptIndex < LATER_INSTANCES; scriptIndex++) {
+    if (SCRIPTS[scriptIndex].lineCount == 0) break;
+  }
+
+  LATER_ENVIRON * SCRIPT = &SCRIPTS[scriptIndex];
+  SCRIPT->loadedAt = millis();
+  SCRIPT->i = 0;
+  strcpy(SCRIPT->fileName, scriptFileName);
+  laterUtil::trimLeft(fileBuff, true);
+
+  // replace #includes
+  replaceIncludes(fileBuff);
+
+  // replace special macros like __FILENAME__ and __SKETCH_FILE__
+  replaceSpecialMacros(fileBuff, scriptFileName);
+
+  // look for #type special macro
+  sniffContentType( fileBuff,  SCRIPT );
+
+  // parse out #define calls and populate replacement mappings
+  populateDefines( fileBuff,  scriptIndex);
+
+  removeMultiLineComments(fileBuff);
+  removeDoubleLines(fileBuff);
+  ///////////////////////////////////////////////////////
+  //    Parse program into lines
+  while (strlen(lb) > 1) {
+#ifdef LATER_LINE_PROFILING
+    unsigned long profileStart = micros();
+#endif
+    lineData = 0;
+    isConstant = 0;
+    memset(consts, '\0', 17);
+
+    // copy program code into line buffer so we can mess it up
+    strncpy( line, lb, endpos);
+    line[endpos] = '\0';
+
+    if (!endpos && !isPrintBlock) {
+      line[endpos] = ' ';
+      strcpy(line, "' ");
+    }
+
+    if (!endpos && isPrintBlock) {
+      line[endpos] = ' ';
+      line[endpos + 1] = '\0';
+    }
+
+    if (!isPrintBlock) laterUtil::trimRight(line);
+    // convert IIF commands into 2-line operations:
+    endpos = convertIIFs(line, lb, endpos);
+    lb += endpos + 1; // rejigger line endings
+    endpos = strcspn( lb, "\n");
+    if (!isPrintBlock) { // trim left spaces and tabs on line
+      int pos = 0;
+      while (isblank(line[pos++])) {  };
+      strcpy(line, line + (pos - 1));
+    }
+
+    removeSingleLineComments(line, cmd);
+    if (!isStaticPrintBlock) laterUtil::trimRight(line);
+    lineLen = strlen(line);
+    ///////////////////////////////////////////
+    if (lineLen || isStaticPrintBlock) { // filter empty lines
+
+      harvestMacros(line, scriptIndex);
+      cleanupVarDeclarations(line);
+      if (line[0] == ':') {
+        if (lineLen == 1) {
+          lb++;
+          continue;
+        }
+        laterUtil::replace(line, ":", "noop=:"); // turn lables into noops
+      }
+      expandRangeOperators(line, SCRIPT);
+      if (line[0] == '&' && laterUtil::startsWith(line, "&RESPONSE->")) laterUtil::replace(line, "&RESPONSE->", "res=&RESPONSE->");
+      replaceEndCommands(line);// handle block endings like end if, }, etc
+
+      lineLen = strlen(line);
+
+      if (line[0] == '<' && line[1] == '?') {
+        isPrintBlock = 1;
+        if (line[2] == '=') {
+          line[2] = ' ';
+          isStaticPrintBlock = 1;
+        }
+        line[0] = '_';
+        line[1] = '=';
+        continue;
+      }
+
+      if (line[0] == '?' && line[1] == '>') {
+        isPrintBlock = isStaticPrintBlock = 0;
+        line[0] = '_';
+        line[1] = '=';
+        continue;
+      }
+
+      if (!isPrintBlock) autoEqualsInsert(line);
+      if (!isStaticPrintBlock) {
+        isConstant = embedVariables(line, isConstant, SCRIPT);
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+        embedTemplates(line, SCRIPT);
+#endif
+      }//end if !SPB
+      lineLen = strlen(line);
+
+      ///////////////////////////////
+      // deduce command:
+
+      int cmdPos = laterUtil::indexOf(line, "=");
+      if (cmdPos < 0)cmdPos = 0;
+      strncpy(cmd, line, cmdPos);
+      cmd[cmdPos] = '\0';
+      char cmdChar = LATER_CMDS[cmd];
+
+      // cleanup value after command:
+      char * linePtr = line;
+      linePtr += cmdPos + 1;
+      if (!isPrintBlock) {
+        if (linePtr[0] == '=') linePtr++;
+        laterUtil::trimLeft(linePtr);
+      } else {
+        linePtr = line;
+        cmdChar = LATER_println;
+      }
+      lineLen = strlen(linePtr);
+
+      ///////////////////////////////////////
+      // FLAGS: set byte flag based on the value
+      // b2         b1      b1
+      // hasParens, hasVar, hasTemplate
+      byte flag = 0;
+
+      //////////  %templates% ? LSB
+      char * tempPtr = strchr(linePtr, '{'); // look for opening template expression
+      if (tempPtr && tempPtr[1] != ' ' && strchr(tempPtr + 1, '}') && !isStaticPrintBlock) flag += 1; // also has later close template delim
+      //////////  $vars ? 2s
+
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+      if (strchr(COMMANDS_ENDING_WITH_LITERALS, cmdChar)) replaceEndingLiterals(linePtr, SCRIPT);
+      if (strchr(COMMANDS_STARTING_WITH_LITERALS, cmdChar) && isdigit(linePtr[0])) replaceStartingLiterals(linePtr,  SCRIPT);
+#endif
+
+      // look for var usage, minding var commands themselves
+      if (cmdChar == LATER_var || cmdChar == LATER_static) { // look only after first equal for this
+        lineData = parseVarCommands(line, linePtr, lineData, SCRIPT); // despace, optomize, fix syntax like *= > =*
+        if (strchr(strchr(linePtr, '='), '@')  && !lineData ) flag += 2;// vars after assign
+      } else { // non var command, but uses var, flag for var processing
+        if (strchr(linePtr, '@')) flag += 2;// vars
+      }
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+      if (cmdChar == LATER_solid) {
+        if (strstr(linePtr, "0,0,0")) lineData = 1;
+        if (strstr(linePtr, "#000")) lineData = 1;
+
+        if (!strchr(linePtr, '{') && !strchr(linePtr, '@') ) {
+          unsigned long parsedColor =  laterUtil::parseColor(linePtr, getCurrent() );
+
+          lineData = 0;
+          itoa(parsedColor, linePtr, 10);
+          char symb = getConstantNumber(linePtr, getCurrent()) + 65;
+
+          linePtr[0] = '@';
+          linePtr[1] = symb;
+          //  linePtr[2] = '_';
+          linePtr[2] = '\0';
+          lineLen = strlen(linePtr);
+        }//end if literal color def?
+
+      }
+#endif
+
+      if (cmdChar == LATER_option) {
+        if (strstr(linePtr, "noget!") )SCRIPT->options.noget = true;
+      }
+
+      if (strchr(linePtr, '(') && strchr(linePtr, ')') && !isStaticPrintBlock ) flag += 4;
+      //////////  [x,y][arrays] ?  8s
+      if (strstr(linePtr, "][") && !isStaticPrintBlock ) flag += 8;
+
+#ifdef ESP8266HTTPClient_H_
+      if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
+#endif
+#ifdef HTTPClient_H_
+      if (strstr(linePtr, "&RESPONSE->") && !isStaticPrintBlock) flag += 32;
+#endif
+
+      if (isConstant) flag += 64;
+
+
+      //|| Later.addons[cmdChar]
+
+      ////////// output ?  16s - interpolate var and %templates% in code line itself?
+      if (  strchr(COMMANDS_NEEDING_OUTPUT, cmdChar)   ) {
+        flag += 16;
+      } else { // don't need whitespace in any other command, right. asume and let's try iy
+        // collapse whitespace here
+        if ( (!isPrintBlock) && strchr(line, ' ') && !strchr(COMMANDS_NEEDING_WHITESPACE, cmdChar) && (!strstr(linePtr, "][")) &&  (!Later.addons[cmdChar])  ) {
+          while (strchr(linePtr, ' ')) laterUtil::replace(linePtr, " ", "");
+        }
+      }//end if non-output command?
+
+      lineLen = strlen(linePtr);
+
+      // populate script line object with accumulated data:
+      LATER_LINE * sLine = &SCRIPT->lines[lineCount];
+      sLine->len = lineLen; // how many chars is line?
+      sLine->start = (outptr - cleanptr); // first line byte in clean buffer
+      sLine->stop  = (outptr - cleanptr) + lineLen;// last line byte in clean buffer
+      sLine->cmd = cmdChar;
+      sLine->data = lineData;
+      sLine->flags = flag;
+
+      // copy to clean:
+      strncpy (outptr, linePtr, lineLen );
+      outptr[lineLen] = '\n';
+      outptr += lineLen + 1;
+#ifdef LATER_LINE_PROFILING
+      sLine->profile.parse = micros() - profileStart;
+#endif
+      if (lineCount++ > LATER_LINE_LIMIT) break; // failsafe here, remove for prod?
+    }//end if line not empty?
+  } // wend endpos > 0
+
+  outptr[0] = '\0';
+
+  // move clean buffer to script object
+  strcpy(SCRIPT->program, clean);
+
+  // populate SCRIPT object with parsed program meta and data:
+  SCRIPT->lineCount = lineCount ;
+  SCRIPT->forTop[0] = -1;
+  SCRIPT->runs = 0;
+
+  buildExitPoints(SCRIPT);
+  SCRIPT->parseTime = micros() - st;
+  return 1;
+}//end loadScript()
+void replaceIncludes(char * fileBuff) {
+  char * inc = strstr(fileBuff, "#include");
+  while (inc) {
+    char incLine[24];
+    strncpy(incLine, inc, 23);
+
+    size_t fnpos = strcspn(incLine, " =\"" );
+    char * fnPtr = incLine + fnpos + 1;
+
+    fnpos = strcspn(fnPtr, " \"\n" );
+    fnPtr[fnpos] = '\0';
+    char * incbuf = laterUtil::fileToBuffInclude(fnPtr);
+
+    unsigned long inclen = strlen(incbuf);
+    unsigned long tailpos = (inc - fileBuff) + strlen(incLine); // where include line orig ends
+
+    memmove(
+      fileBuff + tailpos + inclen - strlen(incLine) ,
+      fileBuff + tailpos,
+      2048 - (tailpos + inclen)
+    );
+
+    // now sandwich in the new include contents:
+    memcpy(inc, incbuf, inclen);
+    inc = strstr(fileBuff, "#include"); // WORKS!
+  }//wend include?
+}//end replaceIncludes()
+
+void replaceSpecialMacros(char * fileBuff, const char * scriptFileName) {
+  char * fil = strstr(fileBuff, "__FILENAME__");
+  while (fil) {
+    strncpy(fil, scriptFileName + 1, 12);
+    unsigned int len = strlen(scriptFileName + 1);;
+    if ( len < 12) memset(fil + 12, ' ', len - 12);
+    fil = strstr(fileBuff, "__FILENAME__");
+  }
+
+  char * ino = strstr(fileBuff, "__SKETCH_FILE__");
+  while (ino) {
+    const char * mySketchName = LATER_SKETCH;
+    strncpy(ino, mySketchName, 15);
+    unsigned int len = strlen(mySketchName);
+    if ( len < 15) memset(ino + 15, ' ', len - 15);
+    ino = strstr(fileBuff, "__SKETCH_FILE__");
+  }
+}// end replaceSpecialMacros()
+void sniffContentType( char * fileBuff, LATER_ENVIRON * SCRIPT ) {
+  char * contentType = strstr(fileBuff, "#type=");
+  while (contentType) {
+    strncpy(SCRIPT->contentType, contentType + 6, 31);
+    size_t ctend = strcspn(SCRIPT->contentType, "\n ;\t");
+    SCRIPT->contentType[ctend] = '\0';
+    contentType[0] = '\'';
+    contentType = strstr(fileBuff, "#type=");
+  }//wend contentType
+}//end sniffContentType()
+void populateDefines(char * fileBuff, int scriptIndex) {
+
+  //#define TABLE_SIZE 100
+  char * dec = strstr(fileBuff, "#define=");
+  if (dec) DEFINES[scriptIndex].clear();
+  while (dec) {
+    // wipe out define call in program text:
+    dec[0] = '/';
+    dec[1] = '/';
+
+    dec = dec + 8; // skip over "define="...
+
+    size_t defpos = strcspn(dec, " ");
+    char * defValp = dec + defpos + 1;
+
+    char decName[16];
+    strncpy(decName, dec, defpos);
+    decName[defpos] = '\0';
+
+    DEFINES[scriptIndex][decName] = defValp;
+    dec = strstr(fileBuff, "#define="); // grab next one (if any)
+  }//wend define
+}//end populateDefines()
+int convertIIFs(char * line, char * lb, int endpos) {
+
+  char * iifPtr  = strstr(line, "iif");
+  char * cmtPtr = strstr(line, "//");
+
+  if (iifPtr && (!cmtPtr || (cmtPtr > iifPtr)) ) {
+
+    int colpos =  strcspn( line, ":");
+    if (colpos > 0 && line[colpos - 1] == ' ' && line[colpos + 1] == ' ') {
+      endpos = colpos;
+      line[colpos] = '\0';
+      lb[colpos] = '\n';
+      laterUtil::trimRight(line);
+    }
+  }
+  return endpos;
+} //end convertIIFs()
+void removeSingleLineComments(char * line, char * cmd) {
+  // remove comments -- needs to chill a bit for later, check if print, log, fetch, etc.
+  int commentPos = laterUtil::indexOf(line, "//");
+  if (commentPos == -1 ) commentPos = laterUtil::indexOf(line, "'");
+  if (commentPos > -1 ) {
+
+    if (commentPos == 0) {
+      line[0] = '\0';
+    } else {
+      int cmdLen = strcspn(line, " =");
+      strncpy(cmd, line, cmdLen);
+      cmd[cmdLen] = '\0';
+      if (!strstr(",_,log,print,println,fetch,ping,timer,", cmd)) line[commentPos] = '\0'; // zap line at comment unless used by command
+      // dd666       ^^^ this ^^^ needs to be an attrib of something rather than a britle string of unparsed command names
+
+    }//end if not whole line comment?
+  }//end if has comment?
+
+  if (line[0] == '\'') line[0] = '\0'; // skip VB-style comment line, also used internally by multi-line comments to curtail buffer resizing
+}//end removeSingleLineComments()
+void harvestMacros(char * line, int scriptIndex) {
+  char macro[16];
+
+  char * macroRep = TEMPLATE_BUFFER;
+
+  // look for any @macro usages first thing
+  char * macroPtr = strchr(line, '@');
+  while (macroPtr) {
+    macroPtr[0] = '?'; // stop same re-find
+    size_t macroNameLen = 1;
+    for (macroNameLen = 1; macroNameLen < 16; macroNameLen++) {
+      if (!isalnum(macroPtr[macroNameLen])) break;
+    }
+
+    strncpy(macro, macroPtr, macroNameLen);
+    macro[macroNameLen] = '\0';
+
+    char * macroBuffPtr = macro + 1;
+    char buffKey2 [ 32 ] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    char * macroRepPtr = DEFINES[scriptIndex][macroBuffPtr];
+    // check GET params for match if no pre-defined macro exists under the name:
+    if (!macroRepPtr || !strlen(macroRepPtr)) {
+      if (LATER_SERVER_NAME.hasArg(macroBuffPtr)) {
+        strcpy(buffKey2, LATER_SERVER_NAME.arg(macroBuffPtr).c_str());
+        macroRepPtr = buffKey2;
+      }
+    }
+
+    if (macroRepPtr) {
+      size_t macroRepLen = strcspn(macroRepPtr, "\n");
+      if (macroRepLen < 1) macroRepLen = strlen(macroRepPtr);
+
+      // cleanup optional semi delimiter on macro names:
+      if (macroPtr[macroNameLen] == ';') {
+        macro[macroNameLen] = ';';
+        macro[macroNameLen + 1] = '\0';
+      }
+      strncpy(macroRep, macroRepPtr, macroRepLen);
+      macroRep[macroRepLen] = '\0';
+      laterUtil::trimRight(macroRep);
+      laterUtil::replace(line, macro, macroRep);
+    }//end if
+
+    macroPtr = strchr(line, '@');
+  }//end if macro?
+}//end harvestMacros()
+void cleanupVarDeclarations(char * line) {
+
+  int lineLen = strlen(line);
+
+  // inject var= into plain var declarations; $x=1 into var=$x=1
+  if (line[0] == '$') {
+    if ( strchr(line, '{') && strchr(line, ':') && line[lineLen - 1] == '}') {
+      laterUtil::replace(line, "$", "define=$");
+    } else {
+      laterUtil::replace(line, "$", "var=$");
+      laterUtil::replace(line, "++", "=+1");
+      laterUtil::replace(line, "--", "=-1");
+    }
+
+    laterUtil::replace(line, " =", "=");
+    laterUtil::replace(line, "= ", "=");
+  }//end if plain syntax var declaration line?
+
+} //end cleanupVarDeclarations();
+void expandRangeOperators(char * line, LATER_ENVIRON * SCRIPT) {
+  char * rangeBuffer = TEMP_BUFFER;
+  char temp[12];
+
+  //replace range operators with csv ints within the range bounds
+  char * rangePtr = strstr(line, "..");
+  while (rangePtr) {
+    //rangePtr[0]=' ';
+    //rangePtr[1]=' ';
+
+    // find first, last number
+    int endCap = Number(rangePtr + 2, SCRIPT->VARS);
+
+    // track backwards to find base range start:
+    for (int i = 0; i < 10; i++) {
+      rangePtr--;
+      if (!isdigit(rangePtr[0])) {
+        rangePtr++;
+        break;
+      }
+    }
+    int startCap = Number(rangePtr, SCRIPT->VARS) + 1;
+    rangeBuffer[0] = ',';
+    memset(rangeBuffer + 1, 0, 48);
+
+    if ( endCap == startCap) endCap++;
+
+    if ( endCap > startCap) {
+      for (int i = startCap; i < endCap; i++) {
+        itoa(i, temp, 10);
+        strcat(rangeBuffer, temp);
+        strcat(rangeBuffer, ",");
+      }
+    } else {
+      for (int i = startCap - 2; i > endCap ; i--) {
+        itoa(i, temp, 10);
+        strcat(rangeBuffer, temp);
+        strcat(rangeBuffer, ",");
+      }
+    }
+
+    laterUtil::replace(line, "..", rangeBuffer);
+    rangePtr = strstr(line, "..");
+
+  }//wend range symbols
+}//end expandRangeOperators()
+void replaceEndCommands(char * line) {
+  if (laterUtil::startsWith(line, "end")) {
+    laterUtil::replace(line, "end sub", "endsub=}");
+    laterUtil::replace(line, "end if", "fi=end if");
+    laterUtil::replace(line, "end do", "loop=loop");
+    laterUtil::replace(line, "end switch", "end=end switch");
+  }//end if end
+
+  if (line[0] == '}') {
+    laterUtil::replace(line, "}", "endsub=}");
+  }//end if close sub brace?
+
+} // end  replaceEndCommands()
+bool embedVariables(char *  line, bool isConstant, LATER_ENVIRON * SCRIPT) {
+  char * varPtr = strchr(line, '$');
+  if (varPtr) {
+    varPtr--;
+    if (varPtr[0] == '=' && isupper(varPtr[2])) isConstant = true;
+    varPtr++;
+    replaceVarNames(varPtr, SCRIPT->index);
+    if (isConstant && strstr(line, "var=@"))  SCRIPT->VARS[varPtr[1] - 65] = 420420420;
+  }
+  return isConstant;
+}//end embedVariables()
+int parseVarCommands(char * line, char * linePtr, int lineData, LATER_ENVIRON * s) {
+
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+  if (strchr(linePtr, '('))  embedFunctions(strchr(linePtr, '='), s);
+#endif
+
+  // clean up all spaces they are not needed.
+  char * ptrSpace = strchr(linePtr, ' ');
+  while (ptrSpace) {
+    strcpy(ptrSpace, ptrSpace + 1);
+    ptrSpace = strchr(ptrSpace, ' ');
+  }
+
+  if (strpbrk (line, "*/-+")) {
+    laterUtil::replace(line, "+=", "=+");
+    laterUtil::replace(line, "-=", "=-");
+    laterUtil::replace(line, "*=", "=*");
+    laterUtil::replace(line, "/=", "=/");
+
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+    if (strstr(line, "=+1")) lineData = 1;
+    if (strstr(line, "=-1")) lineData = 2;
+    if (strstr(line, "=+@") || strstr(line, "=+{#")) lineData = 3;
+    if (strstr(line, "=-@") || strstr(line, "=-{#")) lineData = 4;
+    if (strstr(line, "=/2")) lineData = 8;
+    if (strstr(line, "=*2")) lineData = 9;
+#endif
+    // remove space to the left of =
+    int eqPos = laterUtil::indexOf(linePtr, "=");
+    if (eqPos > 3)  strcpy(linePtr + 3, strchr(linePtr, '='));
+  } // end if line has  math symbols?
+
+  if (strstr(linePtr, "=@") || strstr(linePtr, "={#") ) lineData = 5;
+  if (strstr(linePtr, "=0")) lineData = 6;
+  return lineData;
+}//end parseVarCommands()
+
+#line 1 "mod.ino"
+//#ifdef ESP8266HTTPClient_H_
+#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
+
+int HTTPRequest(char * url) {
+  // wait for WiFi connection
+  yield();
+  //static HTTPClient http;
+  //HTTP = &http;
+  http.end();
+  http.setTimeout(5000);
+  http.begin(url);
+  int httpCode = http.GET();
+  if (httpCode > 0) {
+
+    yield();
+    return httpCode;
+  } else {
+    return httpCode;
+  }
+}//end ajax()
+#endif
+
+#line 1 "runner.ino"
+
 void runScript() {
   unsigned int loopLimit = 32700;
   LATER_ENVIRON * s = getCurrent();
   LATER_LINE * l;
   static char linebuff[LATER_LINE_BUFFER]; // holds a copy of the code line to alter as needed to run, keeps orig intact
   char * lp = s->program; // start point of master line
-  static char tempbuff[LATER_LINE_BUFFER]; // for DEBUGGING output
   if (s->options.debug)  loopLimit = 1000;
   s->startedAt = micros();
   s->runs++;
@@ -3983,14 +4853,12 @@ void runScript() {
       HR_PERF.loop.count++;
     }
 #endif
+    l = &s->lines[s->i]; //    parsed line struct, members: [start, stop, data, len, flags, cmd]
 
 #ifdef LATER_LINE_PROFILING
     profileStart = micros();
     l->profile.total += (profileStart - profileDone);
     profileDone = profileStart;
-#endif
-    l = &s->lines[s->i]; //    parsed line struct, members: [start, stop, data, len, flags, cmd]
-#ifdef LATER_LINE_PROFILING
     l->profile.count++;
 #endif
     // pop temp line buffer:
@@ -4006,6 +4874,9 @@ void runScript() {
 
     // skip over all flag handling if no flag at all is set:
     if (l->flags) { // T=0, V=1, E=2, A=3, O=4, H=5;
+
+      if (l->flags == 128) continue; //dead command, no pre-processing done. used by static/define et al.
+
       //#ifdef ESP8266HTTPClient_H_
 #if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
       // if ajax response operation, do that:
@@ -4045,6 +4916,7 @@ void runScript() {
     }
 
     if (s->options.debug) {
+      static char tempbuff[LATER_LINE_BUFFER]; // for DEBUGGING output
       strcpy(tempbuff, "           ");
       char * tb = tempbuff;
       itoa (s->i, tb, 10);
@@ -4066,7 +4938,7 @@ void runScript() {
     // linebuff has been pre-processed by flag and is ready to feed to commands
     switch (l->cmd) { // do command-y stuff with value by cmd, see COMMANDS:
 
-      case LATER_noop:  continue; // do nothing. res (removed) still fired line prep, noop doesn't case LATER_res:
+      case LATER_noop: l->flags = 128;  continue; // do nothing. res (removed) still fired line prep, noop doesn't case LATER_res:
 
       //  not needed because IFs will always come out line after fi or else, which is co-incidently IF's line.exit
       case LATER_else: // ELSE
@@ -4078,7 +4950,7 @@ void runScript() {
 
         if (l->cmd == LATER_static  ) {// never come back here again
           l->cmd = LATER_noop;
-          l->flags = 0;
+          l->flags = 128;
 
           if (strchr(linebuff, ':') && strchr(linebuff, '{')) { // defining a json literal?
             unsigned int b = linebuff[1] - 65;
@@ -4201,7 +5073,8 @@ void runScript() {
 
         if (usedDMA) continue;
         varSlot = linebuff[1] - 65;
-        if (l->flags > 63 && s->VARS[varSlot] != 420420420) {
+
+        if (   (((l->flags >> 6) & 0x01) == 1)   && (s->VARS[varSlot] != 420420420)   ) {
           l->cmd = LATER_noop;
           continue;
         }
@@ -4696,6 +5569,7 @@ void runScript() {
           s->interval = Number(v, s->VARS);
           s->options.persist = true;
         }
+        l->flags = 128;
         continue;
         break;
       case LATER_interval: //interval sub call
@@ -5105,997 +5979,6 @@ void runScript() {
   }// next line loop
   finishRun(s);
 }//end runScript()
-void finishRun(LATER_ENVIRON * s) {
-  s->runTime = micros() -  s->startedAt;
-  s->duration += s->runTime;
-  s->resumeLineNumber = s->startLineNumber;
-  s->storeDirty = 0;
-  s->calledFromWeb = 0;
-  if (s->interval > 0) {
-    s->resumeMillis = (s->interval - 1) + (millis() - ( s->runTime / 1000));
-  } else {
-    s->resumeMillis = 0;
-  }
-#ifdef HIGH_RES_TIMING
-  HR_PERF.report();
-#endif
-
-}//end finishRun()
-//
-
-#line 1 "docs.ino"
-//@TAKE
-
-#line 1 "http.ino"
-
-File fsUploadFile;
-byte mac[6];  // the bytes of the station MAC address
-const char * const RST_REASONS[] = {
-  "REASON_DEFAULT_RST",
-  "REASON_WDT_RST",
-  "REASON_EXCEPTION_RST",
-  "REASON_SOFT_WDT_RST",
-  "REASON_SOFT_RESTART",
-  "REASON_DEEP_SLEEP_AWAKE",
-  "REASON_EXT_SYS_RST"
-};
-const char * const FLASH_SIZE_MAP_NAMES[] = {
-  "FLASH_SIZE_4M_MAP_256_256",
-  "FLASH_SIZE_2M",
-  "FLASH_SIZE_8M_MAP_512_512",
-  "FLASH_SIZE_16M_MAP_512_512",
-  "FLASH_SIZE_32M_MAP_512_512",
-  "FLASH_SIZE_16M_MAP_1024_1024",
-  "FLASH_SIZE_32M_MAP_1024_1024"
-};
-////////////////////////////////////////////
-#ifdef ESP8266WEBSERVER_H
-std::map<std::string,  std::string> PATHS;
-std::map<std::string,  std::string> BLURBS;
-
-void handleGenericHttpRun(String fn) {
-  const char * empty = "";
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-
-  LATER_ENVIRON * s = Later.load((char*)fn.c_str()); //dd666, move this somewhere better:
-  if (!s) {
-    LATER_SERVER_NAME.send ( 504, LATER_PLAIN, "504 - refused to load");
-    LATER_SERVER_NAME.sendContent("");
-    return;
-  }
-
-  if (!s->options.noget) {
-    // load vars from url into script enviroment:
-    String key, value, banned = ",$name,$content-type";
-    for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
-      key =  "$" + LATER_SERVER_NAME.argName(i);
-      value = LATER_SERVER_NAME.arg(i);
-      if (banned.indexOf(',' + key + ',') > -1) continue;
-      char slot = getVarNameNumber((char*)key.c_str(), s->index);
-      s->VARS[(int)slot] = value.toInt();
-    }
-  }
-  LATER_SERVER_NAME.send ( 200, (const char *)s->contentType, empty); // start response
-  s->calledFromWeb = 1;
-  Later.run((char*)fn.c_str()); // execute em!
-  LATER_SERVER_NAME.sendContent(empty); // finish response
-  /*
-      if (LATER_SERVER_NAME.hasArg("persist")) return;
-    if (s->options.persist) return;
-
-    if (  !strchr(fnp, '~') ) {
-      Later.unload(fnp);
-    } else {
-      s->options.persist = true;
-    }
-  */
-}//end handleGenericHttpRun();
-
-void handleAPI() { // break in here and look for default.bat or index.bat
-  String fn = "/index.bat";
-  if (SPIFFS.exists(fn) && !LATER_SERVER_NAME.hasArg("default")) {
-    handleGenericHttpRun(fn);
-    return;
-  }//end if bat file found?
-
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-
-  char TAGLINE[25] = "Later";
-
-#ifdef LATER_PROJECT
-  strcpy(TAGLINE, LATER_PROJECT);
-#endif
-  LATER_SERVER_NAME .send ( 200, "text/html", F("<html><body><title>"));
-
-  LATER_SERVER_NAME.sendContent(TAGLINE);
-
-  LATER_SERVER_NAME.sendContent(F("</title><style>*{font: 26px monospace;background:#222; color: #ccc; }a{text-decoration:none;color:#77a;}li>a:first-child:visited{color: #aaf;font-weight:bold;}li{list-style:none;padding-bottom: 0.5em;}small{font-size: 80%;white-space:pre; color:#777;}li>a:first-child{width: 7em;display: inline-block;}li:first-child small,li:first-child a{color:#fff}aside{font-size: 20px;opacity:0.8;}h1{font-size: 32px;}</style><h1>"));
-
-  LATER_SERVER_NAME.sendContent(TAGLINE);
-
-  LATER_SERVER_NAME.sendContent(F("</h1><big><big><ul><li>\n<a href=#>Endpoint </a> <small> Kind  Type  Params/Description</small></b>\n<li><a href=/autoexec.bat>/autoexec.bat</a> <small> API TXT View startup script</small>\n<li><a href=/config/>/config</a> <small> UI  HTML  Config options interface</small>\n"));
-  delay(5);
-
-  char line[64];
-  char blurb[160];
-  for (const auto &x : PATHS) {
-
-    Serial.print(x.first.c_str());
-    Serial.print(" - ");
-
-    int len = strlen(BLURBS[x.first.c_str()].c_str()) - 1;
-    strncpy(blurb, BLURBS[x.first.c_str()].c_str(), len );
-    blurb[len] = '\0';
-    if (strlen(blurb) < 5 ) strcpy(blurb , "missin");
-    //blurb = "teeee";
-
-
-    delay(1);
-
-    LATER_SERVER_NAME.sendContent(sprintf(line, "<li><a href=%s>%s</a> ", x.first.c_str(), x.first.c_str() ) ? line : line );
-    LATER_SERVER_NAME.sendContent(" <small> ");
-    LATER_SERVER_NAME.sendContent(blurb + 1);
-    LATER_SERVER_NAME.sendContent("</small>\n");
-  }
-  delay(5);
-
-  LATER_SERVER_NAME.sendContent("\n<li><a href=/update>/update</a> <small> UI HTML  OTA update interface</small>\n");
-
-  LATER_SERVER_NAME.sendContent("<br><br><aside>Built on ");
-  LATER_SERVER_NAME.sendContent(__DATE__);
-  LATER_SERVER_NAME.sendContent(" for ");
-
-#ifdef ARDUINO_BOARD
-  LATER_SERVER_NAME.sendContent(ARDUINO_BOARD);
-#else
-  LATER_SERVER_NAME.sendContent("Unknown Board");
-#endif
-  LATER_SERVER_NAME.sendContent(" w/ ");
-
-#ifdef ESP8266
-  itoa (ESP.getFlashChipRealSize() / 1024, line, 10);
-#else
-  itoa (ESP.getFlashChipSize() / 1024, line, 10);
-#endif
-
-  LATER_SERVER_NAME.sendContent( line ) ;
-  LATER_SERVER_NAME.sendContent("k flash ");
-
-  LATER_SERVER_NAME.sendContent(" as ");
-#ifdef LATER_PROJECT
-  LATER_SERVER_NAME.sendContent(LATER_SKETCH);//manual name
-#else
-#ifdef ESP8266
-  LATER_SERVER_NAME.sendContent(WiFi.hostname());//esp32
-#else
-  LATER_SERVER_NAME.sendContent(WiFi.getHostname());//esp32
-#endif
-#endif
-
-  LATER_SERVER_NAME.sendContent("<br>");
-  LATER_SERVER_NAME.sendContent(WiFi.macAddress());
-
-  LATER_SERVER_NAME.sendContent(" at ");
-  LATER_SERVER_NAME.sendContent(WiFi.localIP().toString());
-  LATER_SERVER_NAME.sendContent("</aside>");
-  LATER_SERVER_NAME.sendContent(F(" <form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body></html>"));
-  LATER_SERVER_NAME.sendContent( "" );
-}
-
-void handleDelete() {
-  String fn = LATER_SERVER_NAME.arg("name");
-
-  if (!LATER_SERVER_NAME.hasArg("name")) {
-    LATER_SERVER_NAME.send ( 404, "text/json", F("false"));
-    return;
-  }
-
-  if (fn[0] != '/') fn = "/" + fn; // optionalize preceding slash
-
-  if (SPIFFS.exists(fn)) {
-    SPIFFS.remove(fn);
-    LATER_SERVER_NAME.send ( 200, "text/json", F("true"));
-    return;
-  }//end if bat file found?
-
-  // should not make it this far, file not found:
-  LATER_SERVER_NAME.send ( 402, "text/json", F("false"));
-}
-
-void(* resetFunc) (void) = 0;//declare reset function at address 0
-
-void handleReboot() {
-  String message = F("<body><h1>Rebooting. Allowing 7 seconds.</h1> <progress></progress> <script> setTimeout(function(){ location.href= localStorage.dest || '/';  },7300);</script></body> ");
-  LATER_SERVER_NAME.send(200, "text/html", message);
-  LATER_SERVER_NAME.close();
-  delay(250);
-  yield();
-  resetFunc();
-}
-void handleResume() {
-
-  char resp[10] = "false";
-  bool status = false;
-  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
-  status = Later.resume(fn);
-  if (status) strcpy(resp, "true");
-
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send(200, "text/plain", resp);
-}
-void handleSuspend() {
-
-  char resp[10] = "false";
-  bool status = false;
-
-  unsigned int ms = LATER_SERVER_NAME.arg("ms").toInt();
-  const char * fn = LATER_SERVER_NAME.arg("name").c_str();
-  if (fn[0] == '/') status = Later.suspend(fn, ms);
-  if (status) strcpy(resp, "true");
-
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send(200, "text/plain", resp);
-}
-#ifdef ESP32
-const char* serverIndex =
-  "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
-  "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
-  "<input type='file' name='update'>"
-  "<input type='submit' value='Update'>"
-  "</form>"
-  "<div id='prg'>progress: 0%</div>"
-  "<script>"
-  "$('form').submit(function(e){"
-  "e.preventDefault();"
-  "var form = $('#upload_form')[0];"
-  "var data = new FormData(form);"
-  " $.ajax({"
-  "url: '/update',"
-  "type: 'POST',"
-  "data: data,"
-  "contentType: false,"
-  "processData:false,"
-  "xhr: function() {"
-  "var xhr = new window.XMLHttpRequest();"
-  "xhr.upload.addEventListener('progress', function(evt) {"
-  "if (evt.lengthComputable) {"
-  "var per = evt.loaded / evt.total;"
-  "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
-  "}"
-  "}, false);"
-  "return xhr;"
-  "},"
-  "success:function(d, s) {"
-  "console.log('success!')"
-  "},"
-  "error: function (a, b, c) {"
-  "}"
-  "});"
-  "});"
-  "</script>";
-
-#endif
-void bindServerMethods() {
-#ifdef ESP32
-  LATER_SERVER_NAME.on("/update", HTTP_GET, []() {
-    LATER_SERVER_NAME.sendHeader("Connection", "close");
-    LATER_SERVER_NAME.send(200, "text/html", serverIndex);
-  });
-  /*handling uploading firmware file */
-  LATER_SERVER_NAME.on("/update", HTTP_POST, []() {
-    LATER_SERVER_NAME.sendHeader("Connection", "close");
-    LATER_SERVER_NAME.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-    ESP.restart();
-  }, []() {
-    HTTPUpload& upload = LATER_SERVER_NAME.upload();
-    if (upload.status == UPLOAD_FILE_START) {
-      Serial.printf("Update: %s\n", upload.filename.c_str());
-      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
-        Update.printError(Serial);
-      }
-    } else if (upload.status == UPLOAD_FILE_WRITE) {
-      /* flashing firmware to ESP*/
-      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
-        Update.printError(Serial);
-      }
-    } else if (upload.status == UPLOAD_FILE_END) {
-      if (Update.end(true)) { //true to set the size to the current progress
-        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-      } else {
-        Update.printError(Serial);
-      }
-    }
-  });
-
-#endif
-  LATER_SERVER_NAME.on("/", handleAPI); // this style of sub won't be listed
-  // subscript public GET endpoints:
-  //@TAKE
-
-  // subscribe public GET endpoints:
-  SUB_PATH(run, handleRun, "API  TXT @name Runs a script by filename");
-  //@TAKE
-  SUB_PATH(scripts, handleScripts, "API  JSON  Details of running scripts");
-  SUB_PATH(log, handleLog, "API  TXT View logged messages. See <a target=_blank href=https://github.com/rndme/later/blob/master/docs/api.md#log>docs</a> for GET options. ");
-  SUB_PATH(dir, handleFileList, "API JSON  Lists stored files w/ details");
-
-  SUB_PATH(resume, handleResume, "API JSON  @name Resumes a suspended script file by name. ");
-  SUB_PATH(suspend, handleSuspend, "API JSON  @name @ms Suspends and unloads a script file by name. ");
-
-  SUB_PATH(ls, handleLS, "UI HTML  File manager interface - allows deletes and uploads");
-  SUB_PATH(delete, handleDelete, "API  JSON  @name Deletes a script by filename");
-  SUB_PATH(reboot, handleReboot, "API  HTML  Reboots the ESP");
-  SUB_PATH(editor, handleEditor, "UI HTML  Script editor interface");
-
-
-  SUB_PATH(store, handleStore, "API TSV Stored vars. See <a target=_blank href=https://github.com/rndme/later/blob/master/docs/api.md#store>docs</a> for GET options. ");
-  SUB_PATH(unload, handleUnload, "API  JSON  @name Unloads a running Script by filename");
-  SUB_PATH(test, handleDump, "API  TXT @name Get debug information of a running script by script filename");
-
-  SUB_PATH(eval, handleEval, "API  TXT @name Runs a Script by filename");
-  SUB_PATH(help, handleCommandList, "API TXT List available commands and functions and templates");
-
-  LATER_SERVER_NAME.on("/upload", HTTP_POST, []() {
-    LATER_SERVER_NAME.send(200, LATER_PLAIN, "ok");
-  }, handleFileUpload);
-  LATER_SERVER_NAME.onNotFound([]() {
-    String fn = LATER_SERVER_NAME.uri() + ".bat";
-    if (SPIFFS.exists(fn)) {
-      handleGenericHttpRun(fn);
-      return;
-    }//end if bat file found?
-    if (!handleFileRead(LATER_SERVER_NAME.uri()))
-      LATER_SERVER_NAME.send(404, LATER_PLAIN, "FileNotFound: " + LATER_SERVER_NAME.uri() );
-  });
-}//end bindServerMethods()
-#ifdef ESP8266
-
-#else
-
-#endif
-void handleLS() { // replace with non-string non-crap:
-
-  String path = LATER_SERVER_NAME.arg("dir");
-  if (path == "") path = "/";
-#ifdef ESP8266
-  Dir dir = SPIFFS.openDir(path);
-#else
-  File dir = SPIFFS.open(path);
-#endif
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send ( 200, "text/html", "");
-
-  LATER_SERVER_NAME.sendContent(F("<html><head><title>"));
-  LATER_SERVER_NAME.sendContent(path);
-  LATER_SERVER_NAME.sendContent(F("</title><style>@import 'https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cyborg/bootstrap.min.css';\n  a,b,small { display: inline-block; min-width: 11em;}"));
-  LATER_SERVER_NAME.sendContent(F(" ol li { margin-top: 0.25em; font-size: 125%; }</style></title></head><body class=container> <h1>"));
-  LATER_SERVER_NAME.sendContent(path);
-  LATER_SERVER_NAME.sendContent(F("</h1> <ol id=list></ol><script>["));
-
-  File entry;
-
-#ifdef ESP8266
-  while (dir.next()) {
-    entry = dir.openFile("r");
-#else
-  entry = dir.openNextFile();
-  while (entry) {
-#endif
-
-    if (strlen(entry.name()) > 2) {
-      bool isDir = false;
-      LATER_SERVER_NAME.sendContent(",\n{\"type\":\"");
-      LATER_SERVER_NAME.sendContent((isDir) ? "dir" : "file");
-      LATER_SERVER_NAME.sendContent("\",\"name\":\"");
-#ifdef ESP8266
-      LATER_SERVER_NAME.sendContent(entry.name() + 1);
-#else
-      LATER_SERVER_NAME.sendContent(entry.name() );// Ignore '/' prefix
-#endif
-#ifdef ESP8266
-      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
-      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.fileSize()));
-#endif
-#ifdef ESP32
-      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
-      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.size()));
-#endif
-
-      LATER_SERVER_NAME.sendContent("\",\"mime\":\"");
-      LATER_SERVER_NAME.sendContent(getContentType(entry.name()));
-      LATER_SERVER_NAME.sendContent("\"}");
-      entry.close();
-
-    }//end if name long?
-
-#ifdef ESP32
-    entry = dir.openNextFile();
-#endif
-  }
-
-  LATER_SERVER_NAME.sendContent(F("].filter(Boolean).map(function(a){list.appendChild(document.createElement('li')).innerHTML='<input type=button onclick=\"doDel(nextElementSibling.href)\" value=X > '+a.name.link('/'+a.name)+' '+'run'.link('/run/?name='+encodeURIComponent(a.name))+'  ' +'edit'.link('/editor/#'+a.name)+' ' + a.size.bold()+' ' + a.mime.small(); });function doDel(fn){if(!confirm('ERASING FILE: '+fn+'\\n\\nThis CANNOT be undone !!!'))return; var path = '/' + fn.split('/').pop(); fetch('/delete/?name='+encodeURIComponent(path)).then(function(){location.reload();});return false;}</script>"));
-  LATER_SERVER_NAME.sendContent(F("<hr><form id=f1 method=post action=/upload enctype=multipart/form-data target=_blank><label>Upload Embeded File <input onchange='setTimeout(function(){f2.click()},222);' accept='application/*'  type=file name=file></label><input type=submit value=Upload id=f2 ></form></body>"));
-  LATER_SERVER_NAME.sendContent("");
-}
-//25968 > 26268 > 26772
-void handleEditor() {
-
-
-  // move this to a multipart response, print most of it, then print define path to script, then print html page closer/footer.
-
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send ( 200, "text/html", "");
-
-  LATER_SERVER_NAME.sendContent(F(  "<!doctype html><html><head>\n    <meta charset=\"UTF-8\">    <title>later editor</title>\n<link rel=icon href=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAAcSURBVDhPY/hr+fc/JXjUgFEDQHjUgGFgwN//AJBjMi73juieAAAAAElFTkSuQmCC> \n<link rel=stylesheet type=text/css href='//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css' />\n<style>\tbody {background:#000;color:#888;padding-top:5px; } #files{ width: 7em; }  #val {overflow: scroll;width: 99%; height: 85vh; font: 24px monospace; } div#stats {position: fixed;top: 1em;right: 3em;width: 40%;background: #111;padding: 1em;overflow: auto;height: 90vh;border: 1px solid #888;font: 20px monospace;}\n</style>\n</head>\n<body class=container-fixed><a href='/docs/'>Home</a>\n   <select id=files onchange='loadme(value)'>\n  <option value=\"\">Load File...<option>\n  </select>  &nbsp; \n <label>Filename: \n  <input type=text id=inpname size=32>\n</label>\n    &nbsp;   &nbsp; \n   <input type=button class='btn btn-success btn-sm' value=Save id=btnsave onclick='saveIt(inpname.value, val.value)'>\n&nbsp;   &nbsp; \n   <input type=button class='btn btn-warning btn-sm' value=Run id=btnrun onclick='runme(inpname.value)'> \n&nbsp;   &nbsp; \n   <input type=button class='btn btn-info btn-sm' value=Test id=btntest onclick='test()'> \n&nbsp;   &nbsp; <label> auto-test <input type=checkbox id=chkauto></label>\n\n&nbsp;   &nbsp;\n&nbsp;   &nbsp; <label> URL Params <input type=input id=inpqs value=\"&reload=true\" size=24></label>\n\n   <input type=button class='btn btn-xs btn-info pull-right btn-sm' value=\"?\" id=btnhelp onclick='showHelp()'> \n\n<br> \n<div id=edwrap>\n<textarea id=val rows=40 cols=90></textarea></div>\n\n<div id=stats></div>\n<form method='POST' action='/update' target=_blank enctype='multipart/form-data' onsubmit='setTimeout(function(){file11.value=null}, 25000)' >\n                  <input id=file11 type='file' accept='application/*' name='update'>\n                  <input type='submit' value='Update'>\n               </form>\n\n\n<script>\nvar url = '/';\n\nfunction saveIt(name, value) {\n\tif(!name) return alert('filename blank, try again');\n\tvar dbs = document.body.style,\n\t\tfile = new File([value], name, {\n\t\t\ttype: \"text/plain\",\n\t\t}),\n\t\tform = new FormData();\n\tdbs.opacity = 0.5;\n\tform.append('file', file, name);\n\tfetch(url + 'upload', {\n\t\tbody: form,\n\t\tmethod: 'POST',\n\t\tmode: 'cors'\n\t}).then(x => {\n\t\tdbs.opacity = 1;\n\t\tdir();\n\t\tlocation.hash = name;\n\t\tdocument.title=\"@\"+name;\n\t});\n}\n\nfunction dir() {\n\tfetch(url + 'dir').then(x => x.json()).then(x => {\n\t\tfiles.options.length = 1;\n\t\tx.sort(function(a,b){return a.name>b.name?1:-1;}).map(function(a, i) {\n\t\t\tfiles.appendChild(new Option(a.name + \" : \" + a.size, a.name));\n\t\t});\n\t})\n}\n\n \nfunction test() {\n\tfetch(url + 'test').then(x => x.text()).then(x=>{\n\t\t stats.innerText= x;\t\n\t});\n}\n\n\nfunction loadme(file) {\n        var dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + file).then(x => x.text()).then(x => {\n\t\tval.value = x;\n\t\tinpname.value = file;\n\t\tval.focus();\n\t\tdbs.opacity = 1;\n\t\tlocation.hash = file;\n\t\tdocument.title=\"@\"+file;\n\t});\n\n}\nvar cache;\nfunction showHelp(){\n  var done = x=>{\n   var s = x.split(/<\\/?pre/i)[1].slice(1).trim();\n   cache = x;\n   stats.innerText = s;\n  };\n  if(cache) return done(cache);\n  fetch(\"/docs/\").then(x=>x.text()).then(done);\n}\n\nfunction runme(file) {\n\tif(!file) return alert(\"no file chosen\");\n\tvar dbs = document.body.style;\n\tdbs.opacity = 0.3;\n\tfetch(url + \"run?name=\" + encodeURIComponent(file) + inpqs.value ).then(x => x.text()).then(x => {\n\t\tval.focus();stats.title=x;\n\t\tdbs.opacity = 1;\n\t\tif(chkauto.checked) setTimeout(test, 500);\n\t});\n}\nif(location.hash) loadme(location.hash.slice(1));\nsetTimeout(dir, 140);\n</script>"));
-
-  LATER_SERVER_NAME.sendContent("<script src=");
-  LATER_SERVER_NAME.sendContent(LATER_EDITOR_URL);
-  LATER_SERVER_NAME.sendContent("></script>");
-  LATER_SERVER_NAME.sendContent("\n</body>\n</html>");
-  LATER_SERVER_NAME.sendContent("");
-}//end handle editor
-String getContentType(String filename) {
-  if (LATER_SERVER_NAME.hasArg("download")) return "application/octet-stream";
-  else if (filename.endsWith(".html")) return "text/html";
-  else if (filename.endsWith(".css")) return "text/css";
-  else if (filename.endsWith(".js")) return "application/javascript";
-  else if (filename.endsWith(".png")) return "image/png";
-  else if (filename.endsWith(".gif")) return "image/gif";
-  else if (filename.endsWith(".jpg")) return "image/jpeg";
-  else if (filename.endsWith(".ico")) return "image/x-icon";
-  else if (filename.endsWith(".mp3")) return "audio/mp3";
-  else if (filename.endsWith(".json")) return "application/json";
-  return LATER_PLAIN;
-}
-
-bool handleFileRead(String path) {
-  if (path.endsWith("/")) path += "index.htm";
-  String contentType = getContentType(path);
-  String pathWithGz = path + ".gz";
-  if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {
-    if (SPIFFS.exists(pathWithGz))
-      path += ".gz";
-    File file = SPIFFS.open(path, "r");
-    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-    LATER_SERVER_NAME.streamFile(file, contentType);
-    file.close();
-    return true;
-  }
-  return false;
-}
-/*
-
-  void handleStatus() {
-  String message = "{\n\n";
-  message.reserve(512);
-
-  const rst_info * resetInfo = system_get_rst_info();
-
-  #ifndef NO_WIFI
-  FSInfo fso_info;
-  SPIFFS.info(fso_info);
-
-  message += " \"timestamp\":\t\"" + String(millis()) + "." + String(micros()) + "\",\n";
-  message += " \"systime\":\t" + String(system_get_time()) + ",\n";
-  message += " \"cycles\":\t" + String(  ESP.getCycleCount()) + ",\n";
-
-  message += " \"rssi\":\t" + String(  WiFi.RSSI() ) + ",\n";
-
-  message += " \"analog\":\t" + String(analogRead(A0)) + ",\n";
-  message += " \"reset\":\t\"" + String(RST_REASONS[resetInfo->reason]) + "\",\n";
-  message += " \"chipid\":\t\"" + String(system_get_chip_id(), HEX) + "\",\n";
-  message += " \"dev_mac\":\t\"" + String(mac[0], HEX) + ":" + String(mac[1], HEX) + ":" + String(mac[2], HEX) + ":" + String(mac[3], HEX) + ":" + String(mac[4], HEX) + ":" + String(mac[5], HEX) + "\",\n";
-  message += " \"dev_ip\":\t\"" + String( WiFi.localIP().toString()) + "\",\n";
-  message += " \"req_uri\":\t\"" + String(LATER_SERVER_NAME.uri()) + "\",\n";
-  message += " \"built\":\t\"" + String( __DATE__) + " " + String(__TIME__) + "\",\n";
-  message += " \"flash\":\t\"" + String(FLASH_SIZE_MAP_NAMES[system_get_flash_size_map()]) + "\",\n";
-
-  message += " \"flash_phy\":\t" + String(  ESP.getFlashChipRealSize()) + ",\n";
-  message += " \"flash_ide\":\t" + String(  ESP.getFlashChipSize()) + ",\n";
-  message += " \"flash_usd\":\t" + String(  fso_info.usedBytes ) + ",\n";
-  message += " \"flash_tot\":\t" + String(  fso_info.totalBytes ) + ",\n";
-
-  message += " \"board\":\t\"" + String(ARDUINO_BOARD) + "\",\n";
-  message += " \"cpumhz\":\t" + String(system_get_cpu_freq()) + ",\n";
-  message += " \"memkb\":\t" + String(system_get_free_heap_size()) + "\n";
-  message += "\n}";
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send(200, "application/json", message);
-  #endif
-  }
-*/
-static String filename;
-void handleFileUpload() {
-
-  HTTPUpload& upload = LATER_SERVER_NAME.upload();
-  if (upload.status == UPLOAD_FILE_START) {
-    filename = upload.filename;
-    if (!filename.startsWith("/")) filename = "/" + filename;
-#ifdef DEBUG_WEBSERVER
-    Serial.printf("handleFileUpload Name: %s\n", filename.c_str());
-#endif // DEBUG_WEBSERVER
-    fsUploadFile = SPIFFS.open(filename, "w");
-  }
-  else if (upload.status == UPLOAD_FILE_WRITE) {
-    if (fsUploadFile)
-      fsUploadFile.write(upload.buf, upload.currentSize);
-  }
-  else if (upload.status == UPLOAD_FILE_END) {
-    if (fsUploadFile) {
-      fsUploadFile.close();
-      if ((!LATER_SERVER_NAME.hasArg("reload")) && Later.getByName( (char*)filename.c_str() ))  Later.unload((char*)filename.c_str());
-      if ((LATER_SERVER_NAME.hasArg("reload")) && Later.getByName( (char*)filename.c_str() ))  Later.run((char*)filename.c_str());
-
-      // handleSetFileLastFileName = ""; // bust any batch file caches
-      LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-      LATER_SERVER_NAME.send(200, "text/html", F("<html><title>Done Uploading...</title><h1>Done</h1><script>location.replace('/ls');</script></html>"));
-    }
-#ifdef DEBUG_WEBSERVER
-    Serial.printf(F("handleFileUpload Size: %u\n"), upload.totalSize);
-#endif // DEBUG_WEBSERVER
-  }
-}//end handleFileUpload()
-void handleFileList() {
-
-  String path = LATER_SERVER_NAME.arg("dir");
-  if (path == "") path = "/";
-
-#ifdef ESP8266
-  Dir dir = SPIFFS.openDir(path);
-#else
-  File dir = SPIFFS.open(path);
-#endif
-
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send ( 200, "text/json", "[{}");
-
-  File entry;
-
-#ifdef ESP8266
-  while (dir.next()) {
-    entry = dir.openFile("r");
-#else
-  entry = dir.openNextFile();
-  while (entry) {
-#endif
-
-    if (strlen(entry.name()) > 2) {
-
-      bool isDir = false;
-      LATER_SERVER_NAME.sendContent(",\n{\"type\":\"");
-      LATER_SERVER_NAME.sendContent((isDir) ? "dir" : "file");
-      LATER_SERVER_NAME.sendContent("\",\"name\":\"");
-#ifdef ESP8266
-      LATER_SERVER_NAME.sendContent(entry.name() + 1);
-#else
-      LATER_SERVER_NAME.sendContent(entry.name() );// Ignore '/' prefix
-#endif
-#ifdef ESP8266
-      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
-      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(dir.fileSize()));
-#endif
-#ifdef ESP32
-      LATER_SERVER_NAME.sendContent( "\",\"size\":\"");
-      LATER_SERVER_NAME.sendContent(laterUtil::formatBytes(entry.size()));
-#endif
-      LATER_SERVER_NAME.sendContent("\",\"mime\":\"");
-      LATER_SERVER_NAME.sendContent(getContentType(entry.name()));
-      LATER_SERVER_NAME.sendContent("\"}");
-      entry.close();
-
-    }
-
-#ifdef ESP32
-    entry = dir.openNextFile();
-#endif
-
-  }
-
-  LATER_SERVER_NAME.sendContent("]");
-  LATER_SERVER_NAME.sendContent("");
-  /*
-
-    String path = LATER_SERVER_NAME.arg("dir");
-
-    Dir dir = SPIFFS.openDir(path);
-    path = String();
-    String output = "[";
-    while (dir.next()) {
-      File entry = dir.openFile("r");
-      if (true)//entry.name()!="secret.json") // Do not show secrets
-      {
-        if (output != "[")
-          output += ',';
-        bool isDir = false;
-        output += "\n{\"type\":\"";
-        output += (isDir) ? "dir" : "file";
-        output += "\",\"name\":\"";
-        output += String(entry.name()).substring(1);
-        output += "\",\"size\":\"" + laterUtil::formatBytes(dir.fileSize()) + "\",";
-
-        output += "\"mime\":\"" + getContentType(entry.name()) + "";
-
-        output += "\"}";
-      }
-      entry.close();
-    }
-
-    output += "\n]";
-    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-    LATER_SERVER_NAME.send(200, "text/json", output);
-
-  */
-}//end handFileList()
-void handleUnload() {
-  char fnb[32] = {'/'};
-  char *fnp = fnb + 1;
-  memset(fnp, '\0', 31);
-  strcpy(fnp, LATER_SERVER_NAME.arg("name").c_str());
-  if (fnp[0] == '*') {
-    for (int i = 0, mx = Later.loadedScripts; i < mx; i++) {
-      fnp = SCRIPTS[i].fileName;
-      Later.unload(fnp);
-    }
-
-  } else {
-    if (fnp[0] != '/') fnp = fnb;
-    Later.unload(fnp);
-  }
-
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send(200, "text/json", "true");
-}
-void handleRun() {
-
-  char fnb[44] = {'/'};
-  char *fnp = fnb + 1;
-  memset(fnp, '\0', 43);
-  strcpy(fnp, LATER_SERVER_NAME.arg("name").c_str());
-  if (fnp[0] != '/') fnp = fnb;
-
-  if (SPIFFS.exists(fnp)) {
-    handleGenericHttpRun(fnp);
-    /*
-        LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-        LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-
-        LATER_ENVIRON * s = Later.load(fnp);
-        if (!s) {
-          LATER_SERVER_NAME.send ( 503, LATER_PLAIN, "503 - refused to load");
-          LATER_SERVER_NAME.sendContent("");
-          return;
-        }
-
-        // load vars from url into script enviroment:
-        String key, value, banned = ",$reload,$name,$content-type";
-        for (uint8_t i = 0; i < LATER_SERVER_NAME.args(); i++) {
-          key =  "$" + LATER_SERVER_NAME.argName(i);
-          value = LATER_SERVER_NAME.arg(i);
-          if (!isdigit(value[0])) continue;
-          if (banned.indexOf(',' + key + ',') > -1) continue;
-          char slot = getVarNameNumber((char*)key.c_str(), s->index);
-          s->VARS[(int)slot] = value.toInt();
-        }
-        if (LATER_SERVER_NAME.hasArg("content-type")) {
-          LATER_SERVER_NAME.send ( 200, LATER_SERVER_NAME.arg("content-type"), "");
-        } else {
-          LATER_SERVER_NAME.send ( 200,  s->contentType, "");
-        }
-
-        s->calledFromWeb = 1;
-        Later.run(fnp);
-        LATER_SERVER_NAME.sendContent("");
-        if (LATER_SERVER_NAME.hasArg("persist")) return;
-        if (s->options.persist) return;
-
-        if (  !strchr(fnp, '~') ) {
-          Later.unload(fnp);
-        } else {
-          s->options.persist = true;
-        }
-
-    */
-
-    //LATER_INSTANCES
-    return;
-  }//end if bat file found?
-
-  LATER_SERVER_NAME.send(404, LATER_PLAIN, "404 - batch not found" );
-
-}//end handleRun()
-void handleLog() {
-
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-
-  if ( LATER_SERVER_NAME.hasArg("tail")) {
-    int count = LATER_SERVER_NAME.arg("tail").toInt();
-
-    if (count < 1) { // passed in url w/o value or zero, grab just the last line:
-      LATER_SERVER_NAME.send(200, LATER_PLAIN, strrchr(setRunLog, '\n') + 1);
-      return;
-    }
-
-    // grab tails chars specified by tail arg:
-    int pos = strlen(setRunLog) - count;
-    if (pos < 0) pos = 0;
-    char *ret = setRunLog + pos;
-    LATER_SERVER_NAME.send(200, LATER_PLAIN, ret);
-    return;
-  }//end if tail arg?
-  //////////////////////////////////////////////////////////////
-  // processed results  - chunked line-by-line results:
-  if (LATER_SERVER_NAME.args() > 0) {
-    LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
-    LATER_SERVER_NAME.send(200, LATER_PLAIN, LATER_LOG_HEADER);                      //Send first part WITH header
-
-    int pos = strcspn(setRunLog + 1, "\n");
-
-    // take, skip, larger, smaller, after, before, filter, exclude, count
-
-    char * rest = setRunLog;
-    char line[64];
-    char termBuffer[24];
-    char excludeBuffer[24];
-
-    bool is_filter = LATER_SERVER_NAME.hasArg("filter");
-
-    bool is_after = LATER_SERVER_NAME.hasArg("after");
-    bool is_before = LATER_SERVER_NAME.hasArg("before");
-    bool is_larger = LATER_SERVER_NAME.hasArg("larger");
-    bool is_smaller = LATER_SERVER_NAME.hasArg("smaller");
-    bool is_exclude = LATER_SERVER_NAME.hasArg("exclude");
-    bool is_take = LATER_SERVER_NAME.hasArg("take");
-    bool is_skip = LATER_SERVER_NAME.hasArg("skip");
-    bool is_count = LATER_SERVER_NAME.hasArg("count");
-    unsigned long afterTime = strtoul(LATER_SERVER_NAME.arg("after").c_str(), NULL, 0);
-    unsigned long beforeTime = strtoul(LATER_SERVER_NAME.arg("before").c_str(), NULL, 0);
-
-    unsigned int largerThan = LATER_SERVER_NAME.arg("larger").toInt();
-    unsigned int smallerThan = LATER_SERVER_NAME.arg("smaller").toInt();
-
-    int takeLeft = LATER_SERVER_NAME.arg("take").toInt();
-    int skipLeft = LATER_SERVER_NAME.arg("skip").toInt();
-    int countOfResults = 0;
-    unsigned long lineTime;
-    char lineTimeString[16];
-
-    if (is_filter) strcpy(termBuffer, LATER_SERVER_NAME.arg("filter").c_str() );
-    if (is_exclude) strcpy(excludeBuffer, LATER_SERVER_NAME.arg("exclude").c_str() );
-
-    bool is_wanted;
-
-    int logLeft = strlen(rest);
-
-    while ( (logLeft - pos) > 1 ) {
-      // copy line from string to buffer:
-      strncpy(line, rest + 1, pos);
-      line[pos] = '\n';
-      line[pos + 1] = '\0';
-
-      // now filter by making sure line contains term
-
-      is_wanted = 1;
-      if (is_filter && is_wanted) is_wanted = strstr (line, termBuffer);
-      if (is_exclude && is_wanted) is_wanted = !strstr (line, excludeBuffer);
-
-      if (is_larger && is_wanted)  is_wanted =  strlen(line) > largerThan;
-      if (is_smaller && is_wanted) is_wanted =  strlen(line) < smallerThan;
-      if (is_after && is_wanted) {
-        // parse a time from log line
-        int delimPos =  strcspn(line, "\t: ");
-        strncpy(lineTimeString, line, delimPos);
-        lineTime =  strtoul(lineTimeString, NULL, 0);
-        is_wanted = (lineTime > afterTime);
-      }
-      if (is_before && is_wanted) {
-        // parse a time from log line
-        int delimPos =  strcspn(line, "\t: ");
-        strncpy(lineTimeString, line, delimPos);
-        lineTime =  strtoul(lineTimeString, NULL, 0);
-        is_wanted = (lineTime < beforeTime);
-      }
-      if (is_skip && is_wanted )  is_wanted = skipLeft-- < 1;
-      if (is_take && is_wanted ) {
-        is_wanted = takeLeft-- > 0;
-        if (takeLeft < 0) break; // early bail optomize if no more results wanted
-      }//end if take?
-      // based on the guantlet above, do we still want the line in the results?
-      if (is_wanted) {
-        if (is_count) {
-          countOfResults++;
-        } else {
-          LATER_SERVER_NAME.sendContent( line );
-        }
-      }
-      // find next line, if any
-      if (rest[0]) {
-        rest = strchr ( rest + 1, '\n' );
-        pos = strcspn(rest + 1, "\n");
-      } else {
-        rest[0] = '\0';
-        break;
-      }
-
-      logLeft = strlen(rest);
-
-    } // wend rest
-    if (is_count) {
-      LATER_SERVER_NAME.sendContent( String(countOfResults) );
-    }
-
-    LATER_SERVER_NAME.sendContent(F("")); // this tells web client that transfer is done
-    LATER_SERVER_NAME.client().stop();
-    //Tell browser no more content is coming
-    return;
-  }//end if params?
-  //////////////////////////////////////////////////////////////
-  // END processed results
-  // serve whole log:
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
-  LATER_SERVER_NAME.send(200, LATER_PLAIN, LATER_LOG_HEADER);
-  LATER_SERVER_NAME.sendContent(strchr(setRunLog, '\n') + 1);
-  LATER_SERVER_NAME.sendContent(F(""));
-
-}//end handleLog()
-// before log api
-
-// after log api:
-void handleCommandList2() {
-
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);   //Enable Chunked Transfer
-  LATER_SERVER_NAME.send(200, LATER_PLAIN, "COMMAND LISTING (duplicate keys are aliases)\n\nKey\tCommand\n");                      //Send first part WITH header
-
-  char c[2] = {0, 0};
-  for (auto const & x : LATER_CMDS)   {
-    c[0] = x.second;
-    if (!c[0]) continue;
-    LATER_SERVER_NAME.sendContent(c);
-    LATER_SERVER_NAME.sendContent("\t");
-    LATER_SERVER_NAME.sendContent(x.first);
-    LATER_SERVER_NAME.sendContent("\n");
-  }
-  LATER_SERVER_NAME.sendContent("");
-}//end handleCommandList()
-// a 100-line or fewer key:value store with smart api for managing it. file backed peristent storage.
-
-void handleStore() {
-
-  if (LATER_SERVER_NAME.hasArg("value")) {
-    if (LATER_SERVER_NAME.hasArg("ram")) {
-      LATER_STORE.update(LATER_SERVER_NAME.arg("key").c_str(), LATER_SERVER_NAME.arg("value").toInt());
-    } else {
-      LATER_STORE.set(LATER_SERVER_NAME.arg("key").c_str(), LATER_SERVER_NAME.arg("value").toInt());
-    }
-    getCurrent()->storeDirty = 1;
-  } else if (LATER_SERVER_NAME.hasArg("key")) {
-    LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-    LATER_SERVER_NAME.send(200, LATER_PLAIN, String(LATER_STORE.get(LATER_SERVER_NAME.arg("key").c_str())));
-    return;
-  }
-
-  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "key  \ttimestamp\tver\tvalue\n");
-  for (int i = 0; i <  LATER_STORE.length; i++) {
-    LATER_SERVER_NAME.sendContent( LATER_STORE.stringify(i) );
-    LATER_SERVER_NAME.sendContent( "\n" );
-  }//next
-
-  LATER_SERVER_NAME.sendContent("");
-
-  // serve whole log:
-
-} // handleStore()
-int INDENT_LEVEL = 0;
-
-void addJSON(char * buff, const char * key, unsigned long value) {
-  char liner[52] = {'\t', '\t', '\t', '\t', '\t', '\t'};
-  char * line = liner;
-  line += INDENT_LEVEL;
-  sprintf(line, "\"%s\": %lu,\n", key, value);
-  strcat(buff, liner);
-}
-
-void addJSON(char * buff, const char * key, const char * value) {
-  char liner[52] = {'\t', '\t', '\t', '\t', '\t', '\t'};
-  char * line = liner;
-  line += INDENT_LEVEL;
-
-  sprintf(line, "\"%s\": \"%s\",\n", key, value);
-  strcat(buff, liner);
-}
-
-void backtrack(char * buff) {
-  buff[strlen(buff) - 2] = '\0';
-}
-
-void handleScripts() {
-
-  int mx = Later.scriptCount;
-  char out[2048] = {'{', '\n'};
-  memset (out + 2, '\0', 2046);
-
-  INDENT_LEVEL = 1;
-
-  addJSON(out, "count", Later.loadedScripts);
-  addJSON(out, "current", Later.currentScript);
-  addJSON(out, "ms", millis());
-  addJSON(out, "ram", ESP.getFreeHeap());
-  addJSON(out, "bootram", Later.bootRam);
-  strcat(out, "\t\"scripts\":[  \n"); // start scripts:
-  INDENT_LEVEL = 2;
-  // iterate scripts:
-  for (int i = 0; i < mx ; i++) {
-    if (!SCRIPTS[i].lineCount) continue;
-    unsigned long runTime = (millis() - SCRIPTS[i].loadedAt) * (unsigned long)1000;
-    strcat(out, "\t{\n");
-
-    addJSON(out, "fileName", SCRIPTS[i].fileName);
-    addJSON(out, "index", SCRIPTS[i].index);
-    addJSON(out, "frozen", SCRIPTS[i].resumeLineNumber ? 1 : 0);
-    addJSON(out, "interval", SCRIPTS[i].interval  );
-    addJSON(out, "persist", SCRIPTS[i].options.persist  );
-
-    addJSON(out, "line", SCRIPTS[i].i);
-    addJSON(out, "lines", SCRIPTS[i].lineCount);
-    addJSON(out, "exit", SCRIPTS[i].exitLineNumber);
-    addJSON(out, "chars", strlen(SCRIPTS[i].program));
-    addJSON(out, "vars", LATER_VAR_NAMES[i].size());
-    addJSON(out, "reads", SCRIPTS[i].reads);
-    addJSON(out, "writes", SCRIPTS[i].writes);
-
-    addJSON(out, "parseTime", SCRIPTS[i].parseTime);
-    addJSON(out, "runTime", SCRIPTS[i].runTime);
-
-    if (SCRIPTS[i].runs) addJSON(out, "avgTime", SCRIPTS[i].duration / SCRIPTS[i].runs);
-    addJSON(out, "cpuTime", SCRIPTS[i].duration);
-    addJSON(out, "cpuUtil", (SCRIPTS[i].duration * 100 ) / runTime );
-    addJSON(out, "lifeTime", runTime);
-    addJSON(out, "runs", SCRIPTS[i].runs);
-    backtrack(out);
-    strcat(out, "\n\t},\n");
-  }
-
-  INDENT_LEVEL = 0;
-
-  if (mx) backtrack(out);
-
-  strcat(out, "\n\t\t]\n}");//end scripts
-
-
-  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
-  LATER_SERVER_NAME.send(200, "text/json", out);
-}
-#endif
-
-#line 1 "mod.ino"
-//#ifdef ESP8266HTTPClient_H_
-#if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
-
-int HTTPRequest(char * url) {
-  // wait for WiFi connection
-  yield();
-  //static HTTPClient http;
-  //HTTP = &http;
-  http.end();
-  http.setTimeout(5000);
-  http.begin(url);
-  int httpCode = http.GET();
-  if (httpCode > 0) {
-
-    yield();
-    return httpCode;
-  } else {
-    return httpCode;
-  }
-}//end ajax()
-#endif
 
 #line 1 "templates.ino"
 #ifdef ESP32
@@ -6345,6 +6228,9 @@ void embedTemplates(char * line, LATER_ENVIRON * s) {
   unsigned int index;
   if (callback) {
     index = s->TEMP_COUNT++;
+
+    if (index == LATER_TEMPLATE_CACHE_LENGTH) return;
+
     s->TEMPS[index] = callback;
     // now replace text of template embed with shortcut:
     if (nameLength == 3) { //resize the string to hold 4-char symbnol:
@@ -6360,7 +6246,7 @@ void embedTemplates(char * line, LATER_ENVIRON * s) {
 void embedFunctions(char * line, LATER_ENVIRON * s) {
   // if all literals, replace function call with actual result
 
-  bool isFunc = true;
+  // bool isFunc = true;
   char * ptrDblSpace = strstr(line, "  ");
   if (ptrDblSpace) {
     while (ptrDblSpace) {
@@ -6374,7 +6260,7 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
   const char * MATCH_CHARS = ")+*-/%<>=!&?:|";
   ptrParts --;
   if (!isupper(ptrParts[0])) { //not a function call, but math expression, inject . before each operator
-    isFunc = false;
+    //  isFunc = false;
     ptrParts += 2;
     int pos = strcspn (ptrParts , MATCH_CHARS);
     while (pos) {//put num/term into stack, slide string, try to grab next
@@ -6415,9 +6301,19 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
   if (callback) {
 
     // fn found, cache:
-    unsigned int index = s->FUNC_COUNT++;
-    s->FUNCS[index] = callback; // cache locally
+    int index = -1;
+    // look for existing copy of cacched function to re-use:
+    for (unsigned int i = 0; i < s->FUNC_COUNT; i++) {
+      if (callback == s->FUNCS[i]) {
+        index = i;
+      }
+    }
+    if (index == -1) {
+      index = s->FUNC_COUNT++;
+    }
 
+    if (index == LATER_FUNCTION_CACHE_LENGTH) return;
+    s->FUNCS[index] = callback; // cache locally
     // now replace text of fn handle embed with shortcut:
     memset(lp, ' ', nameLen);
     lp += nameLen - 2;
@@ -6438,7 +6334,6 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
       if (!ptr || ptr[0] == '\0') break;
 
       //chomp number and count up:
-      int termLen = 0;
       int i = 0;
       for (; i < 6; i++) {
         if (!isdigit(ptr[i])) {
@@ -6509,6 +6404,14 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
   char * ptrRight = strchr(line, '}');
   if (!ptrRight) return;
 
+  bool isConstant = false;
+
+  if (ptrLeft[1] == '*') {
+    isConstant = true;
+    ptrLeft[0] = ' ';
+    ptrLeft[1] = '{';
+    ptrLeft++;
+  }//ed if star constant?
   char * TEMPLATE_KEY_BUFF2 = ptrLeft;
   char rightSideCap = ptrRight[1];
 
@@ -6534,8 +6437,8 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
     ptrLeft[0] = '@';
     ptrLeft[1] = lineTemplateCount++ + 65; //line[1];
     //ptrLeft[2] = '_';
-    strcpy(ptrLeft+2, ptrRight+1);
-    
+    strcpy(ptrLeft + 2, ptrRight + 1);
+
     // s->lines[s->i].data = 5;
     //lineTemplateCount++;
     if (strrchr ( ptrLeft + 1, '{' )) {
@@ -6604,7 +6507,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
 #endif
   }//end if [0]=='%' ?
 
-  auto callback = TEMPLATES2[TEMPLATE_KEY_BUFF2];
+  auto callback = isConstant ? 0 : TEMPLATES2[TEMPLATE_KEY_BUFF2];
   if (callback) val = callback();
   if (storeCall) {
     char buff[24];
@@ -6616,6 +6519,15 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
   if (varCall) {
     val = s->VARS[ptrLeft[2] - 65];
   }//end if var call?
+  if (isConstant) { // replace val if known value already computed
+    //CONSTANTS[s->index][ptrLeft]
+    auto search = CONSTANTS[s->index].find(TEMPLATE_KEY_BUFF2);
+    if (search != CONSTANTS[s->index].end()) {
+      val = search->second;
+    } else {
+      val = CONSTANTS[s->index][TEMPLATE_KEY_BUFF2] = TEMPLATES2[TEMPLATE_KEY_BUFF2]();
+    }
+  }//end if constant?
   if (val) {
     bool varUsed = false;
 
@@ -6627,7 +6539,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
       //if output needed. build interpolated replacement buffer
       if ( ((s->lines[s->i].flags >> 4) & 0x01) == 1   ) {
         int varLen = strlen(nam);
-        memset ( TEMPLATE_BUFFER, ' ', 24);
+        memset ( TEMPLATE_BUFFER, ' ', 63);
         strncpy(TEMPLATE_BUFFER, nam, varLen);
         TEMPLATE_BUFFER[varLen] = '\0';
       }
@@ -6639,7 +6551,7 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s) { // also accep
       ptrRight[1] = rightSideCap;
       ptrLeft[0] = '@';
       ptrLeft[1] = nam[1];
-     // ptrLeft[2] = '_';
+      // ptrLeft[2] = '_';
       for (int i = 0; i < (len - 2); i++) ptrLeft[2 + i] = ' '; // fill rest of line with space
     } else {
       strcpy(TEMPLATE_KEY_BUFF, TEMPLATE_KEY_BUFF2);
@@ -6711,7 +6623,7 @@ void handleCommandList() {
       if (callback) val = callback();
       LATER_SERVER_NAME.sendContent("\t");
 
-      memset ( TEMPLATE_BUFFER, ' ', 24);
+      memset ( TEMPLATE_BUFFER, ' ', 63);
       itoa(val, TEMPLATE_BUFFER, 10);
       LATER_SERVER_NAME.sendContent(TEMPLATE_BUFFER);
       LATER_SERVER_NAME.sendContent("\n");
@@ -6719,6 +6631,195 @@ void handleCommandList() {
   }
   LATER_SERVER_NAME.sendContent("");
 }//end handleCommandList()
+#ifdef ESP8266WEBSERVER_H
+
+void handleDump() {
+
+  LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
+  if (!s) s = getCurrent();
+  LATER_LINE * l;
+  //char linebuff[LATER_LINE_BUFFER];
+  char * linebuff = LINE_BUFF;
+  memset(linebuff, '\0', 16);
+
+  char respbuff[20];
+  char * lp;
+  //char dbg[ 8 8 ];
+  char * dbg = TEMP_BUFFER;
+  memset(dbg, '\0', 16);
+  char flagList[] = "CHOAEVT";
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "\n");
+
+  sprintf(dbg, "%ld lines in %db from ", s->lineCount, strlen(s->program) );
+  LATER_SERVER_NAME.sendContent(dbg);
+  LATER_SERVER_NAME.sendContent(s->fileName);
+
+  sprintf(dbg, "\nRAM:%d  runs:%lu  subRet:%u resumeLine:%u\n", ESP.getFreeHeap(), s->runs, s->subReturnLine,  s->resumeLineNumber);
+  LATER_SERVER_NAME.sendContent(dbg);
+
+  unsigned long avg = s->runTime;
+  if (s->runs) avg = s->duration / s->runs;
+  sprintf(dbg, "Line:%ld run:%ld parse:%ld avg:%ld",
+          s->i, s->runTime, s->parseTime, avg);
+  LATER_SERVER_NAME.sendContent(dbg);
+  //String bonus = " ";
+  bool bonus = true;
+
+#ifdef LATER_LINE_PROFILING
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP data  runs    ptime    mean  parse  code\n");
+#else
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP dat code\n");
+#endif
+
+  for (int i = 0, mx = s->lineCount; i < mx; i++) {
+    l = &s->lines[i];
+    lp = s->program + l->start;
+    strncpy(linebuff, lp, l->len);
+    linebuff[l->len] = '\0';
+    if (i > 9) bonus = false;
+    if (bonus) LATER_SERVER_NAME.sendContent(" ");
+    LATER_SERVER_NAME.sendContent(itoa(i, respbuff, 10));
+    LATER_SERVER_NAME.sendContent("->");
+    LATER_SERVER_NAME.sendContent(itoa(l->exit, respbuff, 10));
+    LATER_SERVER_NAME.sendContent(" \t[");
+    itoa(l->flags + 256, respbuff, 2);
+    lp = respbuff;
+    lp += 2;  // print out any active flags with abbr in the slot, else empty space:
+    for (int f = 0; f < 7; f++)  lp[f] = (lp[f] == '1') ? flagList[f] : ' ';
+
+    LATER_SERVER_NAME.sendContent(lp);
+    LATER_SERVER_NAME.sendContent("] ");
+    respbuff[0] = l->cmd ? l->cmd : '?';
+    respbuff[1] = '\0';
+    LATER_SERVER_NAME.sendContent(respbuff);
+    LATER_SERVER_NAME.sendContent(" ");
+
+    itoa(l->data, respbuff, 16);
+    if (l->data < 16)  LATER_SERVER_NAME.sendContent("0");
+    LATER_SERVER_NAME.sendContent(respbuff);
+    LATER_SERVER_NAME.sendContent("  ");
+
+    // cut in profile info here:
+#ifdef LATER_LINE_PROFILING
+    outputPaddedNumber(l->profile.count, "xkm", 6);
+    outputPaddedNumber(l->profile.total, "ums", 8);
+    unsigned long tot = l->profile.total;
+    if (l->profile.count) tot = l->profile.total / l->profile.count;
+    outputPaddedNumber(tot, "ums", 7);
+    outputPaddedNumber(l->profile.parse, "ums", 6);
+    LATER_SERVER_NAME.sendContent(" ");
+#endif
+
+    LATER_SERVER_NAME.sendContent(linebuff);
+    LATER_SERVER_NAME.sendContent("\n");
+  }//next line
+
+#ifdef LATER_LINE_PROFILING
+  LATER_SERVER_NAME.sendContent(" # ex    CHOAEVT OP data  runs    ptime    mean  parse  code\n");
+#else
+  LATER_SERVER_NAME.sendContent(" # ex    CHOAEVT OP dat code\n");
+#endif
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+
+  // optimization report:
+
+  LATER_SERVER_NAME.sendContent("\nCACHED FUNCTIONS:\n#  \tsymb\tname\n");
+
+  for (unsigned int i = 0; i < s->FUNC_COUNT; i++) {
+    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
+    LATER_SERVER_NAME.sendContent( ".\t#");
+
+    auto cachedFunc = s->FUNCS[i];
+    for (auto const & x : FUNCS)   {
+      if (x.second == cachedFunc ) {
+
+        // symb:
+        linebuff[0] = 65 + i;
+        linebuff[1] = '\0';
+        LATER_SERVER_NAME.sendContent(linebuff);
+
+        // name:
+        LATER_SERVER_NAME.sendContent("\t");
+        LATER_SERVER_NAME.sendContent(x.first);
+        LATER_SERVER_NAME.sendContent("\n");
+        break;
+      }//end if match?
+    }//next global function
+  }//next local func
+  LATER_SERVER_NAME.sendContent("\nCACHED TEMPLATES:\n#  \tsymb\tvalue\texpr\n");
+
+  for (unsigned int i = 0; i < s->TEMP_COUNT; i++) {
+    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
+    LATER_SERVER_NAME.sendContent( ".\t#");
+
+    auto cachedFunc = s->TEMPS[i];
+
+    for (auto const & x : TEMPLATES2)   {
+      if (x.second == cachedFunc ) {
+        linebuff[0] = 65 + i;
+        linebuff[1] = '\t';
+        LATER_SERVER_NAME.sendContent(linebuff);
+        LATER_SERVER_NAME.sendContent(itoa( cachedFunc(), linebuff, 10));
+        LATER_SERVER_NAME.sendContent( "\t");
+        LATER_SERVER_NAME.sendContent(x.first);
+        LATER_SERVER_NAME.sendContent("\n");
+        break;
+      }
+    }
+
+  }//next temp
+#endif
+  LATER_SERVER_NAME.sendContent("\nVALUE REGISTERS:\n#  \tsymb\tvalue\texpr\n");
+  int varNameMisses = 0;
+
+  //\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
+  for (unsigned int i = 0;  i < LATER_VARS_LENGTH; i++) {
+    if ( i > 25 && i < 32) continue;
+
+    if (varNameMisses  && ! s->VARS[i]) continue; // skip "empty" lines
+
+    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
+    LATER_SERVER_NAME.sendContent( ".\t@");
+    linebuff[0] = (char) (i + 65);
+
+    linebuff[1] = '\0';
+
+    LATER_SERVER_NAME.sendContent(linebuff);
+    LATER_SERVER_NAME.sendContent("\t");
+
+    LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    LATER_SERVER_NAME.sendContent("\t");
+    bool foundVarName = false;
+
+    if (varNameMisses < 2) {
+      for (auto const & x : LATER_VAR_NAMES[s->index])   {
+        if (x.second == i) {
+          foundVarName = true;
+          LATER_SERVER_NAME.sendContent(x.first.c_str());
+          break;
+        }//if match?
+      }//next varName
+    }//if not struck out finding var names yet?
+
+    //}else{
+    if (!foundVarName) {
+      varNameMisses++;
+      LATER_SERVER_NAME.sendContent("#");
+      LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    }
+    LATER_SERVER_NAME.sendContent("\n");
+
+  }//next local var
+  LATER_SERVER_NAME.sendContent("\n-------- SYSTEM LOG -----------\n");
+  LATER_SERVER_NAME.sendContent(setRunLog);
+  LATER_SERVER_NAME.sendContent("\n-------- END PROGRAM DEBUG -----------\n");
+  LATER_SERVER_NAME.sendContent("");//ends and closes response
+} // end handle dump()
+#endif
 
 
 
