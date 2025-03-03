@@ -627,19 +627,19 @@ bool provideArrayReturnAll(char * assign, int elmSectionLength, long value);
 bool processArray(char * line, LATER_ENVIRON * s, int varSlot);
 #line 647 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 978 "core.ino"
+#line 889 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1158 "core.ino"
+#line 1052 "core.ino"
 void popHttpResponse();
-#line 1176 "core.ino"
+#line 1070 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1327 "core.ino"
+#line 1221 "core.ino"
 void processStringFormats(char* s);
-#line 1456 "core.ino"
+#line 1350 "core.ino"
 void handleEval();
-#line 1476 "core.ino"
+#line 1370 "core.ino"
 void outputPaddedNumber(unsigned long value, char * suffix, int width);
-#line 1510 "core.ino"
+#line 1404 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -711,13 +711,13 @@ void replaceEndCommands(char * line);
 bool embedVariables(char * line, bool isConstant, LATER_ENVIRON * SCRIPT);
 #line 643 "loader.ino"
 int parseVarCommands(char * line, char * linePtr, int lineData, LATER_ENVIRON * s);
-#line 755 "loader.ino"
+#line 682 "loader.ino"
 bool isStaticValue(char * str);
-#line 759 "loader.ino"
+#line 686 "loader.ino"
 void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s );
-#line 1066 "loader.ino"
+#line 824 "loader.ino"
 void parseArgsForApply(char * lb, char * CACHE );
-#line 1090 "loader.ino"
+#line 848 "loader.ino"
 void parseApply(char * lb, LATER_LINE * l, LATER_ENVIRON * s );
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
@@ -2883,86 +2883,6 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
 #endif
   return 0;
 } // end evalMath
-/*
-
-  bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
-  #ifdef HIGH_RES_TIMING
-  unsigned long st = micros();
-  #endif
-  unsigned long * VARS = s->VARS;
-  char * ptr = string_condition;
-  char op;
-  unsigned long term1, term2; // the values to compare
-  bool ifConditionTrue = false,
-       shouldInvert = false;
-
-  if (ptr[0] == '!') {
-    shouldInvert = true;
-    ptr++;
-    while (ptr[0] == ' ') ptr++; // trim left
-  }
-  char * opPtr = strpbrk (ptr, "=!<>%&|");
-  if (opPtr && opPtr[0] == '%'  && opPtr[1] == 0) { //
-    if (ptr[0] == '@') {
-      ifConditionTrue = VARS[ptr[1] - 65] > (randomReg() % 100);
-    } else {
-      ifConditionTrue = strtoul(ptr, NULL, 10) > (randomReg() % 100);
-    }
-
-  #ifdef HIGH_RES_TIMING
-    unsigned long et = micros();
-    HR_PERF.cond.total += et - st;
-    HR_PERF.cond.count++;
-  #endif
-    return ifConditionTrue;
-  }//end if random change conditional?
-
-  term1 =  Number(ptr, VARS); // atoi(ptr); LHS
-
-  if (!opPtr) { // if asking for truthyness of a single term, compare to zero and leave
-    ifConditionTrue = term1 > 0;
-    if (shouldInvert) ifConditionTrue = !ifConditionTrue;
-  #ifdef HIGH_RES_TIMING
-    unsigned long et = micros();
-    HR_PERF.cond.total += et - st;
-    HR_PERF.cond.count++;
-  #endif
-    return ifConditionTrue;
-  }
-
-  while (opPtr) {
-    op = opPtr[0];
-    term2 =  Number(opPtr + 1, VARS); // atoi( opPtr + 1 ); RHS
-
-    switch (op) {
-      case '=': ifConditionTrue = term1 == term2; break;
-      case '!': ifConditionTrue = term1 != term2; break;
-      case '>': ifConditionTrue = term1 > term2; break;
-      case '<': ifConditionTrue = term1 < term2; break;
-      case '%': ifConditionTrue = term1 % term2; break;
-      case '|': if (ifConditionTrue) return !shouldInvert; ifConditionTrue = true; break;
-    }
-
-    if (!ifConditionTrue) {
-      if ( !opPtr || opPtr[0] != '|' ) break;
-    }
-
-    term1 = term2;
-    opPtr = strpbrk (opPtr + 1, "=!<>%&|");
-  }
-
-  if (shouldInvert) ifConditionTrue = !ifConditionTrue;
-  #ifdef HIGH_RES_TIMING
-  unsigned long et = micros();
-  HR_PERF.cond.total += et - st;
-  HR_PERF.cond.count++;
-  #endif
-  return ifConditionTrue;
-  } // end evalConditionalExpression()
-*/
-// speed this the F up with line operation cache. cahe: shouldInvert, op, term1 slot, term 2 slot - mus use all above or it won't optomize
-//  l->exprCache[11]
-
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
 #ifdef HIGH_RES_TIMING
   unsigned long st = micros();
@@ -3098,20 +3018,6 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
 #endif
   return ifConditionTrue;
 } // end evalConditionalExpression()
-/*  RESPONSE METHODS AND PROPERTIES
-
-  count
-  indexOf
-  like
-  dd666
-  //numbers[]
-  //lines[]
-  x length
-  x lineCount
-  x status
-  x text
-
-*/
 //#ifdef ESP8266HTTPClient_H_
 #if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
 void popHttpResponse() {
@@ -4981,66 +4887,6 @@ int parseVarCommands(char * line, char * linePtr, int lineData, LATER_ENVIRON * 
   if (strstr(linePtr, "=0")) lineData = 6;
   return lineData;
 }//end parseVarCommands()
-
-/*
-
-  parseApply:@D=@�
-  parseApply:@E=@�
-  parseApply:@F=9
-  parseApply:@G=0
-  parseApply:@H=2
-  parseApply:@G=#A(@D,@E)
-  parseApply:@I={#A}
-  parseApply:@J=(@I.-@H)
-*/
-/*
-
-  parseApply:@D=@�
-  parseApply:@E=@�
-  parseApply:@F=9
-  parseApply:@G=0
-  parseApply:@H=2
-  parseApply:@G=#A(@D,@E)
-  parseApply:@I={#A}
-  parseApply:@J=(@I.-@H)
-  human          loader        parser        runner
-  0,11->$blk        0,11->@G      @�,@�->_@G      @�,@�->_@G
-
-  0,$mx->[$roy,$lem][$c]  0,@I->[@E,@F][@K] @�,@I->_[@E,@F][@K] @�,@I->_[@E,@F, !!!!
-
-  {i}->RGB(0,0,32)    {#B}->RGB(0,0,32) {#B},@�->_@�    @A,@�->_@�
-  {i}->>RGB(3,3,3)    {#C}->>RGB(3,3,3) {#C},@�->_@�    @A,@�->_@�
-  {i}->$col       {#D}->@J      {#D},@�->_@J    @A,@�->_@J
-  $pos->RGB(0,96,28)    @H->RGB(0,96,28)  @H,@�->_@�      @H,@�->_@�
-  {i},2->$col       {#E},2->@J      {#E},@�->_@J    @A,@�->_@J
-  0,$mx->3866624      0,@I->@�      @�,@I->_@�      @�,@I->_@�
-  0,$mx->>$vary     0,@I->>@D     @�,@I->>@D      @�,@I->>@D
-  0,$mx-><$vary     0,@I-><@D     @�,@I-><@D      @�,@I-><@D
-
-  $pos->RGB(0,{i},28)   @H->RGB(0,{#F},28)  @H,@�->_#A(@�,{#F},@�)  @H,@�-404  !!!!
-
-  pixel=13,233->4               @�,@�->_@�    @�,@�->_@�
-  by time loader runs,
-   human vars are machine vars
-   templates are shortened
-
-   x get function results varized
-   x get all them zeros into vars
-   get all literals into vars
-   pad out to keep crucial parts in the same col (if possible) for each flavor
-
-  when it gets to runner,
-   tempaltes are vars
-
-  how can i make this faster?
-  1. always have a flag, def to _
-  2. convert all lits to vars, always but always
-  3. always have start, stop positions, as vars
-  4. cache stuff. but far less need, maybe
-
-  fix bug with last case and array case
-  last one used to spit out @H->28, now @H->#A(@�,@A,@�)
-*/
 bool isStaticValue(char * str) {
   return (!strchr(str, '{')) && (!strchr(str, '@')) && (!strchr(str, '(')) && (!strchr(str, '[')) ;
 }
@@ -5066,7 +4912,6 @@ void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
   char * ptrColorBuff = colorBuff;
   char startBuff[16] = {0};
   char spanBuff[16] = {0};
-
   bool staticIndex = 0;
   bool staticSpan  = 0;
   bool staticColor = 0;
@@ -5084,7 +4929,6 @@ void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
 
   staticIndex = isStaticValue(startBuff);
   staticSpan = isStaticValue(spanBuff);
-
   char * pflag = strchr("+-<>*&", afterAssign[0]);
   char flag;
   if (!pflag) {
@@ -5095,32 +4939,13 @@ void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
     ptrColorBuff++;
   }
   while (ptrColorBuff[0] == ' ') ptrColorBuff++;
+
   staticColor = isStaticValue(ptrColorBuff);
   if (!strchr(assign, '(') && hasParen) staticColor = 1;
-
-  /*
-    DUMP("\nColor:", lb);
-
-    DUMP("flag:", flag);
-    DUMP("startBuff:", startBuff);
-    DUMP("staticIndex:", staticIndex);
-    DUMP("spanBuff:", spanBuff);
-    DUMP("staticSpan:", staticSpan);
-
-    DUMP("colorBuff:", ptrColorBuff);
-    DUMP("staticColor:", staticColor);
-
-  */
 
   if (staticColor) color = laterUtil::parseColor(ptrColorBuff, s);
   RGB_PIXEL.value = color;
 
-  /*
-    DUMP("colorValue:", color);
-    DUMP("Color R", RGB_PIXEL.chan[2]);
-    DUMP("Color G", RGB_PIXEL.chan[1]);
-    DUMP("Color B", RGB_PIXEL.chan[0]);
-  */
   char * cursor = lb;
   start =  Number( startBuff, s->VARS);
   if (staticIndex) {
@@ -5180,116 +5005,15 @@ void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
     strcpy(cursor, ptrColorBuff);
   }
 
-  // new startegey
-
-  // parse just like number does now. it's slow and shit, but it work, by def. we can clean it up
-  // consider range static if all const and vars and lits   set line flag
-  // consider color static if all const and vars and lits   set line flag
-
-  // once parsed, re-serialized and inject into lb for a consistent output, when static
-  /*
-
-    int indPos = laterUtil::indexOf(line, "->"),
-      commaPos = laterUtil::indexOf(line, ",") + 1,
-      startPos = Number(line, s->VARS),
-      howMany = 1;
-    if (commaPos && commaPos < indPos) howMany =  Number(line + commaPos, s->VARS);
-    ptr += indPos + 2;
-
-    color = laterUtil::parseColor(ptr, s);
-
-  */
-  // 86:
-  /*
-
-    char * hash = strchr(assign, '#');
-    if( hash && ! strchr(assign, '(') ){ // not an inline function call
-      // fix literal here.
-      unsigned int col = laterUtil::parseColor(hash, s);
-      hash[0]='@';
-      hash[1]=getConstantNumber(NULL, s, col) + 65;
-      hash[2]='\0';
-    }
-
-    hash = strchr(assign, ',');
-    if( hash && ! strchr(assign, '(') ){ // not an inline function call
-      // fix literal here.
-      hash = assign+2;
-      while(hash[0] && !isdigit(hash[0])) hash++;
-
-      unsigned int col = laterUtil::parseColor(hash, s);
-      hash[0]='@';
-      hash[1]=getConstantNumber(NULL, s, col) + 65;
-      hash[2]='\0';
-    }
-    char sig = '_';
-    replaceEndingLiterals(lb, s);
-    if (assign) {
-      sig = assign[2];
-      assign[0] = 'z';
-      assign[1] = '=';
-      char * paren = strchr(assign, '(');
-      if (paren) embedFunctions(assign, s);
-      assign[0] = '-';
-      assign[1] = '>';
-      if (paren) laterUtil::replace(lb, "> #", ">#"); // maybe 86 this?
-
-    }
-
-    char * zeroComma = strstr(lb, "0,");
-    char zero = getConstantNumber(NULL, s, 0) + 65;
-    char one = getConstantNumber(NULL, s, 1) + 65;
-
-    if (zeroComma) { // 86:
-      laterUtil::replace(lb, "0,", "0 ,");
-      zeroComma[0] = '@';
-      zeroComma[1] = zero;
-    }
-    // get rid of all remaining digit literals:
-
-    char * pos = lb;
-    while (pos[0]) {   // 86:
-      int len = 0;
-      char * sp = pos;
-      while (isDigit(pos[0]) ) pos++;
-      if (sp == pos) {
-        pos++;
-        continue;
-      } else {
-        len = (pos - sp);
-        char symb = getConstantNumber(pos, s) + 65;
-        memset(sp, ' ', len );
-        sp[0] = '^';
-        laterUtil::replace(sp, "^", "  ");
-        sp[0] = '@';
-        sp[1] = symb;
-        pos++;
-      }
-    }//wend pos
-    while (strchr(lb, ' ')) laterUtil::replace(lb, " ", "");
-
-    DUMP(">>>", lb);
-
-    // fill in span after index
-    if (lb[2] == '-' || lb[4] == '-' ) {
-      laterUtil::replace(lb, "->", ",@^->");
-      strchr(lb, '^')[0] = one;
-    }
-
-     // fill in flag, defaults to _
-    laterUtil::replace(lb, "->@", "->_@");
-    laterUtil::replace(lb, "->[", "->_[");
-    laterUtil::replace(lb, "->{", "->_{");
-    laterUtil::replace(lb, "->#", "->_#");
-  */
-
   if (((l->flags >> 2) & 0x01) == 1) { // remove inlined expressions' flag
     if (!strchr(lb, '(')) l->flags -= 4;
   };
   if (((l->flags >> 1) & 0x01) == 1) { // remove var flags
     l->flags -= 2;
   };
+
 }//end parsePixel();
+
 void parseArgsForApply(char * lb,  char * CACHE  ) {
 
   uint8_t i = 2;
@@ -5381,8 +5105,6 @@ void parseApply(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
     }
   }//end if ready to go for apply?
 }//end parseApply()
-
-//lineData = flag = 0;
 
 #line 1 "mod.ino"
 //#ifdef ESP8266HTTPClient_H_
@@ -5910,49 +5632,7 @@ void runScript() {
         continue;
         break;
       case LATER_apply: // fast expression execution engine
-        /*
-                if (!l->data) { // init
-                  l->data = 1; //  don't init again
 
-                  uint8_t i = 2;
-                  char * ptrLine = strchr(lb, '(') + 1;
-                  char * CACHE = l->exprCache;
-                  memset(CACHE, '\0', 11);
-
-                  while (ptrLine[0]) {
-                    if (ptrLine[0] == '@') {
-                      CACHE[i++] = '@';
-                      CACHE[i++] = ptrLine[1] - 65;
-                      ptrLine += 1;
-                    } else if (ptrLine[0] == '{') {
-                      CACHE[i++] = '{';
-                      CACHE[i++] = ptrLine[2] - 65;
-                      ptrLine += 2;
-                    } else if (isdigit(ptrLine[0])) {
-                      CACHE[i++] = 'D';
-                      CACHE[i++] = ptrLine[0] - 48;
-                    }
-                    ptrLine++;
-                  }//wend ptrline
-
-                  l->exprCache[0] = lb[1] - 65; // dest
-                  l->exprCache[1] = strchr(lb, '#')[1] - 65; // cb
-
-                } //end if first run of line?
-        */
-        /*
-          still todo:
-          expression converter: if all ops in expr match,, and there's a known function for it, (map + to sum for example), then convert expr to function call and conver fn call to apply
-          convert many expressions and fn calls and use apply - much faster way to execute 2 or 3 - arg functions
-          see if this can be consexpr'd-ish - run first half in pars stage to find signatures and patterns
-                  DUMP("exprCache:", l->exprCache );
-                  DUMP("arit:",   (int)l->exprCache[0] );
-                  DUMP("dest:",  (char)(l->exprCache[1] + 65) );
-                  DUMP("func:",  (char) (l->exprCache[2] + 65) );
-                  Serial.println("cache0:" + String( (char) l->exprCache[3])  + ": slot:" +   String( (int) l->exprCache[4])    );
-                  Serial.println("cache1:" + String( (char) l->exprCache[5])  + ": slot:" +   String( (int) l->exprCache[6])    );
-                  Serial.println("cache2:" + String( (char) l->exprCache[7])  + ": slot:" +   String( (int) l->exprCache[8])    );
-        */
         APPLY_ARGS[2] = NULL;
         for (int i = 0, index = 2, mx = 8; index < mx;  index++) {
           switch ( l->exprCache[index++]) {
@@ -5969,19 +5649,6 @@ void runScript() {
             APPLY_ARGS[1],
             APPLY_ARGS[2]
           );
-        /*  //old buyt working rotine:
-                 int  i = 0;
-                  APPLY_ARGS[2] = NULL;
-                  for (int index = 3, mx = (l->exprCache[0] * 2) + 3; index < mx;  index += 2) {
-                    switch ( l->exprCache[index]) {
-                      case '@': APPLY_ARGS[i++] = s->VARS[ l->exprCache[index + 1]  ]  ; break;
-                      case '{':  APPLY_ARGS[i++] =  s->TEMPS[   l->exprCache[index + 1]  ](); break;
-                      case 'D': APPLY_ARGS[i++] =  l->exprCache[index + 1]; break;
-                      default: break;
-                    }
-
-                  }// next
-        */
 
         continue;
         break;
