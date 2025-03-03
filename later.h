@@ -130,9 +130,16 @@ namespace nsLATER {
 //@TAKE
 
 #define DUMP(lab, val) { Serial.println(lab + String(val)); }
+union RGB_COLOR {
+    std::int32_t value;     // occupies 4 bytes
+    std::uint8_t chan[4];     // occupies 1 byte
+};
+
+RGB_COLOR RGB_PIXEL;
+RGB_COLOR OLD_PIXEL;
+RGB_COLOR NEW_PIXEL;
 
 #include <map>
-
 struct cmp_str { // converts pointers into stirng values to find terms in map and let map balance red/black tree of K:V pairs
   bool operator()(char const *a, char const *b) const noexcept {
     return strcmp(a, b) < 0;
@@ -168,6 +175,7 @@ char setRunLog[LATER_LOG_SIZE + 16] = "";
 
 
 std::map <const char *, unsigned long, cmp_str> CONSTANTS[LATER_INSTANCES];
+unsigned long APPLY_ARGS[4] = {0, 0, 0, 0};
 
 //>> public types, used to make callbacks for commands+function, run backups or mods, etc
 #ifdef HIGH_RES_TIMING
@@ -285,6 +293,7 @@ typedef struct LATER_LINE {
   LINE_PROFILE profile;
 #endif
   char cmd; // shorthand command code
+  char exprCache[11];
 } LATER_LINE;
 
 typedef struct LATER_ENVIRON {
@@ -292,38 +301,39 @@ typedef struct LATER_ENVIRON {
   long i; // what line are we at?
   LATER_LINE lines[LATER_LINE_LIMIT]; // holds meta about each line
   char program[LATER_PROGRAM_SIZE]; // program code string buffer
-  long lineCount = 0; // how many parsed code lines are in the program?
-  unsigned long loadedAt, startedAt, runs, duration, runTime, parseTime, reads, writes, interval; // ms timestamp at program start, how many executions?
   char fileName[32]; // file name of the program
 
-  long forTop[4], forStep[4], forIndex[4], forStart[4], forEnd[4], forLevel = 0; // int_fast16_t
-
-  long switchExit; // tracking switch statement cases
   char switchTerm[16]; // term used to lexically match case statements buffer
   char contentType[32]; // used for http response, set by #type= "macro"
 
-  unsigned long intervals[8] = {0, 0, 0, 0,   0, 0, 0, 0}; // ms timer snapshots for repeating sections ; interval command
-  byte intervalCount = 0; // how many intervals are active?
-  unsigned long VARS[LATER_VARS_LENGTH];// holds variable values
+  int eventSlot = -1; // when using events, store slot# here for unload to clean up
+  int status; // for returning web call success, errs, etc
+
   noArgFunc TEMPS[ LATER_TEMPLATE_CACHE_LENGTH]; // local template function cache
   threeArgFunc FUNCS[LATER_FUNCTION_CACHE_LENGTH];// local function cache
+  long lineCount = 0; // how many parsed code lines are in the program?
+  long forTop[4], forStep[4], forIndex[4], forStart[4], forEnd[4], forLevel = 0; // int_fast16_t
+  long switchExit; // tracking switch statement cases
+
+  unsigned long intervals[8] = {0, 0, 0, 0,   0, 0, 0, 0}; // ms timer snapshots for repeating sections ; interval command
+  unsigned long loadedAt, startedAt, runs, duration, runTime, parseTime, reads, writes, interval; // ms timestamp at program start, how many executions?
+  unsigned long VARS[LATER_VARS_LENGTH];// holds variable values
   unsigned int TEMP_COUNT = 0; // how many templates are cached?
   unsigned int FUNC_COUNT = 0; // how many functions are cached?
   unsigned int LITS_COUNT = 2; // how many literals are var-cached?
   unsigned long subArgs[8];
   unsigned long jumpIfOperand = 0; // stores one compare term per program for fast jumping around
-  char jumpIfOperator = 0;
-  byte subReturnLine; // for calling subs, calling line goes here
-  int status; // for returning web call success, errs, etc
-  byte resumeLineNumber; // for freeze, where to thaw?
   // bool persist; // unload after execution if false;
   unsigned long resumeMillis; // for freeze, when to thaw?
   unsigned long timer; // for tracking timer commands
+  unsigned long subReturnValue = 99; // stores var slot for call command to recieve value
+  byte intervalCount = 0; // how many intervals are active?
+  char jumpIfOperator = 0;
+  byte subReturnLine; // for calling subs, calling line goes here
+  byte resumeLineNumber; // for freeze, where to thaw?
   byte arity; // how many args passed
   byte startLineNumber = 0; // over-rides the default of 0 as top line, to allow simple+effecient run-once code via start command
   byte exitLineNumber = 0; // over-rides the default last line from the real last line. can be jumped over in unload() to allow cleanup routine
-  int eventSlot = -1; // when using events, store slot# here for unload to clean up
-  unsigned long subReturnValue = 99; // stores var slot for call command to recieve value
   bool calledFromWeb; // switches print from Serial to server
   bool storeDirty; // set by store update, reset after first thereafter run
   bool isSuspended; // used by unload() to skip finish section code when suspending
@@ -335,6 +345,7 @@ LATER_ENVIRON SCRIPTS[LATER_INSTANCES]; // dd666
 // cdefnoqrstux
 // left: y
 // char cmd name constants
+#define LATER_apply '6'
 #define LATER_noop 'n'
 #define LATER_else 'E'
 #define LATER_var 'V'
@@ -401,6 +412,7 @@ std::map<const char *,  char, cmp_str> LATER_CMDS = { // 300 bytes for all comma
   {"_", 'l'},
   {"__", 'l'},
   {"analogWrite", 'w'},
+  {"apply", '6'},
   {"assert", 'k'},
   {"attachInterrupt", 'v'}, // alias: on
   {"break", 'B'},
@@ -563,15 +575,15 @@ LATER_SAMPLER Sampler;
 #endif
 
 unsigned long randomReg();
-#line 611 "danscript.ino"
+#line 629 "danscript.ino"
 unsigned long clamp(int a);
-#line 725 "danscript.ino"
+#line 749 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 839 "commands.ino"
+#line 872 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 857 "commands.ino"
+#line 890 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 1017 "commands.ino"
+#line 1050 "commands.ino"
 void loadStoredValuesForStore();
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -609,23 +621,25 @@ void autoEqualsInsert(char * line);
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
 #line 433 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 465 "core.ino"
-bool processArray(char * line, unsigned long * VARS, int varSlot);
-#line 655 "core.ino"
+#line 492 "core.ino"
+bool provideArrayReturnAll(char * assign, int elmSectionLength, long value);
+#line 503 "core.ino"
+bool processArray(char * line, LATER_ENVIRON * s, int varSlot);
+#line 647 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 884 "core.ino"
+#line 978 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 980 "core.ino"
+#line 1158 "core.ino"
 void popHttpResponse();
-#line 998 "core.ino"
+#line 1176 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1149 "core.ino"
+#line 1327 "core.ino"
 void processStringFormats(char* s);
-#line 1278 "core.ino"
+#line 1456 "core.ino"
 void handleEval();
-#line 1298 "core.ino"
+#line 1476 "core.ino"
 void outputPaddedNumber(unsigned long value, char * suffix, int width);
-#line 1332 "core.ino"
+#line 1510 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -673,57 +687,71 @@ void backtrack(char *buff);
 void handleScripts();
 #line 1 "loader.ino"
 int loadScript(const char * scriptFileName);
-#line 328 "loader.ino"
+#line 351 "loader.ino"
 void replaceIncludes(char * fileBuff);
-#line 363 "loader.ino"
+#line 386 "loader.ino"
 void replaceSpecialMacros(char * fileBuff, const char * scriptFileName);
-#line 385 "loader.ino"
+#line 408 "loader.ino"
 void sniffContentType( char * fileBuff, LATER_ENVIRON * SCRIPT );
-#line 398 "loader.ino"
+#line 421 "loader.ino"
 void populateDefines(char * fileBuff, int scriptIndex);
-#line 423 "loader.ino"
+#line 446 "loader.ino"
 int convertIIFs(char * line, char * lb, int endpos);
-#line 444 "loader.ino"
-void removeSingleLineComments(char * line, char * cmd);
 #line 467 "loader.ino"
+void removeSingleLineComments(char * line, char * cmd);
+#line 490 "loader.ino"
 void harvestMacros(char * line, int scriptIndex);
-#line 519 "loader.ino"
+#line 542 "loader.ino"
 void cleanupVarDeclarations(char * line);
-#line 541 "loader.ino"
+#line 564 "loader.ino"
 void expandRangeOperators(char * line, LATER_ENVIRON * SCRIPT);
-#line 591 "loader.ino"
+#line 614 "loader.ino"
 void replaceEndCommands(char * line);
-#line 606 "loader.ino"
+#line 629 "loader.ino"
 bool embedVariables(char * line, bool isConstant, LATER_ENVIRON * SCRIPT);
-#line 620 "loader.ino"
+#line 643 "loader.ino"
 int parseVarCommands(char * line, char * linePtr, int lineData, LATER_ENVIRON * s);
+#line 755 "loader.ino"
+bool isStaticValue(char * str);
+#line 759 "loader.ino"
+void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s );
+#line 1066 "loader.ino"
+void parseArgsForApply(char * lb, char * CACHE );
+#line 1090 "loader.ino"
+void parseApply(char * lb, LATER_LINE * l, LATER_ENVIRON * s );
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
 #line 2 "runner.ino"
 void runScript();
-#line 16 "templates.ino"
+#line 31 "templates.ino"
 void getDate(unsigned long epoc);
-#line 215 "templates.ino"
+#line 230 "templates.ino"
 unsigned long processTemplateExpressionsNumber(const char * line);
-#line 246 "templates.ino"
+#line 261 "templates.ino"
 void embedTemplates(char * line, LATER_ENVIRON * s);
-#line 289 "templates.ino"
+#line 304 "templates.ino"
 void embedFunctions(char * line, LATER_ENVIRON * s);
-#line 459 "templates.ino"
+#line 474 "templates.ino"
 void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
-#line 674 "templates.ino"
+#line 689 "templates.ino"
 uint8_t parseByteFromChars(char * ptr);
-#line 687 "templates.ino"
+#line 702 "templates.ino"
 void handleCommandList();
-#line 748 "templates.ino"
+#line 813 "templates.ino"
 void handleDump();
-#line 611 "danscript.ino"
+#line 629 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
 
 std::map < const char *, unsigned long(*)(unsigned long, unsigned long, unsigned long), cmp_str > FUNCS = {
   RAWFUNC("SUM", a + b + c),
+  RAWFUNC("DIFF", a - b - c),
+  { "MULT", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 1)->unsigned long {return a * b * c; }},
+  { "DIV", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 1)->unsigned long {return a / b; }},
+  { "AND", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 1)->unsigned long {return a && b && c; }},
+  RAWFUNC("OR", a || b || c),
+  RAWFUNC("OR", a || b || c),
   RAWFUNC("MIN", min(a, b)),
   RAWFUNC("MAX", max(a, b)),
   RAWFUNC("SQRT", sqrt(a)),
@@ -1042,7 +1070,7 @@ void LaterClass::unload(const char * fileName) {
     s->lines[i].profile = {0, 0, 0};
 #endif
   }
-
+  //s->exprCacheLen = 0;
   //remove script and reset options
   loadedScripts--;
   s->fileName[0] = '\0';
@@ -1506,7 +1534,7 @@ void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
     //char linebuff[LATER_LINE_BUFFER];
     char * linebuff = LINE_BUFF;
     memset(linebuff, '\0', 16);
-    
+
     lp = s->program + l->start;
     strncpy(linebuff, lp, l->len);
     linebuff[l->len] = '\0';
@@ -1733,88 +1761,114 @@ int within(int range, int base) {
   int n = (randomReg() % (range * 2)) - range ;
   return min(255, max(base + n, 0));
 }
-
-int rndSubtract(int range, int base) {
-  int n = randomReg() % range;
-  return max(base - n, 0);
+void rndSubtract(uint8_t &range, uint8_t &base) {
+  uint8_t n = randomReg() % range;
+  if (base > n) {
+    base -= n;
+  } else {
+    base = 0;
+  }
 }
-int rndAdd(int range, int base) {
-  int n = randomReg() % range;
-  return min(base + n, 255);
+void rndAdd(uint8_t &range, uint8_t &base) {
+  uint8_t n = randomReg() % range;
+  if ((255 - n) > base) {
+    base += n;
+  } else {
+    base = 255;
+  }
 }
 void runSetPixel(char * line, LATER_ENVIRON * s) {
 
   char * ptr = line;
-  uint32_t color;
-  int indPos = laterUtil::indexOf(line, "->"),
-      commaPos = laterUtil::indexOf(line, ",") + 1,
-      startPos = Number(line, s->VARS),
-      howMany = 1;
-  if (commaPos && commaPos < indPos) howMany =  Number(line + commaPos, s->VARS);
+  LATER_LINE * l = &s->lines[s->i];
+  char * CACHE = l->exprCache;
+  int startPos = CACHE[0] ?  CACHE[1] : Number(line, s->VARS);
+  int howMany =  CACHE[2] ?  CACHE[3] : Number(strchr(line + 1, ',') + 1, s->VARS);
+  /*
 
-  ptr += indPos + 2;
+    /*
+    cache map
+    0 isStaticIndex
+    1 staticIndex
+    2 isStaticSpan
+    3 staticSpan
+    4 mode flag
+    5 isStaticColor
+    6 staticRed
+    7 staticGreen
+    8 staticBlue
+  */
 
-  //  1,2->|#11,22,33
-  // look for
+  ptr = strchr(line, '>') + 2;
+  char flag = CACHE[4];
+  if (flag == '_') flag = 0;
 
-  char flag = 0;
-  if (strpbrk (ptr, "+-<>*&")) {
-    flag = ptr[0];
-    ptr++;
-  }
   if (startPos + howMany >  LATER_PIXEL_NAME.numPixels()) return;
 
-  color = laterUtil::parseColor(ptr, s);  // LATER_PRINTLN("pix color:" + String(color));
+  if (CACHE[5]) {
+    NEW_PIXEL.chan[2] = CACHE[6];
+    NEW_PIXEL.chan[1] = CACHE[7];
+    NEW_PIXEL.chan[0] = CACHE[8];
+  } else {
+    NEW_PIXEL.value = s->VARS[ptr[1] - 65];
+  }
   // here we can apply shit like bright, avg, rnd, etc
   if (flag) {
-
-    byte  r1 = (color >> 16) & 0xFF,
-          g1 = (color >> 8) & 0xFF,
-          b1 = color % 256;
-    uint32_t colorOld;
-
     for (int i = startPos, mx = startPos + howMany; i < mx; i++) {
 
-      colorOld = LATER_PIXEL_NAME.getPixelColor(i);
-
-      byte r2 = (colorOld >> 16) & 0xFF,
-           g2 = (colorOld >> 8) & 0xFF,
-           b2 = colorOld % 256;
+      OLD_PIXEL.value = LATER_PIXEL_NAME.getPixelColor(i);
 
       switch (flag) {
+
+        case '_': break;
+
         case '+':
-          color = LATER_PIXEL_NAME.Color( add(r1, r2), add(g1, g2), add(b1, b2));
+          RGB_PIXEL.chan[2] =  add(NEW_PIXEL.chan[2], OLD_PIXEL.chan[2]);
+          RGB_PIXEL.chan[1] =  add(NEW_PIXEL.chan[1], OLD_PIXEL.chan[1]);
+          RGB_PIXEL.chan[0] =  add(NEW_PIXEL.chan[0], OLD_PIXEL.chan[0]);
           break;
 
         case '-':
-          color = LATER_PIXEL_NAME.Color( subtract(r1, r2), subtract(g1, g2), subtract(b1, b2));
+          RGB_PIXEL.chan[2] =  subtract(NEW_PIXEL.chan[2], OLD_PIXEL.chan[2]);
+          RGB_PIXEL.chan[1] =  subtract(NEW_PIXEL.chan[1], OLD_PIXEL.chan[1]);
+          RGB_PIXEL.chan[0] =  subtract(NEW_PIXEL.chan[0], OLD_PIXEL.chan[0]);
           break;
 
         case '*':
-          color = LATER_PIXEL_NAME.Color( within(r1, r2), within(g1, g2), within(b1, b2));
+          RGB_PIXEL.chan[2] =  within(NEW_PIXEL.chan[2], OLD_PIXEL.chan[2]);
+          RGB_PIXEL.chan[1] =  within(NEW_PIXEL.chan[1], OLD_PIXEL.chan[1]);
+          RGB_PIXEL.chan[0] =  within(NEW_PIXEL.chan[0], OLD_PIXEL.chan[0]);
           break;
 
         case '>':
-          color = LATER_PIXEL_NAME.Color( rndAdd(r1, r2), rndAdd(g1, g2), rndAdd(b1, b2));
+          //rndAdd2
+          rndAdd(NEW_PIXEL.chan[2], OLD_PIXEL.chan[2]);
+          rndAdd(NEW_PIXEL.chan[1], OLD_PIXEL.chan[1]);
+          rndAdd(NEW_PIXEL.chan[0], OLD_PIXEL.chan[0]);
           break;
 
         case '<':
-          color = LATER_PIXEL_NAME.Color( rndSubtract(r1, r2), rndSubtract(g1, g2), rndSubtract(b1, b2));
+          rndSubtract(NEW_PIXEL.chan[2], OLD_PIXEL.chan[2]);
+          rndSubtract(NEW_PIXEL.chan[1], OLD_PIXEL.chan[1]);
+          rndSubtract(NEW_PIXEL.chan[0], OLD_PIXEL.chan[0]);
           break;
 
         case '&':
-          color = LATER_PIXEL_NAME.Color( (r1 + r2) / 2, (g1 + g2) / 2, (b1 + b2) / 2);
+          RGB_PIXEL.chan[2] =  (NEW_PIXEL.chan[2] + OLD_PIXEL.chan[2]) / 2;
+          RGB_PIXEL.chan[1] =  (NEW_PIXEL.chan[1] + OLD_PIXEL.chan[1]) / 2;
+          RGB_PIXEL.chan[0] =  (NEW_PIXEL.chan[0] + OLD_PIXEL.chan[0]) / 2;
+
           break;
           //case '': break;
       }//end switch()
 
-      LATER_PIXEL_NAME.fill(color, i, 1);
+      LATER_PIXEL_NAME.fill(RGB_PIXEL.value, i, 1);
 
     }//next pixel
     return;
   }//end if flag?
 
-  LATER_PIXEL_NAME.fill(color, startPos, howMany);
+  LATER_PIXEL_NAME.fill(RGB_PIXEL.value, startPos, howMany);
 
 }//end setPixel()
 void runRotate(long dist) {
@@ -2098,9 +2152,9 @@ char* getVarName(const char* longName, const int scriptIndex) {
 #endif
   return buffer;
 }
-char getConstantNumber(char* valueString, LATER_ENVIRON * s, unsigned long res = 0) {
+char getConstantNumber(char* valueString, LATER_ENVIRON * s, unsigned long res = -1) {
   int slot = LATER_VARS_LENGTH - s->LITS_COUNT++;
-  unsigned long value = res ? res :  strtoul(valueString, NULL, 10);
+  unsigned long value = res != -1 ? res :  strtoul(valueString, NULL, 10);
   for (int i = slot; i < LATER_VARS_LENGTH; i++) {
     if (s->VARS[i] == value) {
       s->LITS_COUNT--;
@@ -2156,7 +2210,7 @@ void replaceEndingLiterals(char * line, LATER_ENVIRON * s) {
     digitStart++;
     len = strlen(digitStart);
 
-    if (len > 2) {
+    if (len > 1) {
       char symb = getConstantNumber(digitStart, s) + 65;
       memset(digitStart, ' ', len );
       digitStart[0] = '@';
@@ -2469,13 +2523,19 @@ void processVariableExpressions(char * line, unsigned long * VARS) {// composite
 #endif
 
 }//end processVariableExpressions()
-bool processArray(char * line, unsigned long * VARS, int varSlot) {
-#ifdef HIGH_RES_TIMING
-  unsigned long st = micros();
-#endif
-  char * ptr  = strchr(line, '[');
-  //
+bool provideArrayReturnAll(char * assign, int elmSectionLength, long value) {
+  char * ending  = strchr(assign + elmSectionLength + 1, ']') + 1;
+  ltoa(value, assign, 10 );
+  memmove(assign + strlen(assign), ending, strlen(ending) + 1);
+  return false;
+}//end provideArrayReturn();
+bool processArray(char * line,  LATER_ENVIRON * s,  int varSlot) {
 
+  unsigned long * VARS = s->VARS;
+  if (varSlot == -1 && line[0] == '@'  && line[2] == '=' ) varSlot = line[1] - 65;
+  //LATER_LINE * l = &s->lines[s->i];
+
+  char * ptr  = strchr(line, '[');
   char * assign = ptr;
   char delim = ',';
   // find delim between elements and index:
@@ -2483,133 +2543,101 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
   if (!indDelim) return false;
   int elmSectionLength = indDelim - ptr;
   indDelim += 2;
+  while (indDelim[0] == ' ') indDelim++;
 
   // cut in here to look for special access modifiers:
   //  [1,3,5][>4] == 5 comparison lookup
   //  [1,3,5][&3] == 1 addressof lookup
 
   char lookupModeFlag = 0;
-  if (strspn (indDelim, "<>&=") > 0) {
-    //ptr++;
-
+  if (strchr("<>&=", indDelim[0])) {
     lookupModeFlag = indDelim[0];
     indDelim++;
 
     // look for both options:
-
     bool isAddressCall =  (lookupModeFlag == '&');
     if (isAddressCall) {
-
       if (strspn (indDelim, "<>") == 1) {
         lookupModeFlag = indDelim[0];
         indDelim++;
-        // ptr++;
       }//is a secondary compare being used?
-
     }//end if address call?
 
-    unsigned int valueNeeded = Number(indDelim, VARS);
-
-
-    // ratchet between commas, inclrementing ptr as needed
+    unsigned int valueNeeded = Number(indDelim, s->VARS);
     unsigned int elmValue, elmsFound = 1;
-    //char dlm[2] = {delim}; // dd unused
     bool valid  = false;
 
     while (ptr != NULL) {
       ptr++;
       elmValue = Number(ptr, VARS);
-      /*
-
-          uniPrint("ptr:");
-          uniPrintln(ptr);
-          uniPrint("elmsFound:");
-          uniPrintln(String(elmsFound).c_str());
-
-          uniPrint("elmValue:");
-          uniPrintln(String(elmValue).c_str());
-
-      */
 
       switch (lookupModeFlag) {
         case '>': valid = elmValue > valueNeeded; break;
         case '<': valid = elmValue < valueNeeded; break;
         case '&': valid = elmValue == valueNeeded; break;
       }//end switch compare type
-
       if (valid) {
-        if (varSlot > -1) {//DMA?
-
-          if (!isAddressCall) elmsFound = elmValue;
-          VARS[varSlot] = elmsFound;
-
-          return true;
-        }//dma?
-        // no non-dma return,  yet
-
+        if (!isAddressCall) elmsFound = elmValue;
+        if (varSlot > -1) return (VARS[varSlot] = elmsFound) || 1;
+        return provideArrayReturnAll (assign, elmSectionLength, elmsFound);
         break;
       }//end if valid?
       elmsFound++;
       ptr = strchr(ptr + 1, delim);  // skip commas until count == index
     }//wend comma segment
 
-#ifdef HIGH_RES_TIMING
-    unsigned long et = micros();
-    HR_PERF.array.total += et - st;
-    HR_PERF.array.count++;
-#endif
-
     if (lookupModeFlag == '=') {
-      if (varSlot > -1) {
-        VARS[varSlot] = elmsFound - 1;
-        return true;
-      }
+      elmsFound--;
+    } else {
+      elmsFound = 0;
     }
 
-    if (varSlot > -1) {//DMA?
-      VARS[varSlot] = 0;
-      return true;
-    }//dma?
+    if (varSlot > -1) return (VARS[varSlot] = elmsFound) || 1;
+    return provideArrayReturnAll (assign, elmSectionLength, elmsFound);
 
   }//end if reverse lookup?
   unsigned int indexNeeded = Number(indDelim, VARS);
 
   if (ptr[1] == '&' && ptr[3] == ';') { // fixed width/custom delim flag?
-    if ( isdigit(ptr[2]) ) {
+    if ( isdigit(ptr[2]) ) { // fixed width mode
       int width = ptr[2] - 48;
       ptr += 4;
       ptr += (width * indexNeeded);
-      ptr[width] = '\0';
-      if (varSlot > -1) {
-        VARS[varSlot] = Number(ptr, VARS);
-        return true;
-      }
+      char endCap = ptr[width];
+      ptr[width] = '\0'; // cap off so Number will parse
+
+      unsigned long val = Number(ptr, VARS);
+      ptr[width] = endCap;
+
+      if (varSlot > -1) return (VARS[varSlot] = val) || 1;
+      return provideArrayReturnAll (assign, elmSectionLength, val);
+
     } else {//end fixed width, begin custom delim
       delim = ptr[2];
       ptr += 3;
+      elmSectionLength -= 3;
     }//end if
   }//end if static array or custom delim?
-  // chop off index segment from elements, making last option look like a middle one to simplify element find routine below
+
+  // chop off index segment, making last option look like middle to simplify element finding
   ptr[elmSectionLength] = delim;
   ptr[elmSectionLength + 1] = '\0';
 
   // ratchet between commas, inclrementing ptr as needed
   unsigned int elmLength, elmsFound = 0;
-  char dlm[2] = {delim};
 
   while (ptr) {
     if (elmsFound++ == indexNeeded) {
-      elmLength = strcspn (ptr + 1, dlm); //","); // this could be pointer math instead
+      elmLength =  (strchr(ptr + 1, delim) - ptr) - 1;
       break;
     }
     ptr = strchr(ptr + 2, delim);  // skip commas until count == index
   }//wend comma segment
-  if (ptr) {
-    if (varSlot > -1) {//DMA?
-      VARS[varSlot] = Number(ptr + 1, VARS);
-      return true;
-    }//dma?
 
+  if (ptr) {
+    if (varSlot > -1) return (VARS[varSlot] =  Number(ptr + 1, VARS)) || 1;
+
+    // special text return instead of numbers like reverse and compares use
     char * ending = strchr(indDelim, ']');
     char * ending2 = ending + 1;
     int bonusLen = strlen(ending2);
@@ -2622,23 +2650,12 @@ bool processArray(char * line, unsigned long * VARS, int varSlot) {
       assign[elmLength] = '\0';
     }//end if bonus?
 
-  } else { // no ptr, missed elm, default to 0:
-    if (varSlot > -1) {//DMA?
-#ifdef HIGH_RES_TIMING
-      unsigned long et = micros();
-      HR_PERF.array.total += et - st;
-      HR_PERF.array.count++;
-#endif
-      VARS[varSlot] = 0;
-      return true;
-    }//dma?
-  }//ptr?
+    return false;
+  }
 
-#ifdef HIGH_RES_TIMING
-  unsigned long et = micros();
-  HR_PERF.array.total += et - st;
-  HR_PERF.array.count++;
-#endif
+  if (varSlot > -1) return (VARS[varSlot] = 0) || 1;
+  provideArrayReturnAll (assign, elmSectionLength, 0);
+
   return false;
 }//end processArray()
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
@@ -2663,6 +2680,8 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
   if ( prefixLen > 2 ) { // && isupper(s[prefixLen - 2])  // prefix content long enough to be a command?
     ptrCmd = laterUtil::copyUntilChar(leftPadPtr, '(');
 
+    char * pxptr = strchr(ptrCmd, '>');
+    if (pxptr) ptrCmd = pxptr += 2;
     if (ptrCmd[0] == '@') ptrCmd += 3;
 #ifndef LATER_DISABLE_OPTIMIZATIONS
     if (ptrCmd[0] == '#') { //function shortcut?
@@ -2831,6 +2850,17 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
 #endif
     return 1;
   }
+
+  char * arrow = strstr(s, "->");
+  if (arrow) {
+    ptrCmd = arrow + 3;
+    ptrCmd[0] = '@';
+    char symb = getConstantNumber(NULL, script, varCache) + 65;
+    ptrCmd[1] = symb;
+    ptrCmd[2] = '\0';
+    return 0;
+  }
+
   // non DMA call, must interpolate result into code line as literal number
   if (hasFunc) ptrOrig -= strlen(ptrCmd);   // include function name in output replacing
 
@@ -2853,10 +2883,12 @@ bool evalMath(char * s, LATER_ENVIRON * script, int DMA) {
 #endif
   return 0;
 } // end evalMath
-bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
-#ifdef HIGH_RES_TIMING
+/*
+
+  bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
+  #ifdef HIGH_RES_TIMING
   unsigned long st = micros();
-#endif
+  #endif
   unsigned long * VARS = s->VARS;
   char * ptr = string_condition;
   char op;
@@ -2877,11 +2909,11 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
       ifConditionTrue = strtoul(ptr, NULL, 10) > (randomReg() % 100);
     }
 
-#ifdef HIGH_RES_TIMING
+  #ifdef HIGH_RES_TIMING
     unsigned long et = micros();
     HR_PERF.cond.total += et - st;
     HR_PERF.cond.count++;
-#endif
+  #endif
     return ifConditionTrue;
   }//end if random change conditional?
 
@@ -2890,11 +2922,11 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
   if (!opPtr) { // if asking for truthyness of a single term, compare to zero and leave
     ifConditionTrue = term1 > 0;
     if (shouldInvert) ifConditionTrue = !ifConditionTrue;
-#ifdef HIGH_RES_TIMING
+  #ifdef HIGH_RES_TIMING
     unsigned long et = micros();
     HR_PERF.cond.total += et - st;
     HR_PERF.cond.count++;
-#endif
+  #endif
     return ifConditionTrue;
   }
 
@@ -2919,6 +2951,145 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
     opPtr = strpbrk (opPtr + 1, "=!<>%&|");
   }
 
+  if (shouldInvert) ifConditionTrue = !ifConditionTrue;
+  #ifdef HIGH_RES_TIMING
+  unsigned long et = micros();
+  HR_PERF.cond.total += et - st;
+  HR_PERF.cond.count++;
+  #endif
+  return ifConditionTrue;
+  } // end evalConditionalExpression()
+*/
+// speed this the F up with line operation cache. cahe: shouldInvert, op, term1 slot, term 2 slot - mus use all above or it won't optomize
+//  l->exprCache[11]
+
+bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
+#ifdef HIGH_RES_TIMING
+  unsigned long st = micros();
+#endif
+
+  char * ptr = string_condition;
+  char op, opHint;
+  char term1Slot, term2Slot;
+  unsigned long term1 = 0, term2 = 0; // the values to compare
+  bool ifConditionTrue = false,
+       shouldInvert = false;
+  char * opPtr;
+  // setup line cache:
+  LATER_LINE * l = &s->lines[s->i];
+  char * CACHE =  l->exprCache;
+  unsigned long * VARS = s->VARS;
+  // cahe: shouldInvert, op, term1 slot, term 2 slot - mus use all above or it won't optomize
+  //  l->exprCache[11]
+  if (!l->data) {
+    memset(CACHE, '\0', 11);
+    if (ptr[0] == '!') {
+      shouldInvert = true;
+      ptr++;
+      while (ptr[0] == ' ') ptr++; // trim left
+      CACHE[0] = 1;
+    }///end if invert?
+    opPtr = strpbrk (ptr, "=!<>%&|");
+
+    op = opPtr[0];
+    opHint = opPtr[1];
+
+    CACHE[1] = op;
+    CACHE[2] = opHint;
+    if (ptr[0] == '@') {
+      term1Slot = ptr[1] - 65;
+      term1 = VARS[term1Slot] ;
+    } else {
+      term1Slot = getConstantNumber(ptr, s);
+      term1 = VARS[term1Slot] ;
+    }
+
+    CACHE[3] = term1Slot;
+    CACHE[4] = opPtr - string_condition;
+    //  exprCache map:
+    //  0:shouldInvert
+    //  1:op code
+    //  3:term1 slot
+    //  4:opPtr - string_condition offset
+    //  5:term2 type :  1=var slot, 0=everything else. allows var slot 0 to be used instead of reflecting !!used
+    //  7:disble chained compare mode
+    char * t2 = strchr(opPtr + 1, '@');
+    if (t2) {
+      t2++;
+      CACHE[5] = 1;
+      CACHE[6] = t2[0] - 65;
+      term2 = VARS[CACHE[6]];
+    } else {
+      term2 =  Number(opPtr + 1, VARS);
+    }
+
+    l->data = 1;
+
+  } else { // has line.data: restor state from last time:
+    shouldInvert = CACHE[0];
+    op = CACHE[1];
+    opHint = CACHE[2];
+    term1Slot = CACHE[3];
+    term1 =  VARS[term1Slot];
+    if (shouldInvert) ptr++;
+    while (ptr[0] == ' ') ptr++; // can we kill this one day?
+    opPtr = string_condition + CACHE[4];
+    if (CACHE[5]) {
+      term2 = VARS[CACHE[6]];
+    } else {
+      term2 = Number(opPtr + 1, VARS);
+    }
+  }//end if first time or cache?
+  if (op == '%'  && opHint == 0) { // random % syntax:
+    ifConditionTrue = term1 > (randomReg() % 100);
+#ifdef HIGH_RES_TIMING
+    unsigned long et = micros();
+    HR_PERF.cond.total += et - st;
+    HR_PERF.cond.count++;
+#endif
+    return ifConditionTrue;
+  }//end if random change conditional?
+
+  if (!op) { // if asking for truthyness of a single term, compare to zero and leave
+    ifConditionTrue = term1 > 0;
+    if (shouldInvert) ifConditionTrue = !ifConditionTrue;
+#ifdef HIGH_RES_TIMING
+    unsigned long et = micros();
+    HR_PERF.cond.total += et - st;
+    HR_PERF.cond.count++;
+#endif
+    return ifConditionTrue;
+  } // end if boolean self-compareto true?
+
+  int opCount = 0;
+
+  while (opPtr) {
+    switch (op) {
+      case '=': ifConditionTrue = term1 == term2; break;
+      case '!': ifConditionTrue = term1 != term2; break;
+      case '>': ifConditionTrue = term1 > term2; break;
+      case '<': ifConditionTrue = term1 < term2; break;
+      case '%': ifConditionTrue = term1 % term2; break;
+      case '|': if (ifConditionTrue) return !shouldInvert; ifConditionTrue = true; break;
+    }
+
+    if (!ifConditionTrue) {
+      if ( !opPtr || opPtr[0] != '|' ) break;
+    }
+    if (CACHE[7]) break; // known no further processing needed
+
+    opCount++;
+    term1 = term2;
+    opPtr = strpbrk (opPtr + 1, "=!<>%&|"); // preumably, this breaks away
+
+    if (opPtr) {
+      op = opPtr[0];
+      term2 =  Number(opPtr + 1, VARS); // atoi( opPtr + 1 ); RHS
+    } else {
+      if (opCount == 1) CACHE[7] = 1; // tried again and missed 1st time, don't check anymore
+    }
+
+  }//wend
   if (shouldInvert) ifConditionTrue = !ifConditionTrue;
 #ifdef HIGH_RES_TIMING
   unsigned long et = micros();
@@ -4365,6 +4536,19 @@ int loadScript(const char * scriptFileName) { //dd666 make this a class method
         line[1] = '=';
         continue;
       }
+#ifndef LATER_DISABLE_OPTIMIZATIONS
+      if (!isPrintBlock && line[4] == '$') {
+
+        if (strstr(line, "={micros}")) {
+          laterUtil::replace(line, "{micros}", "2");
+          lineData = 10;
+        }
+        if (strstr(line, "={cycle}")) {
+          laterUtil::replace(line, "{cycle}", "2");
+          lineData = 11;
+        }
+      }
+#endif
 
       if (!isPrintBlock) autoEqualsInsert(line);
       if (!isStaticPrintBlock) {
@@ -4413,7 +4597,7 @@ int loadScript(const char * scriptFileName) { //dd666 make this a class method
 #endif
 
       // look for var usage, minding var commands themselves
-      if (cmdChar == LATER_var || cmdChar == LATER_static) { // look only after first equal for this
+      if (cmdChar == LATER_var || cmdChar == LATER_static || cmdChar == LATER_apply ) { // look only after first equal for this
         lineData = parseVarCommands(line, linePtr, lineData, SCRIPT); // despace, optomize, fix syntax like *= > =*
         if (strchr(strchr(linePtr, '='), '@')  && !lineData ) flag += 2;// vars after assign
       } else { // non var command, but uses var, flag for var processing
@@ -4470,18 +4654,21 @@ int loadScript(const char * scriptFileName) { //dd666 make this a class method
           while (strchr(linePtr, ' ')) laterUtil::replace(linePtr, " ", "");
         }
       }//end if non-output command?
-
-      lineLen = strlen(linePtr);
+      // wipe out existing processing for math commands:
 
       // populate script line object with accumulated data:
       LATER_LINE * sLine = &SCRIPT->lines[lineCount];
-      sLine->len = lineLen; // how many chars is line?
-      sLine->start = (outptr - cleanptr); // first line byte in clean buffer
-      sLine->stop  = (outptr - cleanptr) + lineLen;// last line byte in clean buffer
       sLine->cmd = cmdChar;
       sLine->data = lineData;
       sLine->flags = flag;
 
+      if ( cmdChar == LATER_apply ||  cmdChar == LATER_var ) parseApply(linePtr, sLine, SCRIPT );
+      if ( cmdChar == LATER_pixel ) parsePixel(linePtr, sLine, SCRIPT );
+
+      lineLen = strlen(linePtr);
+      sLine->len = lineLen; // how many chars is line?
+      sLine->start = (outptr - cleanptr); // first line byte in clean buffer
+      sLine->stop  = (outptr - cleanptr) + lineLen;// last line byte in clean buffer
       // copy to clean:
       strncpy (outptr, linePtr, lineLen );
       outptr[lineLen] = '\n';
@@ -4795,6 +4982,408 @@ int parseVarCommands(char * line, char * linePtr, int lineData, LATER_ENVIRON * 
   return lineData;
 }//end parseVarCommands()
 
+/*
+
+  parseApply:@D=@�
+  parseApply:@E=@�
+  parseApply:@F=9
+  parseApply:@G=0
+  parseApply:@H=2
+  parseApply:@G=#A(@D,@E)
+  parseApply:@I={#A}
+  parseApply:@J=(@I.-@H)
+*/
+/*
+
+  parseApply:@D=@�
+  parseApply:@E=@�
+  parseApply:@F=9
+  parseApply:@G=0
+  parseApply:@H=2
+  parseApply:@G=#A(@D,@E)
+  parseApply:@I={#A}
+  parseApply:@J=(@I.-@H)
+  human          loader        parser        runner
+  0,11->$blk        0,11->@G      @�,@�->_@G      @�,@�->_@G
+
+  0,$mx->[$roy,$lem][$c]  0,@I->[@E,@F][@K] @�,@I->_[@E,@F][@K] @�,@I->_[@E,@F, !!!!
+
+  {i}->RGB(0,0,32)    {#B}->RGB(0,0,32) {#B},@�->_@�    @A,@�->_@�
+  {i}->>RGB(3,3,3)    {#C}->>RGB(3,3,3) {#C},@�->_@�    @A,@�->_@�
+  {i}->$col       {#D}->@J      {#D},@�->_@J    @A,@�->_@J
+  $pos->RGB(0,96,28)    @H->RGB(0,96,28)  @H,@�->_@�      @H,@�->_@�
+  {i},2->$col       {#E},2->@J      {#E},@�->_@J    @A,@�->_@J
+  0,$mx->3866624      0,@I->@�      @�,@I->_@�      @�,@I->_@�
+  0,$mx->>$vary     0,@I->>@D     @�,@I->>@D      @�,@I->>@D
+  0,$mx-><$vary     0,@I-><@D     @�,@I-><@D      @�,@I-><@D
+
+  $pos->RGB(0,{i},28)   @H->RGB(0,{#F},28)  @H,@�->_#A(@�,{#F},@�)  @H,@�-404  !!!!
+
+  pixel=13,233->4               @�,@�->_@�    @�,@�->_@�
+  by time loader runs,
+   human vars are machine vars
+   templates are shortened
+
+   x get function results varized
+   x get all them zeros into vars
+   get all literals into vars
+   pad out to keep crucial parts in the same col (if possible) for each flavor
+
+  when it gets to runner,
+   tempaltes are vars
+
+  how can i make this faster?
+  1. always have a flag, def to _
+  2. convert all lits to vars, always but always
+  3. always have start, stop positions, as vars
+  4. cache stuff. but far less need, maybe
+
+  fix bug with last case and array case
+  last one used to spit out @H->28, now @H->#A(@�,@A,@�)
+*/
+bool isStaticValue(char * str) {
+  return (!strchr(str, '{')) && (!strchr(str, '@')) && (!strchr(str, '(')) && (!strchr(str, '[')) ;
+}
+
+void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
+
+  //support literals: #ABC or #abc or #AABBCC or #aabbcc, or r,g,b, ints, functions
+  char * ptr = lb;
+  char * assign = strstr(lb, "->");
+  if (!assign) return;
+
+  char * afterAssign = assign + 2;
+  char * comma = strstr(lb, ",");
+  bool hasParen = strchr(assign, '(');
+  assign[0] = 'z';
+  assign[1] = '=';
+  char * paren = strchr(assign, '(');
+  if (paren) embedFunctions(assign, s);
+  assign[0] = '-';
+  assign[1] = '>';
+  char colorBuff[32];
+  strcpy(colorBuff, assign + 2);
+  char * ptrColorBuff = colorBuff;
+  char startBuff[16] = {0};
+  char spanBuff[16] = {0};
+
+  bool staticIndex = 0;
+  bool staticSpan  = 0;
+  bool staticColor = 0;
+  long start, span;
+
+  char * CACHE = l->exprCache;
+  uint32_t color = 0;
+  if (comma && comma < assign) {
+    strncpy(spanBuff, comma + 1, (assign - comma) - 1);
+    strncpy(startBuff, lb, comma - lb);
+  } else {
+    strcpy(spanBuff, "1");
+    strncpy(startBuff, lb, assign - lb);
+  }
+
+  staticIndex = isStaticValue(startBuff);
+  staticSpan = isStaticValue(spanBuff);
+
+  char * pflag = strchr("+-<>*&", afterAssign[0]);
+  char flag;
+  if (!pflag) {
+    flag = '_';
+  } else {
+    flag = pflag[0];
+    afterAssign++;
+    ptrColorBuff++;
+  }
+  while (ptrColorBuff[0] == ' ') ptrColorBuff++;
+  staticColor = isStaticValue(ptrColorBuff);
+  if (!strchr(assign, '(') && hasParen) staticColor = 1;
+
+  /*
+    DUMP("\nColor:", lb);
+
+    DUMP("flag:", flag);
+    DUMP("startBuff:", startBuff);
+    DUMP("staticIndex:", staticIndex);
+    DUMP("spanBuff:", spanBuff);
+    DUMP("staticSpan:", staticSpan);
+
+    DUMP("colorBuff:", ptrColorBuff);
+    DUMP("staticColor:", staticColor);
+
+  */
+
+  if (staticColor) color = laterUtil::parseColor(ptrColorBuff, s);
+  RGB_PIXEL.value = color;
+
+  /*
+    DUMP("colorValue:", color);
+    DUMP("Color R", RGB_PIXEL.chan[2]);
+    DUMP("Color G", RGB_PIXEL.chan[1]);
+    DUMP("Color B", RGB_PIXEL.chan[0]);
+  */
+  char * cursor = lb;
+  start =  Number( startBuff, s->VARS);
+  if (staticIndex) {
+    l->exprCache[0] = 1;
+    l->exprCache[1] = start;
+    itoa(start, cursor, 10);
+  } else {
+    strcpy(cursor, startBuff);
+  }
+
+  cursor += strlen(cursor) - 1;
+  strcat(cursor, ", ");
+  cursor = strchr(cursor, ',') + 1;
+  span =  Number( spanBuff, s->VARS);
+  if (staticSpan) {
+    l->exprCache[2] = 1;
+    l->exprCache[3] = span;
+    itoa(span, cursor, 10);
+  } else {
+    strcpy(cursor, spanBuff);
+  }
+  strcat(cursor, "->_");
+  cursor = strchr(cursor, '_');
+
+  cursor[0] = flag;
+  l->exprCache[4] = flag;
+  cursor++;
+
+  if (staticColor) {
+    l->exprCache[5] = 1;
+    l->exprCache[6] =  RGB_PIXEL.chan[2];
+    l->exprCache[7] =  RGB_PIXEL.chan[1];
+    l->exprCache[8] =  RGB_PIXEL.chan[0];
+
+    memset(cursor, '.', 7);
+    cursor[0] = '#';
+    cursor++;
+    itoa(RGB_PIXEL.chan[2], cursor, 16);
+    if (!cursor[1]) {
+      cursor[1] = cursor[0];
+      cursor[0] = '0';
+    }
+    cursor += 2;
+    itoa(RGB_PIXEL.chan[1], cursor, 16);
+    if (!cursor[1]) {
+      cursor[1] = cursor[0];
+      cursor[0] = '0';
+    }
+    cursor += 2;
+    itoa(RGB_PIXEL.chan[0], cursor, 16);
+    if (!cursor[1]) {
+      cursor[1] = cursor[0];
+      cursor[0] = '0';
+    }
+    cursor[2] = '\0';
+  } else {
+    strcpy(cursor, ptrColorBuff);
+  }
+
+  // new startegey
+
+  // parse just like number does now. it's slow and shit, but it work, by def. we can clean it up
+  // consider range static if all const and vars and lits   set line flag
+  // consider color static if all const and vars and lits   set line flag
+
+  // once parsed, re-serialized and inject into lb for a consistent output, when static
+  /*
+
+    int indPos = laterUtil::indexOf(line, "->"),
+      commaPos = laterUtil::indexOf(line, ",") + 1,
+      startPos = Number(line, s->VARS),
+      howMany = 1;
+    if (commaPos && commaPos < indPos) howMany =  Number(line + commaPos, s->VARS);
+    ptr += indPos + 2;
+
+    color = laterUtil::parseColor(ptr, s);
+
+  */
+  // 86:
+  /*
+
+    char * hash = strchr(assign, '#');
+    if( hash && ! strchr(assign, '(') ){ // not an inline function call
+      // fix literal here.
+      unsigned int col = laterUtil::parseColor(hash, s);
+      hash[0]='@';
+      hash[1]=getConstantNumber(NULL, s, col) + 65;
+      hash[2]='\0';
+    }
+
+    hash = strchr(assign, ',');
+    if( hash && ! strchr(assign, '(') ){ // not an inline function call
+      // fix literal here.
+      hash = assign+2;
+      while(hash[0] && !isdigit(hash[0])) hash++;
+
+      unsigned int col = laterUtil::parseColor(hash, s);
+      hash[0]='@';
+      hash[1]=getConstantNumber(NULL, s, col) + 65;
+      hash[2]='\0';
+    }
+    char sig = '_';
+    replaceEndingLiterals(lb, s);
+    if (assign) {
+      sig = assign[2];
+      assign[0] = 'z';
+      assign[1] = '=';
+      char * paren = strchr(assign, '(');
+      if (paren) embedFunctions(assign, s);
+      assign[0] = '-';
+      assign[1] = '>';
+      if (paren) laterUtil::replace(lb, "> #", ">#"); // maybe 86 this?
+
+    }
+
+    char * zeroComma = strstr(lb, "0,");
+    char zero = getConstantNumber(NULL, s, 0) + 65;
+    char one = getConstantNumber(NULL, s, 1) + 65;
+
+    if (zeroComma) { // 86:
+      laterUtil::replace(lb, "0,", "0 ,");
+      zeroComma[0] = '@';
+      zeroComma[1] = zero;
+    }
+    // get rid of all remaining digit literals:
+
+    char * pos = lb;
+    while (pos[0]) {   // 86:
+      int len = 0;
+      char * sp = pos;
+      while (isDigit(pos[0]) ) pos++;
+      if (sp == pos) {
+        pos++;
+        continue;
+      } else {
+        len = (pos - sp);
+        char symb = getConstantNumber(pos, s) + 65;
+        memset(sp, ' ', len );
+        sp[0] = '^';
+        laterUtil::replace(sp, "^", "  ");
+        sp[0] = '@';
+        sp[1] = symb;
+        pos++;
+      }
+    }//wend pos
+    while (strchr(lb, ' ')) laterUtil::replace(lb, " ", "");
+
+    DUMP(">>>", lb);
+
+    // fill in span after index
+    if (lb[2] == '-' || lb[4] == '-' ) {
+      laterUtil::replace(lb, "->", ",@^->");
+      strchr(lb, '^')[0] = one;
+    }
+
+     // fill in flag, defaults to _
+    laterUtil::replace(lb, "->@", "->_@");
+    laterUtil::replace(lb, "->[", "->_[");
+    laterUtil::replace(lb, "->{", "->_{");
+    laterUtil::replace(lb, "->#", "->_#");
+  */
+
+  if (((l->flags >> 2) & 0x01) == 1) { // remove inlined expressions' flag
+    if (!strchr(lb, '(')) l->flags -= 4;
+  };
+  if (((l->flags >> 1) & 0x01) == 1) { // remove var flags
+    l->flags -= 2;
+  };
+}//end parsePixel();
+void parseArgsForApply(char * lb,  char * CACHE  ) {
+
+  uint8_t i = 2;
+  char * ptrLine = strchr(lb, '(') + 1;
+  memset(CACHE, '\0', 11);
+
+  while (ptrLine[0]) {
+    if (ptrLine[0] == '@') {
+      CACHE[i++] = '@';
+      CACHE[i++] = ptrLine[1] - 65;
+      ptrLine += 1;
+    } else if (ptrLine[0] == '{') {
+      CACHE[i++] = '{';
+      CACHE[i++] = ptrLine[2] - 65;
+      ptrLine += 2;
+    } else if (isdigit(ptrLine[0])) {
+      CACHE[i++] = 'D';
+      CACHE[i++] = ptrLine[0] - 48;
+    }
+    ptrLine++;
+  }//wend ptrline
+
+}
+
+void parseApply(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
+
+  if (lb[3] == '#' && lb[5] == '(' && strchr(lb, ',')) {
+
+
+    l->cmd = LATER_apply;
+    l->flags = 0; // cancel line preproc
+    l->data = 0; // cancel optimizations
+
+    parseArgsForApply( lb,   l->exprCache  );
+
+    l->exprCache[0] = lb[1] - 65; // dest
+    l->exprCache[1] = strchr(lb, '#')[1] - 65; // cb
+
+  } else { // not ready to go, but can it be converted inline?
+
+    l->cmd = LATER_var; // until proven innocent
+
+    // look for convertable expressions:
+    if (lb[3] == '(' ) {
+
+      int opPos1 =  strcspn( lb, "+/-*|");
+      char op1 = lb[opPos1];
+
+      if (!op1) return;
+
+      int opPos2 =  strcspn( lb + opPos1 + 1, "+/-*|");
+      if ( strcspn( lb + opPos1 + 2 + opPos2, "+/-*|") > 0 ) return; // if more than 3 terms, must do it as an expression.
+
+      char op2 = lb[opPos2 + opPos1 + 1];
+      if (op2 && op2 != op1)  return;
+      char nameBuffer[8] = {0, 0, 0, 0,  0, 0, 0, 0};
+      switch (op1) {
+        case '-': strcpy(nameBuffer, "DIFF"); break;
+        case '+': strcpy(nameBuffer, "SUM"); break;
+        case '*': strcpy(nameBuffer, "MULT"); break;
+        case '/': strcpy(nameBuffer, "DIV"); break;
+        default:          return;          break;
+      }
+
+      if (!strlen(nameBuffer )) return;
+      auto callback = FUNCS[nameBuffer];
+      if (!callback) return;
+      int index = -1;
+      // look for existing copy of cacched function to re-use:
+      for (unsigned int i = 0; i < s->FUNC_COUNT; i++) {
+        if (callback == s->FUNCS[i])    index = i;
+      }
+      if (index == -1) {
+        index = s->FUNC_COUNT++;
+      }
+
+      if (index == LATER_FUNCTION_CACHE_LENGTH) return;
+      s->FUNCS[index] = callback;
+
+      l->cmd = LATER_apply;
+      l->flags = 0; // cancel line preproc
+      l->data = 0; // cancel optimizations
+      parseArgsForApply( lb,   l->exprCache  );
+      l->exprCache[0] = lb[1] - 65; // dest
+      l->exprCache[1] = index;
+
+    } else { //give up and make/leave it a var
+      l->cmd = LATER_var;
+    }
+  }//end if ready to go for apply?
+}//end parseApply()
+
+//lineData = flag = 0;
+
 #line 1 "mod.ino"
 //#ifdef ESP8266HTTPClient_H_
 #if defined(ESP8266HTTPClient_H_) || defined(HTTPClient_H_)
@@ -4846,6 +5435,7 @@ void runScript() {
   unsigned long profileStart = micros();
   unsigned long profileDone = profileStart;
 #endif
+  l = &s->lines[s->resumeLineNumber];
   for (s->i = s->resumeLineNumber; s->i < s->exitLineNumber; s->i++) {
 #ifdef HIGH_RES_TIMING
     if (st > 0) {
@@ -4853,7 +5443,6 @@ void runScript() {
       HR_PERF.loop.count++;
     }
 #endif
-    l = &s->lines[s->i]; //    parsed line struct, members: [start, stop, data, len, flags, cmd]
 
 #ifdef LATER_LINE_PROFILING
     profileStart = micros();
@@ -4861,6 +5450,8 @@ void runScript() {
     profileDone = profileStart;
     l->profile.count++;
 #endif
+
+    l = &s->lines[s->i]; //    parsed line struct, members: [start, stop, data, len, flags, cmd]
     // pop temp line buffer:
     lp = s->program + l->start;
     strncpy(linebuff, lp, l->len);
@@ -4904,7 +5495,7 @@ void runScript() {
       // detect arrays and process:
       if ( ((l->flags >> 3) & 0x01) == 1) {
         //  } else {
-        processArray(linebuff, s->VARS, -1); // replace usedDMA with  var dma: @A
+        usedDMA = processArray(linebuff, s, -1); // replace usedDMA with  var dma: @A
         // } // end if var or other cmd?
       }//end if array?
 
@@ -5095,6 +5686,8 @@ void runScript() {
             case 8: s->VARS[varSlot] = s->VARS[varSlot] >> 1; continue; // fast bitshift divide
             case 9: s->VARS[varSlot] = s->VARS[varSlot] << 1; continue; // fast bitshift double
 
+            case 10: s->VARS[varSlot] = micros(); continue; // fast microsecond capture
+            case 11: s->VARS[varSlot] = esp_get_cycle_count(); continue; // fast cpu ticks capture
             default: break;
           }
         }//end if data shortcuts?
@@ -5314,6 +5907,82 @@ void runScript() {
 
       case LATER_if: case LATER_iif: // If/Iff
         if (!evalConditionalExpression(linebuff, s)) s->i = l->exit;
+        continue;
+        break;
+      case LATER_apply: // fast expression execution engine
+        /*
+                if (!l->data) { // init
+                  l->data = 1; //  don't init again
+
+                  uint8_t i = 2;
+                  char * ptrLine = strchr(lb, '(') + 1;
+                  char * CACHE = l->exprCache;
+                  memset(CACHE, '\0', 11);
+
+                  while (ptrLine[0]) {
+                    if (ptrLine[0] == '@') {
+                      CACHE[i++] = '@';
+                      CACHE[i++] = ptrLine[1] - 65;
+                      ptrLine += 1;
+                    } else if (ptrLine[0] == '{') {
+                      CACHE[i++] = '{';
+                      CACHE[i++] = ptrLine[2] - 65;
+                      ptrLine += 2;
+                    } else if (isdigit(ptrLine[0])) {
+                      CACHE[i++] = 'D';
+                      CACHE[i++] = ptrLine[0] - 48;
+                    }
+                    ptrLine++;
+                  }//wend ptrline
+
+                  l->exprCache[0] = lb[1] - 65; // dest
+                  l->exprCache[1] = strchr(lb, '#')[1] - 65; // cb
+
+                } //end if first run of line?
+        */
+        /*
+          still todo:
+          expression converter: if all ops in expr match,, and there's a known function for it, (map + to sum for example), then convert expr to function call and conver fn call to apply
+          convert many expressions and fn calls and use apply - much faster way to execute 2 or 3 - arg functions
+          see if this can be consexpr'd-ish - run first half in pars stage to find signatures and patterns
+                  DUMP("exprCache:", l->exprCache );
+                  DUMP("arit:",   (int)l->exprCache[0] );
+                  DUMP("dest:",  (char)(l->exprCache[1] + 65) );
+                  DUMP("func:",  (char) (l->exprCache[2] + 65) );
+                  Serial.println("cache0:" + String( (char) l->exprCache[3])  + ": slot:" +   String( (int) l->exprCache[4])    );
+                  Serial.println("cache1:" + String( (char) l->exprCache[5])  + ": slot:" +   String( (int) l->exprCache[6])    );
+                  Serial.println("cache2:" + String( (char) l->exprCache[7])  + ": slot:" +   String( (int) l->exprCache[8])    );
+        */
+        APPLY_ARGS[2] = NULL;
+        for (int i = 0, index = 2, mx = 8; index < mx;  index++) {
+          switch ( l->exprCache[index++]) {
+            case '@': APPLY_ARGS[i++] = s->VARS[ l->exprCache[index]  ]  ; break;
+            case '{':  APPLY_ARGS[i++] =  s->TEMPS[   l->exprCache[index]  ](); break;
+            case 'D': APPLY_ARGS[i++] =  l->exprCache[index]; break;
+          }//end switch hint
+        }// next arg pair
+
+        // run function and assign return to destination:
+        s->VARS[   l->exprCache[0]  ] =
+          s->FUNCS[   l->exprCache[1]    ] (
+            APPLY_ARGS[0],
+            APPLY_ARGS[1],
+            APPLY_ARGS[2]
+          );
+        /*  //old buyt working rotine:
+                 int  i = 0;
+                  APPLY_ARGS[2] = NULL;
+                  for (int index = 3, mx = (l->exprCache[0] * 2) + 3; index < mx;  index += 2) {
+                    switch ( l->exprCache[index]) {
+                      case '@': APPLY_ARGS[i++] = s->VARS[ l->exprCache[index + 1]  ]  ; break;
+                      case '{':  APPLY_ARGS[i++] =  s->TEMPS[   l->exprCache[index + 1]  ](); break;
+                      case 'D': APPLY_ARGS[i++] =  l->exprCache[index + 1]; break;
+                      default: break;
+                    }
+
+                  }// next
+        */
+
         continue;
         break;
       case LATER_end: //end switch might need to become LATER_end_switch, if other ends are needed
@@ -5989,7 +6658,14 @@ uint64_t macAddress = ESP.getEfuseMac();
 uint64_t macAddressTrunc = macAddress << 40;
 unsigned long chipID = macAddressTrunc >> 40;
 #endif
-
+#define SIZER(_expr) LATER_SERVER_NAME.sendContent("\n" #_expr ":\t"); LATER_SERVER_NAME.sendContent(itoa(sizeof( _expr ), TEMPLATE_BUFFER, 10));
+#define SIZER_SUB(_name, _expr, _qty) LATER_SERVER_NAME.sendContent("\n  "  #_name ":\t"); \
+  LATER_SERVER_NAME.sendContent(itoa(sizeof( _expr ), TEMPLATE_BUFFER, 10)); \
+  LATER_SERVER_NAME.sendContent("b\t X "); \
+  LATER_SERVER_NAME.sendContent(itoa( _qty , TEMPLATE_BUFFER, 10)); \
+  LATER_SERVER_NAME.sendContent(" = "); \
+  LATER_SERVER_NAME.sendContent(itoa(sizeof( _expr )*_qty, TEMPLATE_BUFFER, 10)); \
+  LATER_SERVER_NAME.sendContent("b total ");
 #ifdef NTP_DEFAULT_LOCAL_PORT
 
 unsigned int DATES[4];
@@ -6279,7 +6955,7 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
   char * lp = line;
   char nameBuffer[32];
 
-  while (!isupper(lp[0])) lp++;
+  while (lp[0] && lp[0] != ')' && !isupper(lp[0])) lp++;
   char * ptrRight = strchr(lp, '(');
   int nameLen = 0;
 
@@ -6351,7 +7027,7 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
       unsigned long rez = callback(terms[0], terms[1], terms[2]);
       // replace whol darn thing with shortcut var
       char symb = getConstantNumber(ptr, s, rez) + 65;
-      ptr = strchr(line, '=') + 1;
+      ptr = strchr(line, ' = ') + 1;
       memset(ptr, ' ', strlen(ptr));
       ptr[0] = '@';
       ptr[1] = symb;
@@ -6369,7 +7045,7 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
     char * startPos = ptr;
     while (isdigit(ptr[0])) ptr++;
     int span = ptr - startPos;
-    if (span > 2) {
+    if (span > 1) {
       char symb = getConstantNumber(startPos, s) + 65;
       memset(startPos, ' ', span);
       startPos[0] = '@';
@@ -6378,14 +7054,14 @@ void embedFunctions(char * line, LATER_ENVIRON * s) {
     }
 
     /*
-        if ( ptr[0] &&  isdigit(ptr[0]) && isdigit(ptr[1]) && isdigit(ptr[2]) ) { // foun 2+digits of literals
-        char symb = getConstantNumber(ptr, s) + 65;
-        ptr[0] = '@';
-        ptr[1] = symb;
-        //ptr[2] = '_';
+      if ( ptr[0] &&  isdigit(ptr[0]) && isdigit(ptr[1]) && isdigit(ptr[2]) ) { // foun 2+digits of literals
+      char symb = getConstantNumber(ptr, s) + 65;
+      ptr[0] = '@';
+      ptr[1] = symb;
+      //ptr[2] = '_';
 
-        ptr+=3;
-        }
+      ptr+=3;
+      }
     */
     ptr++;
     while (ptr[0] == ' ') ptr++;
@@ -6629,6 +7305,46 @@ void handleCommandList() {
       LATER_SERVER_NAME.sendContent("\n");
     }//end if something to send?
   }
+  LATER_SERVER_NAME.sendContent("\nRAM USAGES:\n");
+  int baseSize = 52; // measured by commenting out 10 funcs, lowering ram by 527b
+  baseSize *= FUNCS.size();
+  baseSize += sizeof(FUNCS);
+
+  LATER_SERVER_NAME.sendContent("\nFUNCS:\t");
+  LATER_SERVER_NAME.sendContent(itoa(baseSize, TEMPLATE_BUFFER, 10));
+
+  LATER_SERVER_NAME.sendContent("\nTEMPLATES:\t");
+  LATER_SERVER_NAME.sendContent(itoa(TEMPLATES2.size() * 8, TEMPLATE_BUFFER, 10));
+
+  LATER_SERVER_NAME.sendContent("\nCOMMANDS:\t");
+  LATER_SERVER_NAME.sendContent(itoa(LATER_CMDS.size() * 5, TEMPLATE_BUFFER, 10));
+  SIZER(FILE_BUFF);
+  SIZER(TEMPLATE_BUFFER);
+  SIZER(INCLUDE_BUFFER);
+  SIZER(TEMP_BUFFER);
+  SIZER(LINE_BUFF);
+
+  LATER_SERVER_NAME.sendContent("\nLATER_HTTP_CACHE:\t");
+  LATER_SERVER_NAME.sendContent(itoa(LATER_HTTP_CACHE, TEMPLATE_BUFFER, 10));
+
+  SIZER(setRunLog);
+  SIZER(CMDCHARS);
+  SIZER(VARCHARS );
+  SIZER(VARLIST);
+
+  SIZER(LaterClass);
+  SIZER(LATER_ENVIRON);
+  SIZER_SUB("Lines", LATER_LINE, LATER_LINE_LIMIT);
+  SIZER_SUB("Program", char, LATER_PROGRAM_SIZE);
+  SIZER_SUB("Vars", unsigned long, LATER_VARS_LENGTH);
+  SIZER_SUB("Event", LATER_EVENT, 1);
+  SIZER_SUB("Options", LATER_OPTIONS, 1);
+  SIZER_SUB("Intervals",   unsigned long, 8);
+  SIZER_SUB("Sub Args",   unsigned long, 8);
+  SIZER_SUB("fileName",   char, 32);
+  SIZER_SUB("contentType",   char, 32);
+  SIZER_SUB("FUNCS", threeArgFunc, LATER_FUNCTION_CACHE_LENGTH);
+  SIZER_SUB("TEMPS", noArgFunc, LATER_TEMPLATE_CACHE_LENGTH);
   LATER_SERVER_NAME.sendContent("");
 }//end handleCommandList()
 #ifdef ESP8266WEBSERVER_H
@@ -6654,25 +7370,25 @@ void handleDump() {
   LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
   LATER_SERVER_NAME.send ( 200, LATER_PLAIN, "\n");
 
-  sprintf(dbg, "%ld lines in %db from ", s->lineCount, strlen(s->program) );
+  sprintf(dbg, "%ld lines in %db file:", s->lineCount, strlen(s->program) );
   LATER_SERVER_NAME.sendContent(dbg);
   LATER_SERVER_NAME.sendContent(s->fileName);
 
-  sprintf(dbg, "\nRAM:%d  runs:%lu  subRet:%u resumeLine:%u\n", ESP.getFreeHeap(), s->runs, s->subReturnLine,  s->resumeLineNumber);
+  sprintf(dbg, "\nRAM:%d  runs:%lu  start:%u at:%u exit:%u\n", ESP.getFreeHeap(), s->runs, s->startLineNumber, s->i,  s->exitLineNumber );
   LATER_SERVER_NAME.sendContent(dbg);
 
   unsigned long avg = s->runTime;
   if (s->runs) avg = s->duration / s->runs;
-  sprintf(dbg, "Line:%ld run:%ld parse:%ld avg:%ld",
-          s->i, s->runTime, s->parseTime, avg);
+  sprintf(dbg, "resume:%ld run:%ld parse:%ld avg:%ld",
+          s->resumeLineNumber, s->runTime, s->parseTime, avg);
   LATER_SERVER_NAME.sendContent(dbg);
   //String bonus = " ";
   bool bonus = true;
 
 #ifdef LATER_LINE_PROFILING
-  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP data  runs    ptime    mean  parse  code\n");
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP data  runs    ptime    mean  parse    code\n");
 #else
-  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP dat code\n");
+  LATER_SERVER_NAME.sendContent("\n\nLINES:\n # ex    CHOAEVT OP dat   code\n");
 #endif
 
   for (int i = 0, mx = s->lineCount; i < mx; i++) {
@@ -6701,7 +7417,11 @@ void handleDump() {
     itoa(l->data, respbuff, 16);
     if (l->data < 16)  LATER_SERVER_NAME.sendContent("0");
     LATER_SERVER_NAME.sendContent(respbuff);
+
     LATER_SERVER_NAME.sendContent("  ");
+#ifndef LATER_LINE_PROFILING
+    LATER_SERVER_NAME.sendContent("| ");
+#endif
 
     // cut in profile info here:
 #ifdef LATER_LINE_PROFILING
@@ -6711,7 +7431,7 @@ void handleDump() {
     if (l->profile.count) tot = l->profile.total / l->profile.count;
     outputPaddedNumber(tot, "ums", 7);
     outputPaddedNumber(l->profile.parse, "ums", 6);
-    LATER_SERVER_NAME.sendContent(" ");
+    LATER_SERVER_NAME.sendContent(" | ");
 #endif
 
     LATER_SERVER_NAME.sendContent(linebuff);
