@@ -184,6 +184,8 @@ String lastFileName = "ahriglf6456343455"; // fileLoader cache
 unsigned long APPLY_ARGS[4] = {0, 0, 0, 0};
 
 //>> public types, used to make callbacks for commands+function, run backups or mods, etc
+
+struct CsvState;
 #ifdef HIGH_RES_TIMING
 
 #define HRT_TIME(section) { unsigned long et = micros();  \
@@ -619,12 +621,14 @@ unsigned long randomReg();
 unsigned long clamp(int a);
 #line 827 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 989 "commands.ino"
+#line 990 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 1007 "commands.ino"
+#line 1008 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 1167 "commands.ino"
+#line 1168 "commands.ino"
 void loadStoredValuesForStore();
+#line 1189 "commands.ino"
+CsvState* getCSV(char * codeLine, LATER_ENVIRON * s);
 #line 31 "config.ino"
 void APPLY_CONFIG();
 #line 37 "config.ino"
@@ -1443,69 +1447,67 @@ bool buffToFile(String  fileName,  char * value, bool append) {
   }
   return 0;
 }//end buffToFile()
- std::vector<uint16_t> linePos;
- const char * indexedFileName;
- 
- void indexFile(const char* filename){
+std::vector<uint16_t> linePos;
+const char * indexedFileName;
+void indexFile(const char* filename) {
   indexedFileName = filename;
-  if(linePos.size()==0) linePos.reserve(100);
+  if (linePos.size() == 0) linePos.reserve(100);
   linePos.clear();
-  
-  uint16_t block_size = 256, pos = 0, leftover= 0, lastPos = 0, maxIndex = 0;
-  char buff[block_size+1];
+  linePos.emplace_back(0);
+
+  uint16_t block_size = 256, pos = 0, leftover = 0, maxIndex = 0;
+  char buff[block_size + 1];
   char * p = buff;
-  
+
   File file = SPIFFS.open(filename, "r");
-  
+
   if (file) {
     maxIndex = file.size() - 1;
-    
+
     while (file.available()) {
       leftover = pos;
-      pos=file.position(); 
-      if(leftover && leftover==pos) break; 
+      pos = file.position();
+      if ( (leftover && (leftover == pos)) ) break;
       file.readBytes(buff, block_size);
-          
+
       p = buff;
-      if(p[0]=='\n') linePos.emplace_back( pos+(p-buff) );
-      if(p[1]=='\n') linePos.emplace_back( pos+((p+1)-buff) );
-      
-      while(p=strchr(p+1, '\n')) linePos.emplace_back( pos+ (p-buff) );
+      if (p[0] == '\n') linePos.emplace_back( pos + (p - buff) );
+      if (p[1] == '\n') linePos.emplace_back( pos + ((p + 1) - buff) );
+
+      while ( (p = strchr(p + 1, '\n')) ) linePos.emplace_back( pos + (p - buff) );
 
     }//wend file available
     file.close();
 
     // clean up past-end entries:
-    while( (leftover=linePos.back()) > maxIndex) linePos.pop_back();    
+    while ( (leftover = linePos.back()) > maxIndex) linePos.pop_back();
     linePos.pop_back();
-  
-  }//end if file? 
-  
-  
- }// end indexFile()
-char * getFileLine(const char* filename, uint16_t lineNumber ){
 
-  if(!indexedFileName || strcmp( indexedFileName, filename)) indexFile(filename);
-  if(lineNumber > linePos.size()) return NULL;
-  
+  }//end if file?
+}// end indexFile()
+char * getFileLine(const char* filename, uint16_t lineNumber ) {
+
+  if (!indexedFileName || strcmp( indexedFileName, filename)) indexFile(filename);
+  if ( lineNumber && lineNumber > linePos.size()) return NULL;
+
   int pos = linePos[lineNumber] ;
-  if(!pos) return NULL;
-  
+  if (lineNumber && !pos) return NULL;
+
   const int block_size = 96;
-  static char buff[block_size+1];
-    
-  File file = SPIFFS.open(filename, "r");   
-  if (file) { 
-    
+  static char buff[block_size + 1];
+
+  File file = SPIFFS.open(filename, "r");
+  if (file) {
+
     file.seek( pos, SeekSet);
-    file.readBytes(buff, block_size); 
+    file.readBytes(buff, block_size);
     file.close();
-    
-    char * ending = strchr(buff+1, '\n');
-    if(ending) ending[0]='\0';    
-    
+
+    char * ending = strchr(buff + 1, '\n');
+    if (ending) ending[0] = '\0';
+
     return buff;
-  }//end if file? 
+  }//end if file?
   return NULL;
 } // getFileLine()
 #ifdef ADAFRUIT_NEOPIXEL_H
@@ -1656,7 +1658,7 @@ void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
   unsigned long rez = Number(lb, s->VARS);
   uniPrint( rez ? "PASS: " : "FAIL: ");
   char * p2 = strstr(lb, "->") + 2;
-  while(p2[0]==' ') p2++;
+  while (p2[0] == ' ') p2++;
   uniPrint(p2);
   uniPrint(" :: ");
 
@@ -1669,28 +1671,28 @@ void runAssert(char * lb, LATER_LINE * l, LATER_ENVIRON * s) {
     lp = s->program + l->start;
     strncpy(linebuff, lp, l->len);
     linebuff[l->len] = '\0';
-  
-  // try to print the live rendered linebuff thqat failed 
+
+    // try to print the live rendered linebuff thqat failed
     lp = strstr(linebuff, "->");
     if (lp) lp[0] = '\0';
-  lp--;
-  if(lp) lp[0]='\0';
-  strcat(lp, "=");
-  
-  strstr(lb, "->")[0]='\0';
-  if(lb[0]==' ') lb++;
-  strcat(lp, lb);
-  int len = strlen(lp);
-  if(lp[len-1]==' ') lp[len-1]='\0';
-  char * varPtr = strchr(linebuff, '@');
-  if(varPtr){
-    strcat(lp, "; @");
-    len = strlen(lp);
-    lp[len] = varPtr[1];
-    lp[len+1] = '=';    
-    lp[len+3] = '\0';
-    itoa(s->VARS[varPtr[1]-65], lp+len+2, 10);
-  } 
+    lp--;
+    if (lp) lp[0] = '\0';
+    strcat(lp, "=");
+
+    strstr(lb, "->")[0] = '\0';
+    if (lb[0] == ' ') lb++;
+    strcat(lp, lb);
+    int len = strlen(lp);
+    if (lp[len - 1] == ' ') lp[len - 1] = '\0';
+    char * varPtr = strchr(linebuff, '@');
+    if (varPtr) {
+      strcat(lp, "; @");
+      len = strlen(lp);
+      lp[len] = varPtr[1];
+      lp[len + 1] = '=';
+      lp[len + 3] = '\0';
+      itoa(s->VARS[varPtr[1] - 65], lp + len + 2, 10);
+    }
     uniPrintln(linebuff);
   } else {
     uniPrintln("-");
@@ -2282,6 +2284,117 @@ LaterStore LATER_STORE;
 void loadStoredValuesForStore() {
   LATER_STORE.load();
 }
+
+struct CsvState {
+  const char * fn;
+  //char * vars = "AUTO";
+  bool hasLineParam = false;
+  char delim = ',';
+  uint8_t id = 0;
+  uint8_t skip = 0;
+  uint8_t blockSize = 0;
+  uint8_t morePointer = 0;
+  uint8_t varSlots[12];
+  char    delimStr[2];
+  uint16_t lineNeeded = 1;
+};
+
+CsvState CSV[4];
+CsvState * getCSV(char * codeLine, LATER_ENVIRON * s) {
+
+  CsvState * state;
+  char * varPtr = codeLine;
+  uint8_t id = (s->index * 10) + s->i;
+  int i;
+
+  for (i = 0; i < 4; i++) if (CSV[i].id == id) {
+      state = &CSV[i];
+      break;
+    }
+
+  if (!state->id) {
+    for (i = 0; i < 4; i++) if (CSV[i].id == 0) {
+        state = &CSV[i];
+        break;
+      }
+    if (!state)return NULL;
+  } else {
+    // re-assign line number:
+    if (state->hasLineParam) {
+      if ( (varPtr = laterUtil::afterSubstring(codeLine, "line="))  ) state->lineNeeded = Number(varPtr, s->VARS);
+    } else {
+      state->lineNeeded++;
+    }
+    return state;
+  }
+
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "line="))) {
+    state->lineNeeded =  Number(varPtr, s->VARS);
+    state->hasLineParam = 1;
+  }
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "file="))) state->fn = varPtr;
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "delim="))) state->delim = varPtr[0];
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "skip="))) state->skip = Number(varPtr, s->VARS);
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "block="))) state->blockSize = Number(varPtr, s->VARS);
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "more=@"))) state->morePointer = varPtr[0] - 65;
+
+  if (!state->hasLineParam) state->blockSize = 2; // auto mode
+  state->id = id;
+  state->delimStr[0] = state->delim;
+  memset(state->varSlots, 0, 12);
+  /*
+    DUMP("CSV:id:", state->id);
+    DUMP("CSV:_codeLine:", codeLine);
+    DUMP("CSV:file:", state->fn);
+    DUMP("CSV:delim:", state->delim);
+    DUMP("CSV:skip:", state->skip);
+    DUMP("CSV:hasLineParam:", state->hasLineParam);
+    DUMP("CSV:block:", state->blockSize);
+    DUMP("CSV:more:", state->morePointer);
+    DUMP("CSV:line:", state->lineNeeded);
+
+  */
+  int slotNumber = 0;
+  varPtr = laterUtil::afterSubstring(codeLine, "vars=");
+  if (!varPtr) varPtr = "AUTO";
+
+  if (!strcmp(varPtr, "AUTO")) { // pull var names from data source for templating
+
+    varPtr = laterUtil::getFileLine(state->fn, 0);
+    char nameBuffer[17] = {'$', 0, 0};
+
+    while (varPtr) { //find comma, and copy before it into buffer, trimming as needed and adding a $
+      if (varPtr[0] == state->delim) varPtr++;
+      while (varPtr[0] == ' ') varPtr++;
+
+      int len = strcspn (varPtr, state->delimStr);
+      strncpy(nameBuffer + 1, varPtr, len);
+      nameBuffer[len + 1] = '\0';
+
+      state->varSlots[slotNumber] = getVarNameNumber(nameBuffer, s->index);
+      slotNumber++;
+      varPtr = strchr(varPtr + 1,  state->delim);
+    }//wend var list on csv header
+
+    if (varPtr) { // get last one, not behind a delim
+      strcpy(nameBuffer + 1, varPtr);
+      state->varSlots[slotNumber] = getVarNameNumber(nameBuffer, s->index);
+    }//end if one last value?
+
+  } else { // hard-coded vars for templating
+    char * spacePtr = strchr(varPtr, ' ');
+
+    while (varPtr) {
+      state->varSlots[slotNumber] = varPtr[1] - 65;
+      slotNumber++;
+      varPtr = strchr(varPtr + 1, '@');
+      if (spacePtr && varPtr > spacePtr) break;
+    }//wend var
+  }//end if auto/manual vars?
+  for (int i = 0; i < 10; i++) {
+  }
+  return state;
+} //end getCSV()
 
 #line 1 "config.ino"
 //@TAKE
@@ -3276,7 +3389,6 @@ bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s) {
 
   HRT_TIME(cond)
 
-  DUMP("ifConditionTrue:", ifConditionTrue);
   return ifConditionTrue;
 } // end evalConditionalExpression()
 //#ifdef ESP8266HTTPClient_H_
@@ -6028,110 +6140,43 @@ void runScript() {
         }
         continue;
         break;
-      case LATER_csv:
-        {
-          //for 1; 5; 1
-          //math $age,$year {i} skip=0 delim=,  /data.csv
-          //println Age: $age was born in $year
-          //next
+      case LATER_csv: {
 
-          // pass this thinga poiunt var slot or something, or a repeat lines below argument, so it acts as a loop
-          //or a skip when empty setting that jump forward n lines at end of file.
-
-          char delim = ',';
-          char varSlots[8];
-          char delimStr[2] = {delim, '\0'};
-
-          uint16_t slotNumber = 0, skip = 1, lineNumberNeeeded = 0, slot = 0, autoVars = 0, block = 0, usedSlots = 0, col = 0;
-          uint8_t morePoinerSlot = 0;
-
-          char* nextColumn;
-          char* varPtr = strchr(lb, '@');
-          char* spacePtr = strchr(linebuff, ' ');
-          memset(varSlots, 0, 8);
-
-          //this could be more than 255
-
-          if (l->data != 1) {
-
-
-            memset(l->exprCache, 0, 11);
-
-            while (varPtr) {
-              varSlots[slotNumber] = varPtr[1] - 65;
-              l->exprCache[slotNumber + 4] = varSlots[slotNumber];
-              slotNumber++;
-              varPtr = strchr(varPtr + 1, '@');
-              if (varPtr > spacePtr) break;
-            }
-            if ((varPtr = laterUtil::afterSubstring(linebuff, "skip="))) skip = Number(varPtr, s->VARS) + 1;
-            if ((varPtr = laterUtil::afterSubstring(linebuff, "delim="))) delim = varPtr[0];
-            if ((varPtr = laterUtil::afterSubstring(linebuff, "block="))) block = Number(varPtr, s->VARS);
-            if ((varPtr = laterUtil::afterSubstring(linebuff, "more=@"))) morePoinerSlot = varPtr[0] - 65;
-
-            // cache for next time:
-            l->exprCache[0] = skip;
-            l->exprCache[1] = delim;
-            l->exprCache[2] = block;
-            l->exprCache[3] = morePoinerSlot;
-            l->data = 1;
-
-
-          } else {
-
-            skip = l->exprCache[0];
-            delim = (char)l->exprCache[1];
-            block = l->exprCache[2];
-            morePoinerSlot = l->exprCache[3];
-            for (int i = 4; i < 11; i++) varSlots[i - 4] = l->exprCache[i];
-
-          }//end if data
-
-          delimStr[0] = delim;
-
-          if ((varPtr = laterUtil::afterSubstring(linebuff, " "))) lineNumberNeeeded = Number(varPtr, s->VARS);
-          if (morePoinerSlot) s->VARS[morePoinerSlot] = 1;
+          uint8_t col = 0;
           bool shouldExit = false;
-          char* fnPtr = strchr(linebuff, '/');
-          if (!fnPtr) shouldExit = true;
+          char* nextColumn;
+          int slot = 0, usedSlots = 0;
+          CsvState* csv = getCSV(linebuff, s);
 
+          if (csv->morePointer) s->VARS[csv->morePointer] = 1;
+          if (!csv->fn) shouldExit = true;
 
-          /*
-            for (int i = 0; i < slotNumber; i++) {
-            slot = varSlots[i];
-            if (!slot) break;
-            }
-          */
-
-          char* lineCursor = shouldExit ? NULL : laterUtil::getFileLine(fnPtr, lineNumberNeeeded);
+          char* lineCursor = shouldExit ? NULL : laterUtil::getFileLine(csv->fn, csv->lineNeeded);
 
           if (!lineCursor) shouldExit = true;
 
           if (shouldExit) {
-            if (morePoinerSlot) s->VARS[morePoinerSlot] = 0;
-            if (block) s->i += block;
+            if (csv->morePointer) s->VARS[csv->morePointer] = 0;
+            if (csv->blockSize) s->i += csv->blockSize;
             continue;
           };
-          strcat(lineCursor,  delimStr);
-          col = 0;
-          while ((nextColumn = strchr(lineCursor, delim))) {
-            if ((++col) >= skip) {
-              slot = varSlots[usedSlots++];
+
+          strcat(lineCursor, csv->delimStr);
+          while ((nextColumn = strchr(lineCursor, csv->delim))) {
+            if ((++col) >= csv->skip) {
+              slot = csv->varSlots[usedSlots++];
               if (!slot) break;
-              s->VARS[slot] = atoi(lineCursor);
+              s->VARS[slot] = Number(lineCursor, s->VARS);
             }
             lineCursor = nextColumn + 1;
           }  //wend nextColumn
-
           if (!col) {
-            if (morePoinerSlot) s->VARS[morePoinerSlot] = 0;
-            if (block) s->i += block;
+            if (csv->morePointer) s->VARS[csv->morePointer] = 0;
+            if (csv->blockSize) s->i += csv->blockSize;
             continue;
           }
-          //  slot = varSlots[usedSlots++]; // one more remains since the end of line doesn't have a delim
 
         }  //end scope
-
         continue;
         break;
       case LATER_math:
