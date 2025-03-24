@@ -128,10 +128,36 @@ namespace nsLATER {
 #include <Arduino.h>
 #line 1 "danscript.ino"
 //@TAKE
+#ifdef HIGH_RES_TIMING
+class Timer {
+  public:
+    unsigned long st;
+    const char * label;
+    const char * func;
+    Timer(const char * desc, const char * fun) {
+      st = micros();
+      func = fun;
+      label = desc;
+    }
+    ~Timer() {
+      stop();
+    }
+    void stop() {
+      unsigned long tot = micros() - st;
+      Serial.printf ("%s (%s) : %u us \n", func, label, tot );
+    }
+};
 
+#define TIMER(lab) Timer usTimer( lab, __PRETTY_FUNCTION__ );
+#else
+
+#define TIMER(lab) ;
+
+#endif
 #define DUMP(lab, val) { Serial.println(lab + String(val)); }
 
 unsigned long processTemplateExpressionsNumber(const char * line);
+char SYSTEM_OUTPUT_BUFFER[LATER_LINE_BUFFER] = {0, 0, 0};
 
 union RGB_COLOR {
   std::int32_t value;     // occupies 4 bytes
@@ -299,6 +325,7 @@ typedef struct LATER_OPTIONS {
   bool persist; // keep the script in ram?
   bool socket; // use web socket as print mechanism?
   bool noget; // disables GET param var value mapping
+  bool step; // activate step-through mode, freezing after each line until /next/ is hit
 } LATER_OPTIONS;
 
 // 37800b free before bumping up lines from 64 to 96
@@ -316,6 +343,24 @@ typedef struct LATER_LINE {
   char cmd; // shorthand command code
   char exprCache[11];
 } LATER_LINE;
+
+#ifdef LATER_CSV
+struct CsvState {
+  //const char * fn;
+  //char * filter;
+  bool hasLineParam = false;
+  char delim = ',';
+  // uint8_t id = 0;
+  uint8_t skip = 0;
+  uint8_t blockSize = 0;
+  uint8_t morePointer = 0;
+  uint8_t varSlots[12];
+  char    delimStr[2] = ",";
+  uint16_t lineNeeded = 1;
+  char fn[36] = "";
+  char filter[36] = "";
+};
+#endif
 
 typedef struct LATER_ENVIRON {
   byte index; // which numer of SCRIPTS are we?
@@ -360,6 +405,12 @@ typedef struct LATER_ENVIRON {
   bool calledFromWeb; // switches print from Serial to server
   bool storeDirty; // set by store update, reset after first thereafter run
   bool isSuspended; // used by unload() to skip finish section code when suspending
+
+  bool stepReady; // used by step option to toggle run/pause in each game loop
+#ifdef LATER_CSV
+  CsvState csv;
+#endif
+
   LATER_OPTIONS options;
 
   unsigned long Number(const char * str) {
@@ -376,6 +427,11 @@ typedef struct LATER_ENVIRON {
     return 0; // failsafe
   }
 
+  void freeze(unsigned long duration) {
+    this->resumeLineNumber = this->i + 1;
+    this->resumeMillis = millis() + duration;
+    this->duration = (micros() -  this->startedAt) / 1000;
+  }
 } LATER_ENVIRON;
 //<<
 
@@ -617,17 +673,19 @@ LATER_SAMPLER Sampler;
 #endif
 
 unsigned long randomReg();
-#line 681 "danscript.ino"
+#line 743 "danscript.ino"
 unsigned long clamp(int a);
-#line 827 "danscript.ino"
+#line 889 "danscript.ino"
 LATER_ENVIRON* getCurrent();
-#line 990 "commands.ino"
+#line 1132 "commands.ino"
 template <class text>void uniPrintln(text content);
-#line 1008 "commands.ino"
+#line 1151 "commands.ino"
 template <class text>void uniPrint(text content);
-#line 1168 "commands.ino"
+#line 1311 "commands.ino"
 void loadStoredValuesForStore();
-#line 1189 "commands.ino"
+#line 1316 "commands.ino"
+unsigned long evalLite(char * lb, LATER_ENVIRON * s);
+#line 1351 "commands.ino"
 CsvState* getCSV(char * codeLine, LATER_ENVIRON * s);
 #line 31 "config.ino"
 void APPLY_CONFIG();
@@ -647,45 +705,45 @@ void saveConfig();
 unsigned long Number( const char * str, const unsigned long * VARS );
 #line 24 "core.ino"
 char * getVarName(const char* longName, const int scriptIndex);
-#line 66 "core.ino"
+#line 68 "core.ino"
 char getVarNameNumber(char* longName, int scriptIndex);
-#line 77 "core.ino"
+#line 79 "core.ino"
 void removeDoubleLines(char * buff);
-#line 87 "core.ino"
+#line 89 "core.ino"
 void removeMultiLineComments(char * buff);
-#line 103 "core.ino"
+#line 105 "core.ino"
 void replaceEndingLiterals(char * line, LATER_ENVIRON * s);
-#line 125 "core.ino"
+#line 127 "core.ino"
 void replaceAllLiterals(char * line, LATER_ENVIRON * s);
-#line 152 "core.ino"
+#line 161 "core.ino"
 void replaceStartingLiterals(char * line, LATER_ENVIRON * s);
-#line 162 "core.ino"
+#line 171 "core.ino"
 void replaceVarNames(char * line, int scriptIndex);
-#line 175 "core.ino"
+#line 184 "core.ino"
 void autoEqualsInsert(char * line);
-#line 208 "core.ino"
+#line 217 "core.ino"
 void buildExitPoints( LATER_ENVIRON * SCRIPT );
-#line 458 "core.ino"
+#line 467 "core.ino"
 void processVariableExpressions(char * line, unsigned long * VARS);
-#line 511 "core.ino"
+#line 520 "core.ino"
 bool provideArrayReturnAll(char * assign, int elmSectionLength, long value);
-#line 522 "core.ino"
+#line 531 "core.ino"
 bool processArray(char * line, LATER_ENVIRON * s, int varSlot);
-#line 662 "core.ino"
+#line 671 "core.ino"
 bool evalMath(char * s, LATER_ENVIRON * script, int DMA);
-#line 894 "core.ino"
+#line 903 "core.ino"
 bool evalConditionalExpression(char * string_condition, LATER_ENVIRON * s);
-#line 1127 "core.ino"
+#line 1136 "core.ino"
 void popHttpResponse();
-#line 1145 "core.ino"
+#line 1154 "core.ino"
 bool processResponseEmbeds(char * line, LATER_ENVIRON * s);
-#line 1296 "core.ino"
+#line 1305 "core.ino"
 void processStringFormats(char* s , int index );
-#line 1434 "core.ino"
+#line 1443 "core.ino"
 void handleEval();
-#line 1454 "core.ino"
+#line 1463 "core.ino"
 void outputPaddedNumber(unsigned long value, const char * suffix, int width);
-#line 1488 "core.ino"
+#line 1497 "core.ino"
 void finishRun(LATER_ENVIRON * s);
 #line 34 "http.ino"
 void handleGenericHttpRun(String fn);
@@ -701,73 +759,73 @@ void handleResume();
 void handleSuspend();
 #line 291 "http.ino"
 void bindServerMethods();
-#line 403 "http.ino"
+#line 405 "http.ino"
 void handleLS();
-#line 480 "http.ino"
+#line 482 "http.ino"
 void handleEditor();
-#line 511 "http.ino"
+#line 513 "http.ino"
 String getContentType(String filename);
-#line 533 "http.ino"
+#line 535 "http.ino"
 bool handleFileRead(String path);
-#line 606 "http.ino"
+#line 608 "http.ino"
 void handleFileUpload();
-#line 646 "http.ino"
+#line 648 "http.ino"
 void handleFileList();
-#line 751 "http.ino"
+#line 752 "http.ino"
 void handleUnload();
-#line 776 "http.ino"
+#line 777 "http.ino"
 void handleRun();
-#line 839 "http.ino"
+#line 840 "http.ino"
 void handleLog();
-#line 1029 "http.ino"
+#line 1030 "http.ino"
 void handleCommandList2();
-#line 1067 "http.ino"
+#line 1068 "http.ino"
 void handleStore();
-#line 1106 "http.ino"
+#line 1107 "http.ino"
 void addJSON(char *buff, const char *key, unsigned long value);
-#line 1114 "http.ino"
+#line 1115 "http.ino"
 void addJSON(char *buff, const char *key, const char *value);
-#line 1123 "http.ino"
+#line 1124 "http.ino"
 void backtrack(char *buff);
-#line 1127 "http.ino"
+#line 1128 "http.ino"
 void handleScripts();
 #line 1 "loader.ino"
 int loadScript(const char * scriptFileName);
-#line 421 "loader.ino"
+#line 423 "loader.ino"
 void replaceIncludes(char * fileBuff);
-#line 456 "loader.ino"
+#line 458 "loader.ino"
 void replaceSpecialMacros(char * fileBuff, const char * scriptFileName);
-#line 478 "loader.ino"
+#line 480 "loader.ino"
 void sniffContentType( char * fileBuff, LATER_ENVIRON * SCRIPT );
-#line 491 "loader.ino"
+#line 493 "loader.ino"
 void populateDefines(char * fileBuff, int scriptIndex);
-#line 515 "loader.ino"
+#line 517 "loader.ino"
 void deInlineVarAssignments(char * buff);
-#line 539 "loader.ino"
+#line 541 "loader.ino"
 int convertIIFs(char * line, char * lb, int endpos);
-#line 560 "loader.ino"
+#line 562 "loader.ino"
 void removeSingleLineComments(char * line, char * cmd);
-#line 583 "loader.ino"
+#line 585 "loader.ino"
 void harvestMacros(char * line, int scriptIndex);
-#line 634 "loader.ino"
+#line 636 "loader.ino"
 void cleanupVarDeclarations(char * line);
-#line 656 "loader.ino"
+#line 658 "loader.ino"
 void expandRangeOperators(char * line, LATER_ENVIRON * SCRIPT);
-#line 706 "loader.ino"
+#line 708 "loader.ino"
 void replaceEndCommands(char * line);
-#line 721 "loader.ino"
+#line 723 "loader.ino"
 bool embedVariables(char * line, bool isConstant, LATER_ENVIRON * SCRIPT);
-#line 735 "loader.ino"
+#line 737 "loader.ino"
 int parseVarCommands(char * line, char * linePtr, int lineData, LATER_ENVIRON * s);
-#line 774 "loader.ino"
+#line 776 "loader.ino"
 bool isStaticValue(char * str);
-#line 778 "loader.ino"
+#line 781 "loader.ino"
 void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s );
-#line 916 "loader.ino"
+#line 920 "loader.ino"
 unsigned long applyArgs( LATER_LINE * l, LATER_ENVIRON * s );
-#line 946 "loader.ino"
+#line 950 "loader.ino"
 void parseArgsForApply(char * lb, char * CACHE );
-#line 972 "loader.ino"
+#line 976 "loader.ino"
 void parseApply(char * lb, LATER_LINE * l, LATER_ENVIRON * s );
 #line 7 "mod.ino"
 int HTTPRequest(char * url);
@@ -785,9 +843,11 @@ void processTemplateExpressions2(char * line, LATER_ENVIRON * s);
 uint8_t parseByteFromChars(char * ptr);
 #line 697 "templates.ino"
 void handleCommandList();
-#line 808 "templates.ino"
+#line 810 "templates.ino"
+void handleStep();
+#line 891 "templates.ino"
 void handleDump();
-#line 681 "danscript.ino"
+#line 743 "danscript.ino"
 unsigned long  clamp(int a) {
   return a > 0 ? (a < 255 ? a : 255) : 0;
 }
@@ -907,10 +967,10 @@ class LaterClass {
 
 } Later ;
 //<<
-LATER_ENVIRON * getCurrent() {
+inline LATER_ENVIRON * getCurrent() {
   return &SCRIPTS[Later.currentScript];
 } //end getCurrent()
-unsigned long randomReg() {
+inline unsigned long randomReg() {
 #ifdef ESP8266
   return RANDOM_REG32;
 #else
@@ -1137,6 +1197,11 @@ void LaterClass::unload(const char * fileName) {
     s->lines[i].profile = {0, 0, 0};
 #endif
   }
+
+#ifdef LATER_CSV
+  memset(s->csv.fn, '\0', 16);
+#endif
+
   //s->exprCacheLen = 0;
   //remove script and reset options
   loadedScripts--;
@@ -1159,6 +1224,7 @@ void LaterClass::unload(const char * fileName) {
   s->options.socket = 0;
   s->options.persist = 0;
   s->options.perf = 0;
+  s->options.step = 0;
   s->options.strict = 0;
   s->forLevel = 0;
   s->intervalCount = 0;
@@ -1278,7 +1344,123 @@ bool LaterClass::addCommand(const char * commandName, bool(*callBack)(char *, LA
 //http://192.168.0.91/set?p=16,OUTPUT&16=1&s=500&16=0&s=500&16=1
 
 #line 1 "commands.ino"
+//rx usage:
+//char text[] = "a man needs $47.00 too feel rich these days.";
+/*
+  supports:
 
+  tokens:
+  /s -spacy
+  /w -wordy
+  /d -digity
+  /t -{template}
+  /v -@var
+
+  suffixs:
+  +  -one or more in a row
+
+  flags:
+  ^  -starts with
+
+*/
+
+class RX {
+  public:
+
+    char * rx;
+    char * hay;
+    int rxlen;
+    int haylen;
+    char token;
+    char c;
+    bool isStart = false;
+    bool isEnd = false;
+    bool isMany = false;
+    bool wasValid = false;
+    bool valid = false;
+    int validCount = 0;
+    int invalidCount = 0;
+    bool secondTry = false;
+
+    RX(char * rx) {
+      this->rx = rx;
+
+      rxlen = strlen(rx);
+      isStart = rx[0] == '^';
+      isEnd = rx[rxlen - 1] == '$';
+      isMany = false; // for + suffixes
+
+    }
+
+    void nextToken() {
+      while (rx[0] == '/') rx++;
+      isMany = rx[1] == '+';
+      token = rx[0];
+    }
+    int test(char * hay) {
+
+      this->hay = hay;
+      haylen = strlen(hay);
+
+      if (isStart) rx++;
+
+      int i = 0;
+
+      // load up fist token fro rx, then compare it against each char in hay. bail on first miss if startswith
+
+      nextToken();
+
+      for (; i < haylen; i++) {
+        c = hay[i];
+        wasValid = valid;
+        switch (token) {
+          case 's': valid = c == ' ';  break;
+          case 'w': valid = isalnum(c);  break;
+          case 'd': valid = isdigit(c);  break;
+          case 'v': valid = c == '@';  break;
+          case 't': valid = c == '{';  break;
+          case '.': valid = c ? true : false; break;
+        }
+
+        if (valid) {
+          validCount++;
+        } else {
+          invalidCount++;
+        }
+
+        if (valid && !isMany) {
+          rx++;
+          nextToken();
+        }
+
+        if (!valid && !wasValid && secondTry && !isStart) {
+          secondTry = 0;
+          rx -= 3;
+          nextToken();
+          i--;
+          continue;
+        }
+
+        if (!valid && wasValid && isMany && !isStart) {
+
+          if (secondTry && strlen(rx) < 3 ) return i + 1;
+          if (!secondTry) {
+            i--;
+            secondTry = 1;
+            rx += 2;
+            nextToken();
+          }
+          if (!token && invalidCount == 1) return i + 1;
+        }
+
+        if (!valid && isStart) return token ? i + 1 : 0;
+        if (valid && !token) return i + 1;
+      }//next
+      return valid ? i + 1 : 0;
+
+    }
+
+};
 namespace laterUtil {
 char * splits[24];
 int split_count;
@@ -1331,7 +1513,7 @@ char * trimRight(char * str) noexcept {
   return str;
 }//end trimRight()
 
-char * trimLeft(char * str, bool aggressive = false) noexcept {
+inline char * trimLeft(char * str, bool aggressive = false) noexcept {
   if (!aggressive) {
     while (str[0] == ' ') str++;
   } else {
@@ -1339,10 +1521,10 @@ char * trimLeft(char * str, bool aggressive = false) noexcept {
   }
   return str;
 }//end trimLeft()
-bool startsWith(const char * hay, const char * needle)  noexcept {
+inline bool startsWith(const char * hay, const char * needle)  noexcept {
   return ! memcmp ( hay, needle, strlen(needle));
 }
-int indexOf(char * base, const char * term) noexcept {
+inline int indexOf(char * base, const char * term) noexcept {
   HRT_COUNT(indexOf)
   char * p = strstr(base, term);
   if (!p) return -1;
@@ -2129,6 +2311,7 @@ void logMe(const char* line) noexcept {  // turn into a circular log, accepting 
 template <class text>
 void uniPrintln(text content) {
   auto s = getCurrent();
+  strcpy(SYSTEM_OUTPUT_BUFFER, content);
 #ifdef WEBSOCKETSSERVER_H_
   if (s->options.socket) {
     webSocket.broadcastTXT(content);
@@ -2284,76 +2467,87 @@ LaterStore LATER_STORE;
 void loadStoredValuesForStore() {
   LATER_STORE.load();
 }
+unsigned long evalLite(char * lb, LATER_ENVIRON * s)  {
+  char varChar;
+  unsigned long tempInt = s->Number(lb);
+  unsigned long varCache, varTemp;
+  lb++;
 
-struct CsvState {
-  const char * fn;
-  //char * vars = "AUTO";
-  bool hasLineParam = false;
-  char delim = ',';
-  uint8_t id = 0;
-  uint8_t skip = 0;
-  uint8_t blockSize = 0;
-  uint8_t morePointer = 0;
-  uint8_t varSlots[12];
-  char    delimStr[2];
-  uint16_t lineNeeded = 1;
-};
+  while (++lb && (varCache != tempInt)) {
+    varCache = tempInt;
+    varChar = (lb++)[0];
+    varTemp = s->Number(lb++);
 
-CsvState CSV[4];
+    switch (varChar) {
+      case '+': tempInt += varTemp; break;
+      case '-': tempInt -= varTemp; break;
+      case '/': tempInt /= varTemp; break;
+      case '*': tempInt *= varTemp; break;
+      case '%': tempInt %= varTemp; break;
+      case '^': tempInt ^= varTemp; break;
+      //case ' ': break;
+      case '|': tempInt = (tempInt || varTemp) ? 1 : 0; break;
+      case '&': tempInt = (tempInt && varTemp) ? varTemp : 0; break;
+      case '=': tempInt = (tempInt == varTemp) ? 1 : 0; break;
+      case '!': tempInt = tempInt != varTemp; break;
+      case '<': tempInt = tempInt < varTemp; break;
+      case '>': tempInt = tempInt > varTemp; break;
+    }
+  }
+  return tempInt;
+}//end evalLite()
+#ifdef LATER_CSV
+
 CsvState * getCSV(char * codeLine, LATER_ENVIRON * s) {
 
-  CsvState * state;
+  CsvState * state = &s->csv;
   char * varPtr = codeLine;
-  uint8_t id = (s->index * 10) + s->i;
   int i;
 
-  for (i = 0; i < 4; i++) if (CSV[i].id == id) {
-      state = &CSV[i];
-      break;
-    }
+  if (state->fn[0]) { // re-call, just re-assign line number:
 
-  if (!state->id) {
-    for (i = 0; i < 4; i++) if (CSV[i].id == 0) {
-        state = &CSV[i];
-        break;
-      }
-    if (!state)return NULL;
-  } else {
-    // re-assign line number:
     if (state->hasLineParam) {
       if ( (varPtr = laterUtil::afterSubstring(codeLine, "line="))  ) state->lineNeeded = Number(varPtr, s->VARS);
     } else {
       state->lineNeeded++;
     }
     return state;
-  }
-
+  }//end if re-call?
+  // init:
   if ((varPtr = laterUtil::afterSubstring(codeLine, "line="))) {
     state->lineNeeded =  Number(varPtr, s->VARS);
     state->hasLineParam = 1;
   }
-  if ((varPtr = laterUtil::afterSubstring(codeLine, "file="))) state->fn = varPtr;
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "file="))) strncpy(state->fn, varPtr, 35);
+  if ((varPtr = laterUtil::afterSubstring(codeLine, "filter="))) strncpy(state->filter, varPtr, 35);
   if ((varPtr = laterUtil::afterSubstring(codeLine, "delim="))) state->delim = varPtr[0];
   if ((varPtr = laterUtil::afterSubstring(codeLine, "skip="))) state->skip = Number(varPtr, s->VARS);
   if ((varPtr = laterUtil::afterSubstring(codeLine, "block="))) state->blockSize = Number(varPtr, s->VARS);
   if ((varPtr = laterUtil::afterSubstring(codeLine, "more=@"))) state->morePointer = varPtr[0] - 65;
 
   if (!state->hasLineParam) state->blockSize = 2; // auto mode
-  state->id = id;
+
   state->delimStr[0] = state->delim;
   memset(state->varSlots, 0, 12);
+
+  char * spcPtr = strchr(state->fn, ' ');
+  if (spcPtr)spcPtr[0] = '\0';
+
+  spcPtr = strchr(state->filter, ' ');
+  if (spcPtr)spcPtr[0] = '\0';
+
   /*
-    DUMP("CSV:id:", state->id);
     DUMP("CSV:_codeLine:", codeLine);
     DUMP("CSV:file:", state->fn);
+    DUMP("CSV:filter:", state->filter);
     DUMP("CSV:delim:", state->delim);
     DUMP("CSV:skip:", state->skip);
     DUMP("CSV:hasLineParam:", state->hasLineParam);
     DUMP("CSV:block:", state->blockSize);
     DUMP("CSV:more:", state->morePointer);
     DUMP("CSV:line:", state->lineNeeded);
-
   */
+
   int slotNumber = 0;
   varPtr = laterUtil::afterSubstring(codeLine, "vars=");
   if (!varPtr) varPtr = "AUTO";
@@ -2391,10 +2585,9 @@ CsvState * getCSV(char * codeLine, LATER_ENVIRON * s) {
       if (spacePtr && varPtr > spacePtr) break;
     }//wend var
   }//end if auto/manual vars?
-  for (int i = 0; i < 10; i++) {
-  }
   return state;
 } //end getCSV()
+#endif
 
 #line 1 "config.ino"
 //@TAKE
@@ -2447,6 +2640,8 @@ char* getVarName(const char* longName, const int scriptIndex) {
 char getConstantNumber(char* valueString, LATER_ENVIRON * s, long res = -1) {
   int slot = LATER_VARS_LENGTH - s->LITS_COUNT++;
   unsigned long value = res != -1 ? res :  strtoul(valueString, NULL, 10);
+  if (value == 0) return LATER_VARS_LENGTH - 1;
+
   for (int i = slot; i < LATER_VARS_LENGTH; i++) {
     if (s->VARS[i] == value) {
       s->LITS_COUNT--;
@@ -2525,12 +2720,17 @@ void replaceAllLiterals(char * line, LATER_ENVIRON * s) {
 
     char symb = getConstantNumber(nxtDigit, s) + 65;
     memset(nxtDigit, ' ', len );
+    if (len == 1) { // need to make room for var symbol w/single-digit numbers:
+      int slen = strlen(nxtDigit);
+      nxtDigit[slen + 1] = '\0';
+      for (int i = slen; i > 0; i--) nxtDigit[i] = nxtDigit[i - 1];
+    }
     nxtDigit[0] = '@';
     nxtDigit[1] = symb;
     nxtDigit += len + 1;
   }//wend digit char
 
-}// end replaceEndingLiterals()
+}// end replaceAllLiterals()
 void replaceStartingLiterals(char * line, LATER_ENVIRON * s) {
 
 
@@ -2668,7 +2868,7 @@ void buildExitPoints( LATER_ENVIRON * SCRIPT  ) { // scan and calculate exit poi
           if (x->cmd == LATER_loop) need--;
           if (x->cmd == LATER_do) need++;
           if (need == 0) {
-            line->exit = i + 1;
+            line->exit = i;
             break;
           }
         }
@@ -4054,6 +4254,8 @@ void bindServerMethods() {
   SUB_PATH(unload, handleUnload, "API  JSON  @name Unloads a running Script by filename");
   SUB_PATH(test, handleDump, F("API  TXT @name Get debug information of a running script by script filename"));
 
+  SUB_PATH(step, handleStep, F("API  TXT @name Step to next line of step option script by filename"));
+
   SUB_PATH(eval, handleEval, "API  TXT @name Runs a Script by filename");
   SUB_PATH(help, handleCommandList, F("API TXT List available commands and functions and templates"));
 
@@ -4288,9 +4490,8 @@ void handleFileList() {
     if (strlen(entry.name()) > 2) {
 
       bool isDir = false;
-      LATER_SERVER_NAME.sendContent(",\n{\"type\":\"");
-      LATER_SERVER_NAME.sendContent((isDir) ? "dir" : "file");
-      LATER_SERVER_NAME.sendContent("\",\"name\":\"");
+      LATER_SERVER_NAME.sendContent(",\n{\"name\":\"");
+
 #ifdef ESP8266
       LATER_SERVER_NAME.sendContent(entry.name() + 1);
 #else
@@ -4663,7 +4864,7 @@ void handleScripts() {
     addJSON(out, "frozen", SCRIPTS[i].resumeLineNumber ? 1 : 0);
     addJSON(out, "interval", SCRIPTS[i].interval);
     addJSON(out, "persist", SCRIPTS[i].options.persist);
-
+    addJSON(out, "step", SCRIPTS[i].options.step);
     addJSON(out, "line", SCRIPTS[i].i);
     addJSON(out, "lines", SCRIPTS[i].lineCount);
     addJSON(out, "exit", SCRIPTS[i].exitLineNumber);
@@ -4699,7 +4900,7 @@ void handleScripts() {
 #line 1 "loader.ino"
 int loadScript(const char * scriptFileName) { //dd666 make this a class method
   unsigned long st = micros();
-
+  TIMER(scriptFileName);
   char * fileBuff = laterUtil::fileToBuff(scriptFileName);
   char clean[LATER_PROGRAM_SIZE];
   char * outptr = clean;
@@ -4893,6 +5094,7 @@ int loadScript(const char * scriptFileName) { //dd666 make this a class method
         if (strchr(linePtr, '@')) flag += 2;// vars
       }
 #ifndef LATER_DISABLE_OPTIMIZATIONS
+#ifdef ADAFRUIT_NEOPIXEL_H
       if (cmdChar == LATER_solid) {
         if (strstr(linePtr, "0,0,0")) lineData = 1;
         if (strstr(linePtr, "#000")) lineData = 1;
@@ -4912,6 +5114,7 @@ int loadScript(const char * scriptFileName) { //dd666 make this a class method
         }//end if literal color def?
 
       }
+#endif
 #endif
 
       if (cmdChar == LATER_option) {
@@ -4952,54 +5155,56 @@ int loadScript(const char * scriptFileName) { //dd666 make this a class method
       sLine->flags = flag;
 
       if ( cmdChar == LATER_apply ||  cmdChar == LATER_var ) parseApply(linePtr, sLine, SCRIPT );
+#ifdef ADAFRUIT_NEOPIXEL_H
       if ( cmdChar == LATER_pixel ) parsePixel(linePtr, sLine, SCRIPT );
+#endif
 
       if ( cmdChar == LATER_math ) {
         replaceAllLiterals(linePtr, SCRIPT);
         laterUtil::replace(linePtr, " ", "");
       }
 
-      /*
+#ifdef LATER_CSV
+      if ( cmdChar == LATER_csv ) {
+        replaceAllLiterals(linePtr, SCRIPT);
+        getCSV(linePtr, SCRIPT);
+      }
+#endif
 
-          if(cmdChar == LATER_do){
-           char hint = linePtr[0];
-           if(hint=='w' || hint =='u'){
+      if (cmdChar == LATER_do) {
+        char hint = linePtr[0];
+        if (hint == 'w' || hint == 'u') {
 
-             laterUtil::replace(linePtr, "while", "@A=(");
-             laterUtil::replace(linePtr, "until", "@A=(");
-             strcat(linePtr, ")");
-             parseApply(linePtr, sLine, SCRIPT );
-             if(cmdChar != sLine->cmd){
-              sLine->cmd = cmdChar;
-              linePtr+=3;
-              linePtr[0]=hint;
-              sLine->exprCache[0]= (hint=='u') ? 1 : 0;
-              sLine->data = 1;
-             }//end if changed?
-           }else{//end if hint?
-            linePtr+= strlen(linePtr) - 1;
-            linePtr[0]=' ';
-           }
-          }//end if do?
+          replaceAllLiterals(linePtr, SCRIPT);
 
-        if(cmdChar == LATER_if || cmdChar == LATER_iif){
-             laterUtil::replace(linePtr, "@", "@A=(@");
+          laterUtil::replace(linePtr, "while", "@A=(");
+          laterUtil::replace(linePtr, "until", "@A=(");
+          strcat(linePtr, ")");
+          parseApply(linePtr, sLine, SCRIPT );
 
-             strcat(linePtr, ")");
-             parseApply(linePtr, sLine, SCRIPT );
-             if(cmdChar != sLine->cmd){
-              sLine->cmd = cmdChar;
-              linePtr+=4;
-              sLine->exprCache[0]= 1;
-              sLine->data = 2;
-              sLine->flags=0;
-              linePtr[strlen(linePtr) - 1]=' ';
+          if (cmdChar != sLine->cmd) {
+            sLine->cmd = cmdChar;
+            linePtr += 2;
 
-              DUMP("linePtr up:",linePtr);
-             }//end if changed?
+            linePtr[0] = hint;
+            sLine->exprCache[0] = (hint == 'u') ? 1 : 0;
+            sLine->data = 2;
+          }//end if changed?
 
-          }//end if if?
-      */
+        }//end if while/until or just _plain DO?
+      }//end if do?
+      if ( (cmdChar == LATER_if || cmdChar == LATER_iif) && !strchr(linePtr, '(')) {
+        replaceAllLiterals(linePtr, SCRIPT);
+        char op[2] = {linePtr[0], 0};
+        laterUtil::replace(linePtr, op, "@A=( ");
+        laterUtil::replace(linePtr, " ", op);
+        strcat(linePtr, ")");
+        parseApply(linePtr, sLine, SCRIPT );
+        linePtr += 3;
+        sLine->data = 2;
+        sLine->flags = 0;
+        sLine->cmd = cmdChar;
+      }//end if if?
       lineLen = strlen(linePtr);
       sLine->len = lineLen; // how many chars is line?
       sLine->start = (outptr - cleanptr); // first line byte in clean buffer
@@ -5351,6 +5556,7 @@ bool isStaticValue(char * str) {
   return (!strchr(str, '{')) && (!strchr(str, '@')) && (!strchr(str, '(')) && (!strchr(str, '[')) ;
 }
 
+#ifdef ADAFRUIT_NEOPIXEL_H
 void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
 
   //support literals: #ABC or #abc or #AABBCC or #aabbcc, or r,g,b, ints, functions
@@ -5473,6 +5679,7 @@ void parsePixel(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
   };
 
 }//end parsePixel();
+#endif
 
 unsigned long applyArgs(  LATER_LINE * l, LATER_ENVIRON * s  ) {
   APPLY_ARGS[2] = 0;
@@ -5554,6 +5761,7 @@ void parseApply(char * lb, LATER_LINE * l, LATER_ENVIRON * s ) {
 
       // check for opPos3, and abort if present
       uint8_t opPos3 =  strcspn( lb + opPos1 + opPos2 + 2, "+/-*|<>=!");
+      if (!opPos2)opPos3 = 0;
       if (opPos3) return;
       char nameBuffer[8] = {0, 0, 0, 0,  0, 0, 0, 0};
 
@@ -5653,6 +5861,18 @@ void runScript() {
 #endif
   l = &s->lines[s->resumeLineNumber];
   for (s->i = s->resumeLineNumber; s->i < s->exitLineNumber; s->i++) {
+
+    if (s->options.step) {
+      if (!s->stepReady) {
+        s->stepReady = true;
+      } else {
+        s->stepReady = false;
+        s->i--;
+        s->freeze(99999);
+        return;
+      }
+    }//end if line step mode?
+
 #ifdef HIGH_RES_TIMING
     if (st > 0) {
       HR_PERF.loop.total += micros() - st;
@@ -6140,26 +6360,27 @@ void runScript() {
         }
         continue;
         break;
+#ifdef LATER_CSV
       case LATER_csv: {
-
+          // make this update the params better, maybe on save or load. switch to [instante][line]?
           uint8_t col = 0;
           bool shouldExit = false;
           char* nextColumn;
           int slot = 0, usedSlots = 0;
           CsvState* csv = getCSV(linebuff, s);
 
+
           if (csv->morePointer) s->VARS[csv->morePointer] = 1;
           if (!csv->fn) shouldExit = true;
 
           char* lineCursor = shouldExit ? NULL : laterUtil::getFileLine(csv->fn, csv->lineNeeded);
-
           if (!lineCursor) shouldExit = true;
-
           if (shouldExit) {
             if (csv->morePointer) s->VARS[csv->morePointer] = 0;
             if (csv->blockSize) s->i += csv->blockSize;
+            csv->lineNeeded = 0;
             continue;
-          };
+          }
 
           strcat(lineCursor, csv->delimStr);
           while ((nextColumn = strchr(lineCursor, csv->delim))) {
@@ -6170,45 +6391,32 @@ void runScript() {
             }
             lineCursor = nextColumn + 1;
           }  //wend nextColumn
+
           if (!col) {
             if (csv->morePointer) s->VARS[csv->morePointer] = 0;
             if (csv->blockSize) s->i += csv->blockSize;
+            csv->lineNeeded = 0;
             continue;
-          }
+          } else {
 
+            if (csv->filter) {
+              uint16_t  rez = evalLite(csv->filter, s);
+              if (!rez) {
+                s->i++;
+                continue; // non-destructive exit
+              }//end if rez?
+            }//end if filter?
+          }//end if !col?
         }  //end scope
         continue;
         break;
+
+#endif
       case LATER_math:
-        //unsigned long varCache, tempInt, varTemp;
-        //int varSlot = 0;
-        //char varChar;
-
-        //char b;
-        //char * v = lb;
-        varSlot =  lb[1] - 65;
-        tempInt = s->Number((lb = lb + 3)++);
-
-        while (++lb && (varCache != tempInt)) {
-          varCache = tempInt;
-          varChar = (lb++)[0];
-          varTemp = s->Number(lb++);
-          switch (varChar) {
-            case '+': tempInt += varTemp; break;
-            case '-': tempInt -= varTemp; break;
-            case '/': tempInt /= varTemp; break;
-            case '*': tempInt *= varTemp; break;
-            case '%': tempInt %= varTemp; break;
-            case '^': tempInt ^= varTemp; break;
-            case '|': tempInt = tempInt || varTemp; break;
-            case '&': tempInt = tempInt && varTemp; break;
-            case '=': tempInt = tempInt == varTemp; break;
-            case '!': tempInt = tempInt != varTemp; break;
-            case '<': tempInt = tempInt < varTemp; break;
-            case '>': tempInt = tempInt > varTemp; break;
-          }
-        }
+        varSlot = lb[1] - 65;
+        tempInt = evalLite(lb + 3, s);
         s->VARS[varSlot] = tempInt;
+
         continue;
         break;
       case LATER_apply: // fast expression execution engine
@@ -6480,6 +6688,7 @@ void runScript() {
         if (strstr(lb, "persist")) s->options.persist = true;
         if (strstr(lb, "socket")) s->options.socket = true;
         if (strstr(lb, "noget")) s->options.noget = true;
+        if (strstr(lb, "step")) s->options.step = true;
 
         if ((k = strstr(lb, "interval"))) {
           // find next digits
@@ -6560,31 +6769,28 @@ void runScript() {
         continue;
         break;
 #endif
+
       case LATER_do: // do
-        l->data = 0;
-        //vfSnSnSn
-        if (l->data) { // dd666 might be badd
+
+        if (l->data) {
           // do an apply things here
           bool resp = applyArgs(l, s);
           if (l->exprCache[0]) resp = !resp;
           if (!resp) s->i = l->exit;
           continue;
-
         } else {
 
           if (linebuff[0] == ' ') continue;
-
           if (linebuff[0] == 'w') {
             if (!evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
           }//end if while
 
           if (linebuff[0] == 'u') { //blah
-            if (evalConditionalExpression(linebuff + 5, s)) s->i = l->exit;
+            if (evalLite(linebuff + 5, s)) s->i = l->exit;
           }//end if until
         }
         continue;
         break;
-
       case LATER_default: // switch default
         if (!s->switchTerm[0]) {
           s->i = s->switchExit;
@@ -6751,9 +6957,7 @@ void runScript() {
         continue;
         break;
       case LATER_freeze: // suspend operation for given MS
-        s->resumeLineNumber = s->i + 1;
-        s->resumeMillis = millis() + Number(lb, s->VARS);
-        s->duration = (micros() -  s->startedAt) / 1000;
+        s->freeze(Number(lb, s->VARS));
         return;
         continue;
         break;
@@ -7608,7 +7812,76 @@ void handleCommandList() {
   LATER_SERVER_NAME.sendContent("");
 }//end handleCommandList()
 #ifdef ESP8266WEBSERVER_H
+void handleStep() {
 
+  LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
+  if (!s) s = getCurrent();
+  //char linebuff[LATER_LINE_BUFFER];
+  char * linebuff = LINE_BUFF;
+  memset(linebuff, '\0', 16);
+
+  s->resumeMillis = millis() - 4;
+
+  LATER_SERVER_NAME.sendHeader(LATER_CORS, "*");
+  LATER_SERVER_NAME.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  LATER_SERVER_NAME.send ( 200, LATER_PLAIN, " ");
+  LATER_SERVER_NAME.sendContent(itoa(s->i, linebuff, 10));
+  LATER_SERVER_NAME.sendContent("\n");
+
+  if (strlen(SYSTEM_OUTPUT_BUFFER)) {
+    LATER_SERVER_NAME.sendContent(SYSTEM_OUTPUT_BUFFER);
+    memset(SYSTEM_OUTPUT_BUFFER, '\0', 2);
+  }
+
+  LATER_SERVER_NAME.sendContent("\n");
+
+  int varNameMisses = 0;
+
+  //\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
+  for (unsigned int i = 0;  i < LATER_VARS_LENGTH; i++) {
+    if ( i > 25 && i < 32) continue;
+
+    if (varNameMisses  && ! s->VARS[i]) continue; // skip "empty" lines
+
+    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
+
+    linebuff[0] = '\0';
+    strcpy(linebuff, ".\t@ \t");
+    linebuff[3] = (char) (i + 65);
+
+    //linebuff[1] = '\t';
+    //linebuff[2] = '\0';
+
+    LATER_SERVER_NAME.sendContent(linebuff);
+
+    LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    LATER_SERVER_NAME.sendContent("\t");
+    bool foundVarName = false;
+
+    if (varNameMisses < 2) {
+      for (auto const & x : LATER_VAR_NAMES[s->index])   {
+        if (x.second == i) {
+          foundVarName = true;
+          LATER_SERVER_NAME.sendContent(x.first.c_str());
+          break;
+        }//if match?
+      }//next varName
+    }//if not struck out finding var names yet?
+
+    //}else{
+    if (!foundVarName) {
+      varNameMisses++;
+      LATER_SERVER_NAME.sendContent("#");
+      LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    }
+    LATER_SERVER_NAME.sendContent("\n");
+
+  }//next local var
+
+  LATER_SERVER_NAME.sendContent("");
+
+
+}//end handleStep()
 void handleDump() {
   LATER_ENVIRON * s = LATER_SERVER_NAME.hasArg("name") ? Later.getByName(LATER_SERVER_NAME.arg("name").c_str()) : getCurrent();
   if (!s) s = getCurrent();
@@ -7733,7 +8006,47 @@ void handleDump() {
 #ifndef LATER_DISABLE_OPTIMIZATIONS
 
   // optimization report:
+  LATER_SERVER_NAME.sendContent("\nVALUE REGISTERS:\n#  \tsymb\tvalue\texpr\n");
+  int varNameMisses = 0;
 
+  //\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
+  for (unsigned int i = 0;  i < LATER_VARS_LENGTH; i++) {
+    if ( i > 25 && i < 32) continue;
+
+    if (varNameMisses  && ! s->VARS[i]) continue; // skip "empty" lines
+
+    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
+    LATER_SERVER_NAME.sendContent( ".\t@");
+    linebuff[0] = (char) (i + 65);
+
+    linebuff[1] = '\0';
+
+    LATER_SERVER_NAME.sendContent(linebuff);
+    LATER_SERVER_NAME.sendContent("\t");
+
+    LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    LATER_SERVER_NAME.sendContent("\t");
+    bool foundVarName = false;
+
+    if (varNameMisses < 2) {
+      for (auto const & x : LATER_VAR_NAMES[s->index])   {
+        if (x.second == i) {
+          foundVarName = true;
+          LATER_SERVER_NAME.sendContent(x.first.c_str());
+          break;
+        }//if match?
+      }//next varName
+    }//if not struck out finding var names yet?
+
+    //}else{
+    if (!foundVarName) {
+      varNameMisses++;
+      LATER_SERVER_NAME.sendContent("#");
+      LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
+    }
+    LATER_SERVER_NAME.sendContent("\n");
+
+  }//next local var
   LATER_SERVER_NAME.sendContent("\nCACHED FUNCTIONS:\n#  \tsymb\tname\n");
 
   for (unsigned int i = 0; i < s->FUNC_COUNT; i++) {
@@ -7781,47 +8094,6 @@ void handleDump() {
 
   }//next temp
 #endif
-  LATER_SERVER_NAME.sendContent("\nVALUE REGISTERS:\n#  \tsymb\tvalue\texpr\n");
-  int varNameMisses = 0;
-
-  //\nVALUE REGISTERS:\n#  \tSYM\tval\texpr\n");
-  for (unsigned int i = 0;  i < LATER_VARS_LENGTH; i++) {
-    if ( i > 25 && i < 32) continue;
-
-    if (varNameMisses  && ! s->VARS[i]) continue; // skip "empty" lines
-
-    LATER_SERVER_NAME.sendContent(itoa(i, linebuff, 10));
-    LATER_SERVER_NAME.sendContent( ".\t@");
-    linebuff[0] = (char) (i + 65);
-
-    linebuff[1] = '\0';
-
-    LATER_SERVER_NAME.sendContent(linebuff);
-    LATER_SERVER_NAME.sendContent("\t");
-
-    LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
-    LATER_SERVER_NAME.sendContent("\t");
-    bool foundVarName = false;
-
-    if (varNameMisses < 2) {
-      for (auto const & x : LATER_VAR_NAMES[s->index])   {
-        if (x.second == i) {
-          foundVarName = true;
-          LATER_SERVER_NAME.sendContent(x.first.c_str());
-          break;
-        }//if match?
-      }//next varName
-    }//if not struck out finding var names yet?
-
-    //}else{
-    if (!foundVarName) {
-      varNameMisses++;
-      LATER_SERVER_NAME.sendContent("#");
-      LATER_SERVER_NAME.sendContent(itoa(s->VARS[i], linebuff, 10));
-    }
-    LATER_SERVER_NAME.sendContent("\n");
-
-  }//next local var
   LATER_SERVER_NAME.sendContent("\n-------- SYSTEM LOG -----------\n");
   LATER_SERVER_NAME.sendContent(setRunLog);
   LATER_SERVER_NAME.sendContent("\n-------- END PROGRAM DEBUG -----------\n");
