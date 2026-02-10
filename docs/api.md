@@ -1,6 +1,7 @@
 
 # HTTP APIs
 
+* [/](#root)
 * [/help/](#help)
 * [/log/](#log)
 * [/store/](#store)
@@ -9,9 +10,18 @@
 * [/reboot/](#reboot)
 * [/resume/](#resume)
 * [/suspend/](#suspend)
+* [/unload/](#unload)
+* [/step/](#step)
 * [/dir/](#dir)
+* [/ls/](#ls)
 * [/test/](#test)
 * [/scripts/](#scripts)
+* [/update/](#update)
+
+
+
+## /  (root)
+By default an HTML help screen is show with basic build info and navigation to available APIs, fetaures, etc. It can be replaced by `/index.bat`, which shows the output of the script instead of the HTML interface. You can also supliment the default HTML with a file named `/_index.html`, which is included literally at the end of the navigation list, making it easy to add your own items, or customize the look and feel with CSS, or even hijack the whole page with your own custom javascript.
 
 
 ## /help/
@@ -130,8 +140,15 @@ delete a stored file by calling the endpoint: `/run/?name=file.bat`. Returns `tr
 Suspends and unloads a script by name.  If given a ms param number, also sets it to resume in that number of milliseconds. This saves all the state and variables to the flash and then frees up a program slot. Returns `true|false` json reflecting if the file was actually suspended (found, running, and saved). 
 
 
+## /unload/
+Unloads an option persist/interval script by name, stopping execution/suspesion/freezing.
+
+
+## /step/
+Steps through a script's line of code one by one, displaying debug info in the response. Use name GET param to name script, or default to current.
+
 ## /reboot/
-Resets the ESP, same as pressing the reset button. Returns HTML response with a re-direct when the device returns to the wifi network.
+Resets the ESP, same as pressing the reset button. Returns HTML response with a re-direct when the device returns to the wifi network. It will run /reboot.bat if it exists, returning the output from that script instead of the default HTML message. This is an opertunity to save data/config, ping external services, blink a sync warning, etc.
 
 ## /dir/
 A JSON Array of Objects decribing the files save on the ESP.
@@ -150,7 +167,8 @@ A JSON Array of Objects decribing the files save on the ESP.
 
 
 
-
+## /ls/
+An HTML listing of files with the ability to run, delete, or view each file, as well as upload new files.
 
 ## /test/
 View a detailed inspection of the last executed script; the parsed code, current variable values, the runtime log, and stats.
@@ -293,3 +311,6 @@ View a JSON list of running tasks with statistics, comparable to a _task manager
 		]
 }
 ```
+
+## /update/
+Provides an HTML file upload to install a new sketch from a .bin file in the temporary sketch compilation folder. 
