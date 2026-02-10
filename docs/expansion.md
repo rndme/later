@@ -227,3 +227,333 @@ Read serial port byte by byte
 ```    
 
 
+
+
+## Arrays
+
+```c++
+#ifdef LATER_ARRAY
+
+void addLaterArrays() {
+
+#ifdef ESP32
+
+  ///////////////////////////////////
+  // LATER ARRAY ADDON
+
+  /* Functions, Templates, and array Command methods
+
+      FUNCTIONS
+      ARRAY(n)   // returns the value at element #n, ex: $v=ARRAY(2) // get third element
+      INDEXOF(v) // returns the array index of the first element to equal v
+
+      TEMPLATES
+      {[length]} // used elements
+      {[limit]}  // max index
+      {[avg]}    // mean
+      {[max]}    // max value in array
+      {[min]}    // min value in array
+      {[sum]}    // sum of all elements
+      {[pop]}    // value of last element, which is removed
+      {[shift]}  // value of first element, which is removed
+
+      COMMANDS
+      array clear                     // empty the array
+      array dump                      // print array as JSON
+      array fill value,?count,?start  // injects a set value into the array 1+ times
+      array filter conditional        // used conditional syntax to remove elements, ex: array filter > 3
+      array length n                  // sets the array length to n elements, discarding anything greater
+      array push a,?b,?c,?...rest     // adds values to end of array
+      array reverse                   // reverse order of elements
+      array sort                      // ascending sort
+      array splice pos,remove_count,?value (dd: upgrade to ...rest?)
+      array unshift a,?b,?c,?...rest  // adds values to start of array
+  */
+
+
+  // ARRAY FUNCTIONS:
+  Later.addFunction("ARRAY", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
+    if (a >= ARRAY_LENGTH) return -1;
+    return ARRAY[a];
+  });
+
+  Later.addFunction("INDEXOF", [](unsigned long a = 0, unsigned long b = 0, unsigned long c = 0)->unsigned long {
+    if (b < 1) b = 0;
+    if (b >= ARRAY_LENGTH) b = ARRAY_LENGTH ;
+    for (int i = b; i < ARRAY_LENGTH; i++) if (a == ARRAY[i]) return i;
+    return -1;
+  });
+
+  // ARRAY TEMPLATES:
+  Later.addTemplate("{[length]}", TEMPLATE(  ARRAY_LENGTH  ));
+  Later.addTemplate("{[limit]}", TEMPLATE(  ARRAY_LIMIT  ));
+  Later.addTemplate("{[pop]}",  []()->unsigned long{
+    unsigned long val = ARRAY[ARRAY_LENGTH - 1];
+    ARRAY_LENGTH--;
+    return val;
+  });
+  Later.addTemplate("{[min]}",  []()->unsigned long{
+    unsigned long min = ARRAY[0];
+    for (int i = 1; i < ARRAY_LENGTH; i++) {
+      if (ARRAY[i] < min)  min = ARRAY[i];
+    }
+    return min;
+  });
+  Later.addTemplate("{[max]}",  []()->unsigned long{
+    unsigned long max = ARRAY[0];
+    for (int i = 1; i > ARRAY_LENGTH; i++) {
+      if (ARRAY[i] < max) max = ARRAY[i];
+    }
+    return max;
+  });
+  Later.addTemplate("{[median]}",  []()->unsigned long{
+    unsigned long min2 = ARRAY[0];
+    for (int i = 1; i > ARRAY_LENGTH; i++) if (ARRAY[i] < min2) min2 = ARRAY[i];
+
+
+    int halfCount = ARRAY_LENGTH / 2;
+    int val = ARRAY[0];
+    int biggerCount = 0;
+    for (int i = 0; i < ARRAY_LENGTH; i++) {
+      val = ARRAY[i];
+      if (val <= min2) continue;
+      //biggerCount = ARRAY.filter(x => x > val ).length
+      biggerCount = 0;
+      for (int ii = 0; ii < ARRAY_LENGTH; ii++) {
+        if (val < ARRAY[ii]) biggerCount++;
+      }
+      if (biggerCount > halfCount) min2 = val ;
+      if (biggerCount == halfCount) return val;
+    }
+    return 0;
+  });
+
+  Later.addTemplate("{[sum]}",  []()->unsigned long{
+    unsigned long sum = 0;
+    for (int i = 0; i < ARRAY_LENGTH; i++)sum += ARRAY[i];
+    return sum;
+  });
+  Later.addTemplate("{[avg]}",  []()->unsigned long{
+    unsigned long sum = 0;
+    if (ARRAY_LENGTH == 0) return 0;
+    for (int i = 0; i < ARRAY_LENGTH; i++)sum += ARRAY[i];
+    return sum / ARRAY_LENGTH;
+  });
+  Later.addTemplate("{[shift]}",  []()->unsigned long{
+    unsigned long val = ARRAY[0];
+    for (int i = 1; i < ARRAY_LENGTH; i++) {
+      ARRAY[i - 1] = ARRAY[i];
+    }
+    ARRAY_LENGTH--;
+    return val;
+  });
+
+  // ARRAY COMMANDS:
+  Later.addCommand("array", [](char * v, LATER_LINE * ln, LATER_ENVIRON * scr )->bool {
+
+    char * argPtr = strchr(v, ' ');
+    if (argPtr && strlen(argPtr)) {
+      nsLATER::laterUtil::splitStringByChar(argPtr + 1, ',');
+    } else{
+      nsLATER::laterUtil::split_count = 0;
+    }
+
+    if (strstr(v, "dump") == v) {
+      char buffer [20];
+      nsLATER::uniPrint("[ ");
+      for (int i = 0; i < ARRAY_LENGTH; i++) {
+        itoa(ARRAY[i], buffer, 10);
+        nsLATER::uniPrint(buffer);
+        if (i + 1 != ARRAY_LENGTH) nsLATER::uniPrint(", ");
+      }
+      nsLATER::uniPrintln(" ]");
+
+      return 1;
+    }//end if dump?
+
+    if (strstr(v, "clear") == v) {
+      ARRAY_LENGTH = 0;
+      return 1;
+    }//end if clear?
+
+    if (strstr(v, "length") == v) {
+      unsigned long a = argPtr ? std::stoul(argPtr, nullptr, 10 ) : ARRAY_LENGTH;
+      if ( a > ARRAY_LENGTH) return ARRAY_LENGTH;
+      ARRAY_LENGTH = a;
+      return 1;
+    }//end if length?
+
+    if (strstr(v, "push") == v) {
+      for (int i = 0; i < nsLATER::laterUtil::split_count ; i++) {
+        if ( ARRAY_LENGTH < ARRAY_LIMIT ) ARRAY[ARRAY_LENGTH++] = std::stoul( nsLATER::laterUtil::splits[i], nullptr, 10 );
+      }
+      return 1;
+    }//end if push?
+
+    if (strstr(v, "reverse") == v) {
+      std::reverse(ARRAY, ARRAY + ARRAY_LENGTH);
+      return 1;
+    }//end if reverse?
+
+    if (strstr(v, "sort") == v) {
+      std::sort(ARRAY, ARRAY + ARRAY_LENGTH);
+      return 1;
+    }//end if sort?
+
+
+    //////////////////////////////////////////////////////////////////
+
+
+    if (strstr(v, "filter") == v) {
+      //std::sort(ARRAY, ARRAY + ARRAY_LENGTH);
+      bool ok = false;
+      char buff[32];
+      int termLen;
+      char * ptr = argPtr;
+
+      for (int i = 0; i < ARRAY_LENGTH; i++) { // set all invalid elements to -1
+        // make string with compare expression for each element:
+        itoa(ARRAY[i], buff, 10);
+        termLen = strlen(buff);
+        buff[termLen] = ' ';
+        strcpy(buff + termLen, ptr);
+        //Serial.print("exppr:"); Serial.println(buff);
+        ok = nsLATER::evalConditionalExpression(buff, scr);
+        if (!ok) ARRAY[i] = -1;
+      }
+
+      int newLen = 0;
+      int subStrart = 0;
+      for (int i = 0; i < ARRAY_LENGTH; i++) { // remove -1 elements, preserving order
+
+        if (ARRAY[i] == -1) {
+          // find next non- -1    element, move to i
+          for (int subi = (i + 1); subi < ARRAY_LENGTH; subi++) {
+            if (subi < subStrart) subi = subStrart;
+            if (ARRAY[subi] != -1) {
+              ARRAY[i] = ARRAY[subi];
+              subStrart = subi + 1;
+              break;
+            }//end if !-1
+          }//next subi
+
+        } else { //end if -1?
+          newLen++;
+        }
+      } // next elm
+
+      ARRAY_LENGTH = newLen;
+      return 1;
+    }//end if filter?
+
+
+    if (strstr(v, "unshift") == v) {
+      unsigned int toAdd = nsLATER::laterUtil::split_count;
+      int newLen = ARRAY_LENGTH + toAdd;
+
+      if (newLen > ARRAY_LIMIT) { // if array will become too long, cut down right side to make them fit
+        ARRAY_LENGTH = newLen - ARRAY_LIMIT;
+        newLen = ARRAY_LENGTH + toAdd;
+      }
+
+      int curs = ARRAY_LENGTH;
+      int toMove = ARRAY_LENGTH + 1;
+
+      // scootch over elements from a to length by toAdd slots:
+      for (int i = 0; i < toMove; i++) ARRAY[newLen - i] = ARRAY[curs - i];
+
+      // fill in new data
+      for (int i = 0; i < toAdd; i++) ARRAY[i] = std::stoul( nsLATER::laterUtil::splits[i], nullptr, 10 );
+      ARRAY_LENGTH += toAdd;
+      return 1;
+    }//end if unshift?
+
+    if (strstr(v, "fill") == v || strstr(v, "splice") == v) {
+      unsigned long a = 0, b = 0, c = 0;
+      unsigned int arity = nsLATER::laterUtil::split_count;
+      if (arity > 0) a = std::stoul( nsLATER::laterUtil::splits[0], nullptr, 10 );
+      if (arity > 1) b = std::stoul( nsLATER::laterUtil::splits[1], nullptr, 10 );
+      if (arity > 2) c = std::stoul( nsLATER::laterUtil::splits[2], nullptr, 10 );
+
+      if (strstr(v, "fill") == v ) {
+
+        switch (arity) {
+          case 0: return 0; break;
+          case 1: // one argument given, fill entire array with value
+            std::fill(ARRAY, ARRAY + ARRAY_LENGTH, a);
+            break;
+          case 2: // two arguments given: value, count, start at 0
+            std::fill(ARRAY, ARRAY + b, a);
+            break;
+          case 3: // all 3 arguments given: value, count, start
+            std::fill(ARRAY + c, ARRAY + c + b, a);
+            break;
+          default: return 0;
+        }//end switch arity
+
+      } else { // splice
+
+        switch (arity) { // pos, toRem, data...
+          case 0: case 1: return 0; break;
+          case 2: // two arguments given, remove b slots at a
+            if (ARRAY_LENGTH - a < b) b = ARRAY_LENGTH - a; // keep b within array bounds, (eg allow b=999 to chop)
+            for (int i = a; i < ARRAY_LENGTH; i++) ARRAY[i] = ARRAY[i + b];
+            ARRAY_LENGTH -= b; // same each step/permutation of splice arity
+            break;
+
+          default: //3+
+            bool hasRemovals = b > 0;
+            unsigned int toAdd = (nsLATER::laterUtil::split_count - 2);
+            if (!hasRemovals) {
+              int curs = ARRAY_LENGTH;
+              int newLen = ARRAY_LENGTH + toAdd;
+              int toMove = (ARRAY_LENGTH - a) + 1;
+
+              // scootch over elements from a to length by toAdd slots:
+              for (int i = 0; i < toMove; i++) ARRAY[newLen - i] = ARRAY[curs - i];
+
+              // fill in new data
+              for (int i = 0; i < toAdd; i++) ARRAY[i + a] = std::stoul( nsLATER::laterUtil::splits[i + 2], nullptr, 10 );
+              ARRAY_LENGTH += toAdd;
+              ARRAY_LENGTH -= b; // same each step/permutation of splice arity
+            } else { // has removals
+              // first remove at pos, like there was no new data
+
+              if (ARRAY_LENGTH - a < b) b = ARRAY_LENGTH - a; // keep b within array bounds, (eg allow b=999 to chop)
+              for (int i = a; i < ARRAY_LENGTH; i++) ARRAY[i] = ARRAY[i + b];
+              ARRAY_LENGTH -= b; // same each step/permutation of splice arity
+
+              // now just do same thing as arity=2, but don't adjust (shrink) length again
+              int curs = ARRAY_LENGTH;
+              int newLen = ARRAY_LENGTH + toAdd;
+              int toMove = (ARRAY_LENGTH - a) + 1;
+
+              // scootch over elements from a to length by toAdd slots:
+              for (int i = 0; i < toMove; i++) ARRAY[newLen - i] = ARRAY[curs - i];
+
+              // fill in new data
+              for (int i = 0; i < toAdd; i++) ARRAY[i + a] = std::stoul( nsLATER::laterUtil::splits[i + 2], nullptr, 10 );
+              ARRAY_LENGTH += toAdd;
+            }//end if hasRemovals?
+            break;
+
+        }//end switch arity
+
+        return 1;
+      }//end if fill or splice?
+    }//end if fill/splice
+    return 1;
+  });//end array command
+
+
+  // END OF LATER ARRAY ADDON
+  ///////////////////////////////////
+
+#endif
+
+
+}
+
+
+#endif
+```
