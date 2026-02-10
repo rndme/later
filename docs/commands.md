@@ -639,15 +639,17 @@ run /doormon.bat
 **option**   [_text_ **options**]    [ex1](#) <br>
 Specifies options that affect the the lifetime and operation of the program.
 Multiple options can be fed to the command, separated by space or commas.
-There are presently 6 main options:
+Present options:
 
+* `debug` - prints each line of executed code after interpolation and before interpretation.
 * `persist` - preserves a loaded program in RAM after it executes, keeping variable values, run counts, etc.
 * `interval=n` - automatically runs a program repeatedly and endlessly every `n` milliseconds specified. Implies `persist`. Web responses end after the first execution, whereupon `print` defers to Serial.<br>
-* `debug` - prints each line of executed code after interpolation and before interpretation.
-* `socket` - changes print to broadcast over `webSocket` if connected
 * `noget` - disables GET-param variable value passing, except `static` vars.
 * `noget!` - disables all GET-param variable value passing, even `static` vars.
-
+* `perf` - catures performance info for each line of executed code: calls, avg, total, etc
+* `step` - pauses each line of code until advanced by a web call to /step
+* `socket` - changes print to broadcast over `webSocket` if connected
+  
 ```js
 // prints hello once a second:
 option interval=1000
